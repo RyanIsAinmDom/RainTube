@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+    <title id="title">RainTube</title>
+    <desc id="desc">RainTube logo: a white raindrop with a play-triangle cutout on a dark glass tile.</desc>
+    <defs>
+        <linearGradient id="tile" x1="34" y1="18" x2="222" y2="238" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#07111d"/>
+            <stop offset=".48" stop-color="#02070d"/>
+            <stop offset="1" stop-color="#000205"/>
+        </linearGradient>
+        <radialGradient id="skyGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(68 40) rotate(49) scale(192 156)">
+            <stop offset="0" stop-color="#00a8e6" stop-opacity=".32"/>
+            <stop offset=".54" stop-color="#1270d2" stop-opacity=".12"/>
+            <stop offset="1" stop-color="#1270d2" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="violetGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(210 218) rotate(-137) scale(154 128)">
+            <stop offset="0" stop-color="#b08af2" stop-opacity=".20"/>
+            <stop offset=".56" stop-color="#b08af2" stop-opacity=".07"/>
+            <stop offset="1" stop-color="#b08af2" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="dropFill" x1="88" y1="44" x2="172" y2="218" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset=".62" stop-color="#eef9ff"/>
+            <stop offset="1" stop-color="#c8ecff"/>
+        </linearGradient>
+        <filter id="softShadow" x="-28%" y="-22%" width="156%" height="164%" color-interpolation-filters="sRGB">
+            <feDropShadow dx="0" dy="14" stdDeviation="13" flood-color="#000000" flood-opacity=".62"/>
+            <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity=".28"/>
+        </filter>
+        <path
+            id="dropMark"
+            fill-rule="evenodd"
+            d="
+                M128 45.6
+                C104 80 68 116 68 148
+                A60 60 0 0 0 188 148
+                C188 116 152 80 128 45.6
+                Z
+                M112 120.8
+                L112 164
+                L152 142.4
+                Z"/>
+    </defs>
+
+    <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#tile)"/>
+    <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#skyGlow)"/>
+    <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#violetGlow)"/>
+
+    <use href="#dropMark" filter="url(#softShadow)" fill="url(#dropFill)"/>
+
+    <rect x="17.5" y="17.5" width="221" height="221" rx="54.5" fill="none" stroke="#ffffff" stroke-opacity=".12" stroke-width="3"/>
+</svg>
