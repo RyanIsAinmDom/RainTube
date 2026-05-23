@@ -132,7 +132,6 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #container.ytd-masthead {
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #background.ytd-masthead {
     z-index: 0 !important;
     opacity: 1 !important;
-    background: transparent !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host::after {
     content: '';
