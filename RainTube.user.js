@@ -2,15 +2,17 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.133
+// @version            1.20.134
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
+// @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
 // @icon               https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.svg
 // @icon64             https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.svg
 // @match              https://*.youtube.com/*
 // @match              https://*.cnvmp3.com/*
 // @exclude            https://www.youtube.com/live_chat*
 // @exclude            https://studio.youtube.com/*
+
 // GM v4 APIs.
 // @grant              GM.getValue
 // @grant              GM.setValue
@@ -31,14 +33,14 @@
 // @resource           rtFontUiLatin https://cdn.jsdelivr.net/fontsource/fonts/manrope:vf@5.2.8/latin-wght-normal.woff2
 // @resource           rtFontMonoLatin https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono:vf@5.2.8/latin-wght-normal.woff2
 
-// RainTube's YouTube/UI stylesheet is fetched remotely at startup instead
-// of packaged as @resource so CSS-only fixes can appear without reinstalling
-// the script. Keep the local RainTube.youtube.css file in sync with:
-// https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css
+// RainTube's YouTube/UI stylesheet is packaged as @resource. Script
+// managers refresh resources when the userscript itself updates, so CSS
+// changes should bump @version to force a clean resource download. Keep the
+// local RainTube.youtube.css file in sync with this URL.
+// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css
 
 // Core support APIs.
 // @connect            raw.githubusercontent.com
-// @connect            githubusercontent.com
 // @connect            kavin.rocks
 // @connect            invidious.io
 // @connect            api.invidious.io
@@ -74,7 +76,7 @@
 'use strict';
 
 /*
-   RainTube V5.20.133
+   RainTube V5.20.134
 
    Structure:
      - YouTube pages get the RainTube panel, Shorts blocking, quality
@@ -89,7 +91,7 @@ const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '5.20.133',
+    version: '5.20.134',
     instances: {
         // Piped's docs moved the public instance list to this markdown source;
         // parse it dynamically so we track the same list the project publishes.
@@ -736,27 +738,22 @@ function injectUserStyle(css) {
     return style;
 }
 
-const RT_YOUTUBE_CSS_URL = 'https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css';
+const RT_YOUTUBE_CSS_RESOURCE = 'rtYouTubeCss';
 
-function noCacheUrl(url) {
-    const u = new URL(url);
-    u.searchParams.set('rt_css', `${Date.now()}`);
-    return u.href;
-}
-
-async function fetchRemoteStyle(url) {
+async function readTextResource(resourceName) {
+    const url = await GM.getResourceUrl(resourceName);
     const r = await gmRequest({
         method: 'GET',
-        url: noCacheUrl(url),
+        url,
         headers: { Accept: 'text/css, text/plain, */*' },
         responseType: 'text',
         timeout: CFG.api.metaTimeout,
     });
 
     if (!r.ok) {
-        throw new Error(`RainTube stylesheet failed to load: ${r.status ? `HTTP ${r.status}` : (r.reason || 'network')}`);
+        throw new Error(`RainTube resource ${resourceName} failed to load: ${r.status ? `HTTP ${r.status}` : (r.reason || 'network')}`);
     }
-    if (!r.responseText?.trim()) throw new Error('RainTube stylesheet loaded empty');
+    if (!r.responseText?.trim()) throw new Error(`RainTube resource ${resourceName} loaded empty`);
     return r.responseText;
 }
 
@@ -809,7 +806,7 @@ async function injectRainTubeStyles() {
 
     const [fontCss, youtubeCss] = await Promise.all([
         buildRainTubeFontCss(),
-        fetchRemoteStyle(RT_YOUTUBE_CSS_URL),
+        readTextResource(RT_YOUTUBE_CSS_RESOURCE),
     ]);
 
     injectUserStyle([fontCss, youtubeCss].filter(Boolean).join('\n\n'));
@@ -6811,12 +6808,13 @@ function boot() {
 
 /* ── Styles ─────────────────────────────────────────────────────────────── */
 
-/* ── Remote stylesheet ──────────────────────────────────────────────────── */
+/* ── Stylesheet resource ────────────────────────────────────────────────── */
 
 // The YouTube/RainTube UI stylesheet lives in RainTube.youtube.css and is
-// fetched from the raw GitHub URL at startup. It is injected as a <style>
-// tag so CSS application uses the same reliable path as the previous inline
-// stylesheet, while the source stays separately editable.
+// packaged as rtYouTubeCss. Bump @version whenever this resource changes so
+// script managers refresh the cached copy. It is injected as a <style> tag so
+// CSS application uses the same reliable path as the previous inline
+// stylesheet.
 
 /* ── Entry ──────────────────────────────────────────────────────────────── */
 
