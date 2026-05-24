@@ -2,9 +2,9 @@
    RainTube YouTube stylesheet.
 
    Packaged by the userscript as @resource rtYouTubeCss and injected as a
-   stylesheet link at runtime. Keep this local file in sync with the raw
-   GitHub resource URL declared in RainTube.user.js; Greasemonkey caches
-   @resource entries when the script is saved or installed.
+   <style> tag. Keep this local file in sync with the @resource URL declared
+   in RainTube.user.js, and bump the userscript @version when releasing CSS
+   changes so script managers refresh the cached resource.
 */
 
 /* Foundation */
@@ -600,12 +600,15 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     font-weight: 700;
 }
 .rt-card-id code {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
     font-size: 10.5px; font-weight: 500;
     padding: 2px 7px; border-radius: 5px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--rt-stroke-2);
     color: var(--rt-text);
+    overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap;
 }
 
