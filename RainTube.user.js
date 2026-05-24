@@ -2,7 +2,7 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.134
+// @version            1.20.146
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
 // @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
@@ -76,7 +76,7 @@
 'use strict';
 
 /*
-   RainTube V5.20.134
+   RainTube V5.20.146
 
    Structure:
      - YouTube pages get the RainTube panel, Shorts blocking, quality
@@ -91,7 +91,7 @@ const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '5.20.134',
+    version: '5.20.146',
     instances: {
         // Piped's docs moved the public instance list to this markdown source;
         // parse it dynamically so we track the same list the project publishes.
@@ -136,6 +136,7 @@ const CFG = Object.freeze({
         topbarTheme: 'rt_topbar_theme_enabled',
         quality: 'rt_quality_enabled',
         qualityMax: 'rt_quality_max',
+        qualitySuperResolution: 'rt_quality_super_resolution_enabled',
         privateDownloads: 'rt_private_downloads_enabled',
         privateFallback: 'rt_private_fallback_enabled',
         privateProvider: 'rt_private_provider',
@@ -269,11 +270,12 @@ function qualityLevelFromVideoHeight(height) {
     return closest && closest.diff <= 36 ? closest.level : `${raw}p`;
 }
 
-const YT_PLAYER_QUALITY_STORAGE = 'yt-player-quality';
-const YT_PLAYER_QUALITY_BACKUP_STORAGE = 'yt-player-quality-backup';
-const YT_PLAYER_QUALITY_TTL_MS = 30 * 24 * 60 * 60_000;
 const QUALITY_READY_TIMEOUT_MS = 10_000;
 const YT_MENUITEM_SELECTOR = '.ytp-menuitem, ytp-menuitem';
+const YT_SETTINGS_MENUITEM_SELECTOR = '.ytp-settings-menu[data-layer] .ytp-menuitem, ytp-settings-menu ytp-menuitem';
+const QUALITY_ROW_START_RE = /^\s*(?:(?:\d{3,4})\s*p(?:\d+)?|[458]\s*k)(?!\d)/i;
+const QUALITY_SUPER_RESOLUTION_RE = /super[\s-]*resolution/i;
+const QUALITY_PREMIUM_RE = /premium|enhanced\s*bitrate/i;
 
 // NOTE: 1440p, 4K, 5K, and 8K are NOT gated by YouTube Premium. They are
 // available to everyone when the source video has them. The only quality
@@ -282,6 +284,11 @@ const YT_MENUITEM_SELECTOR = '.ytp-menuitem, ytp-menuitem';
 // query page-player metadata without crossing into permission-denied Xray
 // wrappers, so RainTube skips Premium-labelled rows unless a future
 // non-page-context signal can prove they are playable.
+//
+// YouTube also marks AI-upscaled entries as "Super resolution" in the same
+// menu. Those are height-agnostic and evolving: YouTube's rollout started with
+// below-1080p uploads being upscaled from SD to HD, with stated plans to support
+// higher outputs later. Detect them by menu label, not by a hard-coded height.
 
 const SHORTS_ON_VISIT_ORDER = ['hide', 'redirect'];
 const SHORTS_ON_VISIT_LABEL = {
@@ -365,6 +372,7 @@ const DEFAULT_SETTINGS = Object.freeze({
     topbarThemeEnabled: false,
     qualityEnabled: true,
     qualityMax: 'hd1080',
+    qualitySuperResolutionEnabled: false,
     privateDownloadsEnabled: true,
     privateFallbackEnabled: true,
     privateProvider: 'both',
@@ -608,6 +616,7 @@ async function loadRuntimeState() {
         oledThemeEnabled,
         topbarThemeEnabled,
         qualityEnabled,
+        qualitySuperResolutionEnabled,
         privateDownloadsEnabled,
         privateFallbackEnabled,
         rawPrivateProvider,
@@ -631,6 +640,7 @@ async function loadRuntimeState() {
         readStoredValue(CFG.storage.oledTheme, DEFAULT_SETTINGS.oledThemeEnabled),
         readStoredValue(CFG.storage.topbarTheme, DEFAULT_SETTINGS.topbarThemeEnabled),
         readStoredValue(CFG.storage.quality, DEFAULT_SETTINGS.qualityEnabled),
+        readStoredValue(CFG.storage.qualitySuperResolution, DEFAULT_SETTINGS.qualitySuperResolutionEnabled),
         readStoredValue(CFG.storage.privateDownloads, DEFAULT_SETTINGS.privateDownloadsEnabled),
         readStoredValue(CFG.storage.privateFallback, DEFAULT_SETTINGS.privateFallbackEnabled),
         readStoredValue(CFG.storage.privateProvider, DEFAULT_SETTINGS.privateProvider),
@@ -664,6 +674,8 @@ async function loadRuntimeState() {
         topbarThemeEnabled,
         qualityEnabled,
         qualityMax: readEnumSetting(rawQualityMax, QUALITY_ORDER, 'hd1080'),
+        qualitySuperResolutionEnabled: typeof qualitySuperResolutionEnabled === 'boolean'
+            ? qualitySuperResolutionEnabled : DEFAULT_SETTINGS.qualitySuperResolutionEnabled,
         privateDownloadsEnabled,
         privateFallbackEnabled,
         privateProvider: readPrivateProvider(rawPrivateProvider),
@@ -686,8 +698,8 @@ async function loadRuntimeState() {
         privateCancelRequested: false,
 
         // ── UI / DOM handles ──
-        _lastAppliedQualityKey: null,
         _lastQualityTargetKey: null,
+        _lastKnownQuality: null,
         _fab: null,
         _statsFab: null,
         _player: null,
@@ -872,7 +884,8 @@ function currentQualityTargetKey(target = S?.qualityMax) {
     const videoId = getVideoId();
     if (!videoId) return null;
     const quality = readEnumSetting(target, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax);
-    return `${videoId}|${quality}`;
+    const sr = S?.qualitySuperResolutionEnabled ? 'sr1' : 'sr0';
+    return `${videoId}|${quality}|${sr}`;
 }
 
 function qualityTargetAlreadyHandled(target = S?.qualityMax) {
@@ -884,24 +897,6 @@ function qualitySelectionStillWanted(level) {
     const requested = readEnumSetting(level, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax);
     const current = readEnumSetting(S?.qualityMax, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax);
     return !!S?.qualityEnabled && requested === current;
-}
-
-function persistYouTubeQualityPreference(level) {
-    const quality = readEnumSetting(level, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax);
-    const now = Date.now();
-
-    try {
-        const payload = JSON.stringify({
-            data: quality,
-            expiration: now + YT_PLAYER_QUALITY_TTL_MS,
-            creation: now,
-        });
-        localStorage.setItem(YT_PLAYER_QUALITY_STORAGE, payload);
-        localStorage.setItem(YT_PLAYER_QUALITY_BACKUP_STORAGE, payload);
-    } catch {
-        // Storage can be blocked. The visible menu path still applies quality
-        // for the active player; persistence is only YouTube's own startup hint.
-    }
 }
 
 function playerDomRoot() {
@@ -920,8 +915,51 @@ function playerQueryAll(root, selector) {
 }
 
 function menuText(el) {
-    return String(el?.textContent || el?.getAttribute?.('aria-label') || '')
-        .replace(/\s+/g, ' ').trim();
+    if (!el) return '';
+
+    // YouTube often renders newer quality badges as nested/ARIA-only labels.
+    // Reading only textContent can turn a visible "1080p Super resolution"
+    // row into plain "1080p", so collect the visible text plus nearby
+    // accessibility labels before parsing.
+    const parts = [];
+    const seen = new Set();
+    const add = value => {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (!text || seen.has(text)) return;
+        seen.add(text);
+        parts.push(text);
+    };
+
+    add(el.textContent);
+    if (typeof el.getAttribute === 'function') {
+        add(el.getAttribute('aria-label'));
+        add(el.getAttribute('title'));
+    }
+    for (const textNode of Array.from(el.querySelectorAll?.(
+        '.ytp-menuitem-label, .ytp-menuitem-content, .ytp-premium-label'
+    ) || [])) {
+        add(textNode.textContent);
+    }
+    for (const labelled of Array.from(el.querySelectorAll?.('[aria-label], [title]') || [])) {
+        add(labelled.getAttribute('aria-label'));
+        add(labelled.getAttribute('title'));
+    }
+
+    return parts.join(' ');
+}
+
+function parseQualityHeightFromText(text) {
+    const normalized = String(text || '');
+    const pMatch = /(\d{3,4})\s*p(?:\d+)?/i.exec(normalized);
+    if (pMatch) return parseInt(pMatch[1], 10) || 0;
+
+    const kMatch = /\b([458])\s*k\b/i.exec(normalized);
+    if (!kMatch) return 0;
+    return { 4: 2160, 5: 2880, 8: 4320 }[kMatch[1]] || 0;
+}
+
+function isManualQualityRowText(text) {
+    return QUALITY_ROW_START_RE.test(String(text || ''));
 }
 
 function clickMenuElement(el) {
@@ -988,68 +1026,83 @@ function findQualityRootMenuItem(root = playerDomRoot()) {
     return items.find(item => {
         if (item.querySelector('.ytp-menuitem-toggle-checkbox')) return false;
         const content = menuText(item.querySelector('.ytp-menuitem-content') || item);
-        return /\b(?:auto|\d{3,4}\s*p(?:\d+)?)\b/i.test(content);
+        return /\bauto\b/i.test(content) || parseQualityHeightFromText(content) > 0;
     }) || null;
 }
 
 function parseQualityMenuOption(item) {
-    const label = menuText(item.querySelector('.ytp-menuitem-label') || item);
-    if (!label || /^auto\b/i.test(label)) return null;
+    const labelText = menuText(item.querySelector('.ytp-menuitem-label'));
+    const fullText = menuText(item);
+    const searchableText = [labelText, fullText].filter(Boolean).join(' ');
+    if (!searchableText || /^auto\b/i.test(searchableText)) return null;
+    if (!isManualQualityRowText(labelText) && !isManualQualityRowText(fullText)) return null;
 
-    const match = /(\d{3,4})\s*p(?:\d+)?/i.exec(label);
-    if (!match) return null;
-
-    const height = parseInt(match[1], 10) || 0;
+    const height = parseQualityHeightFromText(searchableText);
     if (!height) return null;
 
-    const fullText = menuText(item);
-    const isPremium = !!item.querySelector('.ytp-premium-label')
-        || /\b(?:premium|enhanced\s+bitrate)\b/i.test(fullText);
+    const hasPremiumBadgeClass = !!item.querySelector('.ytp-premium-label');
+    const textSaysPremium = QUALITY_PREMIUM_RE.test(fullText);
+    const isSuperResolution = QUALITY_SUPER_RESOLUTION_RE.test(fullText)
+        || (hasPremiumBadgeClass && !textSaysPremium);
+    // YouTube has historically used .ytp-premium-label for quality badges.
+    // Treat a Super resolution badge as its own variant before applying the
+    // Premium skip rule, otherwise upscaled rows get filtered out.
+    const isPremium = !isSuperResolution && (hasPremiumBadgeClass || textSaysPremium);
     const disabled = item.matches('[disabled], [aria-disabled="true"]')
         || item.classList.contains('ytp-disabled')
         || item.getAttribute('aria-hidden') === 'true';
+    const level = qualityLevelFromHeight(height);
+    const variant = isPremium ? 'Premium' : (isSuperResolution ? 'Super resolution' : '');
+    const compactVariant = isPremium ? 'Premium' : (isSuperResolution ? 'SR' : '');
+    const baseLabel = (level && QUALITY_LABEL[level]) || `${height}p`;
 
     return {
         item,
         height,
-        level: qualityLevelFromHeight(height),
+        level,
         isPremium,
+        isSuperResolution,
         disabled,
-        label: isPremium ? `${height}p Premium` : `${height}p`,
+        label: variant ? `${baseLabel} ${variant}` : baseLabel,
+        compactLabel: compactVariant ? `${baseLabel} ${compactVariant}` : baseLabel,
     };
 }
 
 function collectQualityMenuOptions(root = playerDomRoot()) {
-    return playerQueryAll(root, '.ytp-quality-menu, ytp-quality-menu')
-        .flatMap(qualityMenu => {
-            const panel = playerQuery(qualityMenu, '.ytp-panel-menu') || qualityMenu;
-            return menuItemsFromPanel(panel);
-        })
+    return playerQueryAll(root, YT_SETTINGS_MENUITEM_SELECTOR)
         .map(parseQualityMenuOption)
         .filter(Boolean);
 }
 
-function pickQualityMenuOption(options, targetLevel) {
+function setKnownQuality(choice, videoId = getVideoId()) {
+    S._lastKnownQuality = choice && videoId ? {
+        videoId,
+        height: choice.height,
+        label: choice.compactLabel || choice.label,
+    } : null;
+}
+
+function pickQualityMenuOption(options, targetLevel, { includeSuperResolution = false } = {}) {
     const targetHeight = qualityHeight(targetLevel);
-    let bestAtOrBelow = null;
-    let lowest = null;
+    const eligible = options.filter(opt => {
+        if (opt.disabled || opt.isPremium || opt.height <= 0) return false;
+        return includeSuperResolution || !opt.isSuperResolution;
+    });
 
-    for (const opt of options) {
-        if (opt.disabled || opt.isPremium || opt.height <= 0) continue;
-        if (!lowest || opt.height < lowest.height) lowest = opt;
-        if (opt.height <= targetHeight && (!bestAtOrBelow || opt.height > bestAtOrBelow.height)) {
-            bestAtOrBelow = opt;
-        }
-    }
+    // YouTube lists manual qualities best-first. Keep that order instead of
+    // re-ranking same-height variants: when Super Resolution is enabled, the
+    // menu's first eligible row is the row the user would naturally click.
+    const bestAtOrBelow = eligible.find(opt => opt.height <= targetHeight);
+    if (bestAtOrBelow) return bestAtOrBelow;
 
-    // If only higher qualities are exposed, choose the lowest standard manual
+    // If only higher qualities are exposed, choose the lowest eligible manual
     // option instead of leaving the player on Auto.
-    return bestAtOrBelow || lowest;
+    return eligible[eligible.length - 1] || null;
 }
 
 function closeQualityMenu(root, settingsButton) {
     const backButton = playerQuery(root,
-        '.ytp-quality-menu .ytp-panel-header button, ytp-quality-menu .ytp-panel-header button');
+        '.ytp-settings-menu .ytp-panel-header button, ytp-settings-menu .ytp-panel-header button');
     if (backButton) clickMenuElement(backButton);
     if (isSettingsMenuOpen(settingsButton)) clickMenuElement(settingsButton);
 }
@@ -1086,16 +1139,15 @@ async function selectQualityFromYouTubeMenu(level, { silent = false } = {}) {
         const options = collectQualityMenuOptions(root);
         if (!options.length) return { ok: false, reason: 'quality-options-missing' };
 
-        const choice = pickQualityMenuOption(options, level);
+        const choice = pickQualityMenuOption(options, level, {
+            includeSuperResolution: !!S.qualitySuperResolutionEnabled,
+        });
         if (!choice) return { ok: false, reason: 'target-quality-unavailable' };
         if (!qualitySelectionStillWanted(level)) return { ok: false, reason: 'quality-no-longer-current' };
         if (!clickMenuElement(choice.item)) return { ok: false, reason: 'quality-option-click-failed' };
 
-        const applyKey = `${S.videoId || getVideoId() || ''}|${choice.level || choice.height}|standard`;
-        const alreadyApplied = S._lastAppliedQualityKey === applyKey;
-        S._lastAppliedQualityKey = applyKey;
-
-        if (!alreadyApplied && !silent) {
+        setKnownQuality(choice);
+        if (!silent) {
             toast(`Quality · ${choice.label}`, 'quality');
         }
         return { ok: true, choice };
@@ -1131,7 +1183,6 @@ function applyBestQuality({ silent = false } = {}) {
 async function applyBestQualityFromMenu({ silent = false } = {}) {
     const target = readEnumSetting(S.qualityMax, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax);
     const targetKey = currentQualityTargetKey(target);
-    persistYouTubeQualityPreference(target);
 
     const result = await selectQualityFromYouTubeMenu(target, { silent });
     if (result?.ok) {
@@ -1147,8 +1198,26 @@ async function applyBestQualityFromMenu({ silent = false } = {}) {
     return result;
 }
 
-function readCurrentQuality() {
-    return qualityLevelFromVideoHeight($video()?.videoHeight);
+function readCurrentQualityLabel() {
+    const videoId = getVideoId();
+    if (!videoId) return null;
+
+    const checked = collectQualityMenuOptions().find(({ item }) => item && (
+        item.getAttribute?.('aria-checked') === 'true'
+        || item.ariaChecked === 'true'
+        || item.classList?.contains('ytp-menuitem-checked')
+        || !!item.querySelector?.('[aria-checked="true"]')
+    ));
+    if (checked) setKnownQuality(checked, videoId);
+
+    const rawHeight = Math.round(Number($video()?.videoHeight) || 0);
+    const known = S._lastKnownQuality;
+    if (known?.videoId === videoId && rawHeight && Math.abs(rawHeight - known.height) <= 36) {
+        return known.label;
+    }
+
+    const level = qualityLevelFromVideoHeight(rawHeight);
+    return level ? (QUALITY_LABEL[level] || level) : null;
 }
 
 /* ── Generic helpers ────────────────────────────────────────────────────── */
@@ -4528,7 +4597,7 @@ function createSettingsSections() {
                 {
                     type: 'select',
                     labelText: 'Target quality',
-                    helpText: 'Uses this quality when available, otherwise chooses the closest lower standard option.',
+                    helpText: 'Uses this quality when available, otherwise chooses the closest lower eligible option.',
                     selectId: 'rt_quality_max',
                     options: QUALITY_ORDER.map(q => ({ value: q, label: QUALITY_LABEL[q] || q })),
                     value: S.qualityMax,
@@ -4536,7 +4605,23 @@ function createSettingsSections() {
                         S.qualityMax = value;
                         save(CFG.storage.qualityMax, S.qualityMax);
                         clearQualitySchedule();
-                        S._lastAppliedQualityKey = null;
+                        setKnownQuality(null);
+                        S._lastQualityTargetKey = null;
+                        if (S.qualityEnabled) scheduleQualityApply();
+                    },
+                },
+                {
+                    type: 'checkbox',
+                    inputId: 'rt_quality_super_resolution',
+                    text: 'Include Super resolution',
+                    helpText: 'Allows RainTube to choose YouTube AI-upscaled Super resolution rows when they are the first eligible match in YouTube’s quality menu.',
+                    checked: S.qualitySuperResolutionEnabled,
+                    wide: true,
+                    onChange: checked => {
+                        S.qualitySuperResolutionEnabled = !!checked;
+                        save(CFG.storage.qualitySuperResolution, S.qualitySuperResolutionEnabled);
+                        clearQualitySchedule();
+                        setKnownQuality(null);
                         S._lastQualityTargetKey = null;
                         if (S.qualityEnabled) scheduleQualityApply();
                     },
@@ -4667,6 +4752,7 @@ function syncAllSettingsControls() {
     syncSettingControlValue('rt_shorts_hide_watch', null, { checked: S.shortsHideWatch });
     syncSettingControlValue('rt_shorts_on_visit_select', S.shortsOnVisit);
     syncSettingControlValue('rt_quality_max', S.qualityMax);
+    syncSettingControlValue('rt_quality_super_resolution', null, { checked: S.qualitySuperResolutionEnabled });
     syncSettingControlValue('rt_private_provider_select', S.privateProvider);
     syncSettingControlValue('rt_private_download_timeout_slider', S.privateDownloadTimeoutMs / 1000, { input: true });
     syncSettingControlValue('rt_private_fallback', null, { checked: S.privateFallbackEnabled });
@@ -4674,8 +4760,8 @@ function syncAllSettingsControls() {
 
 async function resetAllSettingsToDefaults() {
     Object.assign(S, DEFAULT_SETTINGS, {
-        _lastAppliedQualityKey: null,
         _lastQualityTargetKey: null,
+        _lastKnownQuality: null,
     });
 
     await deleteRainTubeStorageExcept([CFG.storage.statsBuckets]);
@@ -5855,8 +5941,7 @@ function uiSync() {
         }
         const qualityEl = document.getElementById('rt_vid_quality');
         if (qualityEl) {
-            const cq = vid ? readCurrentQuality() : null;
-            const text = cq ? (QUALITY_LABEL[cq] || cq) : '—';
+            const text = vid ? (readCurrentQualityLabel() || '—') : '—';
             if (qualityEl.textContent !== text) qualityEl.textContent = text;
         }
 
@@ -6234,14 +6319,13 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
     on('rt_sw_q', 'click', () => {
         S.qualityEnabled = !S.qualityEnabled;
         save(CFG.storage.quality, S.qualityEnabled);
-        // Toggling Quality back on: forget the last applied so a toast
-        // confirms the freshly-applied level.
         if (S.qualityEnabled) {
-            S._lastAppliedQualityKey = null;
+            setKnownQuality(null);
             S._lastQualityTargetKey = null;
             scheduleQualityApply();
         } else {
             clearQualitySchedule();
+            setKnownQuality(null);
             S._lastQualityTargetKey = null;
         }
         uiSync();
@@ -6741,7 +6825,7 @@ function onNavigate() {
         S._video = null;
 
         if (vid !== S.videoId) {
-            S._lastAppliedQualityKey = null;
+            setKnownQuality(null);
             S._lastQualityTargetKey = null;
         }
         S.videoId = vid;
