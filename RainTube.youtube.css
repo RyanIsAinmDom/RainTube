@@ -195,25 +195,40 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
         drop-shadow(0 0 9px rgba(var(--rt-control-blue-rgb), 0.12));
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer ytd-logo {
-    display: inline-flex;
-    align-items: center;
-    width: 116px;
-    min-width: 116px;
-    height: 40px;
-    overflow: visible;
+    position: relative;
 }
-/* YouTube's logo SVG internals vary by rollout. Hide the native graphic
-   entirely in themed topbar mode and draw a compact RainTube-colored logo
-   layer with stable spacing instead of chasing path/group order. */
+/* Keep YouTube's native wordmark so the typography stays exact. The SVG
+   internals vary by rollout, so we mask only the left play-badge footprint
+   and draw RainTube's white badge over that stable area. */
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon {
-    opacity: 0 !important;
+    position: relative;
+    z-index: 0;
+    opacity: 1 !important;
+}
+body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon path {
+    fill: #f4f8fb !important;
+    opacity: 1 !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer ytd-logo::before {
     content: '';
     position: absolute;
-    left: 8px;
+    left: 0;
     top: 50%;
     z-index: 1;
+    width: 33px;
+    height: 28px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    background:
+        radial-gradient(130% 130% at 20% 0%, rgba(var(--rt-control-blue-rgb), 0.08), transparent 68%),
+        linear-gradient(180deg, rgba(9, 17, 26, 0.98), rgba(3, 6, 10, 0.96) 58%, rgba(2, 4, 7, 0.98));
+}
+body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer ytd-logo::after {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    z-index: 2;
     width: 29px;
     height: 20px;
     transform: translateY(-50%);
@@ -225,25 +240,6 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
     filter:
         drop-shadow(0 5px 13px rgba(0, 0, 0, 0.26))
         drop-shadow(0 0 12px rgba(var(--rt-control-blue-rgb), 0.13));
-}
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer ytd-logo::after {
-    content: 'YouTube';
-    position: absolute;
-    left: 44px;
-    top: 50%;
-    z-index: 1;
-    transform: translateY(-52%);
-    color: #f4f8fb;
-    font-family: 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
-    font-size: 25px;
-    font-stretch: condensed;
-    font-weight: 800;
-    letter-spacing: -1.35px;
-    line-height: 1;
-    pointer-events: none;
-    text-shadow:
-        0 1px 1px rgba(0, 0, 0, 0.55),
-        0 0 9px rgba(var(--rt-control-blue-rgb), 0.10);
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(ytd-searchbox, yt-searchbox) {
     --ytd-searchbox-background: transparent !important;
