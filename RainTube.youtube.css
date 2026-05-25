@@ -212,11 +212,11 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer ytd-logo::before {
     content: '';
     position: absolute;
-    left: 0;
+    left: 4px;
     top: 50%;
     z-index: 1;
-    width: 33px;
-    height: 28px;
+    width: 42px;
+    height: 30px;
     transform: translateY(-50%);
     pointer-events: none;
     background:
