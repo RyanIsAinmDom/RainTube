@@ -196,6 +196,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer ytd-logo {
     position: relative;
+    isolation: isolate;
 }
 /* Keep YouTube's native wordmark so the typography stays exact. The SVG
    internals vary by rollout, so we mask only the left play-badge footprint
@@ -214,8 +215,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
     position: absolute;
     left: 4px;
     top: 50%;
-    z-index: 1;
-    width: 42px;
+    z-index: 5;
+    width: 58px;
     height: 30px;
     transform: translateY(-50%);
     pointer-events: none;
@@ -228,7 +229,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
     position: absolute;
     left: 8px;
     top: 50%;
-    z-index: 2;
+    z-index: 6;
     width: 29px;
     height: 20px;
     transform: translateY(-50%);
