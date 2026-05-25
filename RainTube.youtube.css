@@ -905,10 +905,19 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     font-size: 9px;
     font-weight: 700;
     outline: none;
+    color-scheme: dark;
 }
 .rt-stat-channel-select:focus-visible {
     border-color: rgba(255, 200, 100, 0.44);
     box-shadow: 0 0 0 2px rgba(255, 200, 100, 0.13);
+}
+.rt-stat-channel-select option {
+    background: #17110a;
+    color: #fff4dc;
+}
+.rt-stat-channel-select option:checked {
+    background: #3a2810;
+    color: #fff;
 }
 .rt-stat-channel-rank {
     width: 22px; height: 22px;
