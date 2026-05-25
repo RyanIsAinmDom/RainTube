@@ -200,23 +200,14 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon svg {
     overflow: visible;
+    /* Hide YouTube's native play-badge footprint while preserving the
+       wordmark. The SVG internals change across logo revisions, so clipping
+       the known left badge area is sturdier than chasing path/group order. */
+    clip-path: inset(0 0 0 34px);
 }
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon :is(#youtube-paths, #youtube-red-paths) path,
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon svg > g > g:not(:first-child) path {
+body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon path {
     fill: #f4f8fb !important;
     opacity: 1 !important;
-}
-/* YouTube's masthead logo is an SVG under #logo-icon. Its first nested group
-   contains the red play badge + arrow; hide that badge and draw a RainTube
-   white badge over the same footprint so the wordmark remains native. */
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon svg > g > g:first-child,
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon svg > g > g:first-child > path,
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon path[fill="#FF0000"],
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon path[fill="#ff0000"],
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon path[fill="#FFFFFF"],
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon path[fill="#ffffff"],
-body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon path[fill="white"] {
-    display: none !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer ytd-logo::before {
     content: '';
