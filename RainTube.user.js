@@ -2,7 +2,7 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.215
+// @version            1.20.219
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
 // @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
@@ -24,31 +24,21 @@
 // @grant              GM.registerMenuCommand
 // @grant              GM.xmlHttpRequest
 // @grant              GM.getResourceUrl
+// @grant              GM.notification
 
-// Fontsource web fonts. Use Fontsource's stable CDN proxy URLs rather than
-// scoped npm package URLs; Greasemonkey fetches @resource entries while saving
-// the script, and the proxy format avoids the scoped-package 400 errors some
-// managers hit with encoded @fontsource-variable npm paths. Resources are
-// downloaded once by the manager, then exposed through GM.getResourceUrl as
-// extension-local URLs at runtime.
+// Packaged fonts; startup intentionally fails if they cannot load.
 // @resource           rtFontDisplayLatin https://cdn.jsdelivr.net/fontsource/fonts/bricolage-grotesque:vf@5.2.8/latin-wght-normal.woff2
 // @resource           rtFontUiLatin https://cdn.jsdelivr.net/fontsource/fonts/manrope:vf@5.2.8/latin-wght-normal.woff2
 // @resource           rtFontMonoLatin https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono:vf@5.2.8/latin-wght-normal.woff2
 
-// RainTube's YouTube/UI stylesheet is packaged as @resource. Script
-// managers refresh resources when the userscript itself updates, so any
-// time CSS changes, bump @version AND mirror it in the rt= query below.
-// The userscript manager keys resource cache off the URL string; a
-// matching @version makes it impossible to forget the cache-bust.
-// Keep the local RainTube.youtube.css file in sync with this URL.
-// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.215
+// Keep @version, CFG.version, and this rt= cache-bust in sync.
+// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.219
 
 // Core support APIs.
 // @connect            raw.githubusercontent.com
 // @connect            api.invidious.io
 
-// Common Piped public-instance root domains. Metadata permissions only;
-// the script still discovers instances dynamically.
+// Common Piped public-instance root domains. Discovery still runs dynamically.
 // @connect            leptons.xyz
 // @connect            nosebs.ru
 // @connect            privacy.com.de
@@ -66,7 +56,7 @@
 // @connect            moomoo.me
 // @connect            syncpundit.io
 
-// Wildcard for instances we discover at runtime that aren't predictable here.
+// Fallback for newly discovered instances.
 // @connect            *
 
 // @run-at             document-start
@@ -77,48 +67,25 @@
 
 'use strict';
 
-/*
- * RainTube V1.20.215
- *
- * Structure:
- *  - YouTube pages get the RainTube panel, Shorts blocking, quality
- *    targeting, and private Piped/Invidious downloads.
- *  - CnvMP3 pages only run the lightweight fallback autofill path.
- *  - State is persisted through GM.setValue, reset through GM.deleteValue, and validated defensively on load.
- *  - Network, probes, and blob downloads use strict GM4 GM.xmlHttpRequest.
- */
-
 const HOST = location.hostname.toLowerCase();
 const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '1.20.215',
+    version: '1.20.219',
     instances: {
-        // Piped's docs moved the public instance list to this markdown source;
-        // parse it dynamically so we track the same list the project publishes.
         mdUrl: 'https://raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md',
         invidiousJsonUrl: 'https://api.invidious.io/instances.json',
         cacheTtlMs: 30 * 60_000,
     },
     api: {
-        // Streams responses are sub-second when healthy. 4s is enough to
-        // tolerate a slow handshake without wasting the user's life.
         streamsTimeout: 4_000,
-        // Discovery + meta requests can wait longer; they're called once.
         metaTimeout: 8_000,
-        // Default timeout for one private blob request. Users can tune this
-        // in Settings; keep the CFG value as the single fallback/default.
         downloadTimeout: 180_000,
-        // How long a host stays dead after a hard failure (5xx, network).
         failureTtlMs: 8 * 60_000,
-        // Bot/captcha responses warrant a longer cooldown.
         hardFailureTtlMs: 30 * 60_000,
         maxDynamicInstancesPerProvider: 60,
-        // How many mirrors to race concurrently per round.
         batchProbeSize: 10,
-        // Headers that make us look like the official Piped frontend.
-        // Some instances require this; harmless on the rest.
         spoofedOrigin: 'https://piped.video',
         spoofedReferer: 'https://piped.video/',
     },
@@ -143,15 +110,11 @@ const CFG = Object.freeze({
         privateFallback: 'rt_private_fallback_enabled',
         privateProvider: 'rt_private_provider',
         privateDownloadTimeoutMs: 'rt_private_download_timeout_ms',
-        // Statistics. Stored through GM.getValue/GM.setValue JSON strings so
-        // the module stays compatible with Greasemonkey 4's Promise API.
         statsRange: 'rt_stats_range',
         statsEnabled: 'rt_stats_enabled',
-        // Statistics display surface: collapsed draggable panel or above recommendations.
         statsDisplay: 'rt_stats_display',
         statsMetrics: 'rt_stats_metrics',
         statsBuckets: 'rt_stats_buckets',
-        // General appearance/behavior.
         buttonPlacement: 'rt_button_placement',
         mainButtonVisible: 'rt_main_button_visible',
         toastDurationMs: 'rt_toast_duration_ms',
@@ -239,35 +202,25 @@ const QUALITY_HEIGHT = Object.freeze({
     tiny: 144,
 });
 
-const QUALITY_HEIGHT_ENTRIES = Object.freeze(
-    Object.entries(QUALITY_HEIGHT).map(([level, height]) => ({ level, height }))
-);
 const QUALITY_LEVEL_BY_HEIGHT = Object.freeze(
-    Object.fromEntries(QUALITY_HEIGHT_ENTRIES.map(({ level, height }) => [height, level]))
+    Object.fromEntries(Object.entries(QUALITY_HEIGHT).map(([level, height]) => [height, level]))
 );
 
 function qualityHeight(level) {
     return QUALITY_HEIGHT[level] || QUALITY_HEIGHT.hd1080;
 }
 
-function qualityLevelFromHeight(height) {
-    return QUALITY_LEVEL_BY_HEIGHT[height] || null;
-}
-
 function qualityLevelFromVideoHeight(height) {
     const raw = Math.round(Number(height) || 0);
     if (!raw) return null;
-    const exact = qualityLevelFromHeight(raw);
+    const exact = QUALITY_LEVEL_BY_HEIGHT[raw] || null;
     if (exact) return exact;
 
-    // The media element can report slightly non-standard heights for cropped
-    // videos. Snap to the closest known YouTube tier within a modest margin so
-    // the panel can still show a meaningful current quality without touching
-    // page-context player methods in standard Greasemonkey.
+    // Cropped videos can report slightly non-standard heights.
     let closest = null;
-    for (const entry of QUALITY_HEIGHT_ENTRIES) {
-        const diff = Math.abs(entry.height - raw);
-        if (!closest || diff < closest.diff) closest = { level: entry.level, diff };
+    for (const [level, value] of Object.entries(QUALITY_HEIGHT)) {
+        const diff = Math.abs(value - raw);
+        if (!closest || diff < closest.diff) closest = { level, diff };
     }
     return closest && closest.diff <= 36 ? closest.level : `${raw}p`;
 }
@@ -279,18 +232,8 @@ const QUALITY_ROW_START_RE = /^\s*(?:(?:\d{3,4})\s*p(?:\d+)?|[458]\s*k)(?!\d)/i;
 const QUALITY_SUPER_RESOLUTION_RE = /super[\s-]*resolution/i;
 const QUALITY_PREMIUM_RE = /premium|enhanced\s*bitrate/i;
 
-// NOTE: 1440p, 4K, 5K, and 8K are NOT gated by YouTube Premium. They are
-// available to everyone when the source video has them. The only quality
-// tier actually gated by Premium is "1080p Premium", a higher-bitrate
-// 1080p variant at the same resolution. Standard Greasemonkey cannot safely
-// query page-player metadata without crossing into permission-denied Xray
-// wrappers, so RainTube skips Premium-labelled rows unless a future
-// non-page-context signal can prove they are playable.
-//
-// YouTube also marks AI-upscaled entries as "Super resolution" in the same
-// menu. Those are height-agnostic and evolving: YouTube's rollout started with
-// below-1080p uploads being upscaled from SD to HD, with stated plans to support
-// higher outputs later. Detect them by menu label, not by a hard-coded height.
+// Premium is only a same-resolution enhanced-bitrate row. Super resolution is
+// label-detected because YouTube can attach it to evolving height tiers.
 
 const SHORTS_ON_VISIT_ORDER = ['hide', 'redirect'];
 const SHORTS_ON_VISIT_LABEL = {
@@ -357,11 +300,7 @@ const RAIN_FPS_MIN = 30;
 const RAIN_FPS_MAX = 120;
 const RAIN_FPS_DEFAULT = 60;
 
-// Single source of truth for the raw default value of every persisted
-// setting. Used by loadRuntimeState (as the fallback when storage is empty
-// or invalid) and by resetAllSettingsToDefaults (as the wipe target). Adding
-// a new persisted setting means adding one entry here — every consumer reads
-// from the same shape so the two stay in sync automatically.
+// Raw persisted-setting defaults; load and reset both read this shape.
 const DEFAULT_SETTINGS = Object.freeze({
     shortsBlockerEnabled: true,
     shortsOnVisit: 'redirect',
@@ -423,6 +362,7 @@ const STATS_RANGE_LABEL = Object.freeze({
     yearly: 'This year',
     alltime: 'All time',
 });
+const STATS_TITLE = 'Statistics';
 
 const STATS_DISPLAY_ORDER = ['panel', 'inline'];
 const STATS_DISPLAY_LABEL = Object.freeze({
@@ -431,10 +371,8 @@ const STATS_DISPLAY_LABEL = Object.freeze({
 });
 
 const STATS_METRICS_ORDER = [
-    // Favorite channel is intentionally first in rendered cards; it is the
-    // most personal rollup and should sit above the rest whenever enabled.
     'favoriteChannel', 'watchTime', 'videosWatched', 'shortsOpened',
-'shortsBlocked',
+    'shortsBlocked',
 ];
 const STATS_METRIC_INFO = Object.freeze({
     watchTime: { label: 'Watch time', icon: 'clock' },
@@ -443,10 +381,9 @@ const STATS_METRIC_INFO = Object.freeze({
     shortsBlocked: { label: 'Shorts blocked', icon: 'shorts' },
     favoriteChannel: { label: 'Favorite channel', icon: 'star' },
 });
-const STATS_METRICS_DEFAULTS = Object.freeze(STATS_METRICS_ORDER.reduce((acc, key) => {
-    acc[key] = true;
-    return acc;
-}, {}));
+const STATS_METRICS_DEFAULTS = Object.freeze(
+    Object.fromEntries(STATS_METRICS_ORDER.map(key => [key, true]))
+);
 const STATS_BUCKET_RETENTION_DAYS = 730;
 const STATS_PERSIST_DEBOUNCE_MS = 2500;
 const STATS_WATCH_TICK_MS = 1000;
@@ -577,11 +514,6 @@ function readRainFpsCap(value) {
 let S = null;
 
 async function loadRuntimeState() {
-    // Fan out every persisted-setting read in parallel. GM.getValue calls
-    // are independent, so awaiting them sequentially serialises startup
-    // for no reason; running them all at once drops total wall-time to
-    // roughly the slowest single read. Fallbacks reference DEFAULT_SETTINGS
-    // so adding a new setting only requires updating that constant.
     const [
         rawQualityMax,
         rawToastDurationMs,
@@ -635,24 +567,14 @@ async function loadRuntimeState() {
     const oldPlacementWasHidden = rawButtonPlacement === 'hide' || rawButtonPlacement === false;
 
     return {
-        // ── Persisted settings ──
         shortsBlockerEnabled,
         shortsOnVisit: readShortsOnVisit(rawShortsOnVisit),
-        // Per-surface toggles. The master toggle gates everything; each
-        // per-surface toggle then enables or disables that specific area.
-        // All default ON so the master toggle starts in a "blocks everywhere"
-        // state matching the previous behaviour.
         shortsHideSidebar,
         shortsHideHome,
         shortsHideSearch,
         shortsHideChannel,
         shortsHideWatch,
-        // OLED pure-black theme. Off by default — it's an opinionated
-        // change that only makes sense when YouTube is already in dark mode.
         oledThemeEnabled,
-        // RainTube-styled YouTube masthead. Off by default; when enabled it
-        // deliberately keeps the top bar dark in every YouTube theme so the
-        // rain/glow treatment has enough contrast.
         topbarThemeEnabled,
         qualityEnabled,
         qualityMax: readEnumSetting(rawQualityMax, QUALITY_ORDER, 'hd1080'),
@@ -662,7 +584,6 @@ async function loadRuntimeState() {
         privateFallbackEnabled,
         privateProvider: readPrivateProvider(rawPrivateProvider),
         privateDownloadTimeoutMs: readPrivateDownloadTimeoutMs(rawPrivateDownloadTimeoutMs),
-        // Toast dismiss duration in ms, clamped to TOAST_DURATION_{MIN,MAX}_MS.
         toastDurationMs: Math.max(TOAST_DURATION_MIN_MS, Math.min(TOAST_DURATION_MAX_MS,
             parseInt(rawToastDurationMs, 10) || TOAST_DURATION_DEFAULT_MS)),
         toastPlacement: readToastPlacementSetting(rawToastPlacement),
@@ -672,14 +593,9 @@ async function loadRuntimeState() {
         rainFpsCap: readRainFpsCap(rawRainFpsCap),
         lightningEnabled,
 
-        // ── Page / navigation ──
         videoId: null,
-
-        // ── Download runtime ──
         downloading: false,
         privateCancelRequested: false,
-
-        // ── UI / DOM handles ──
         _lastQualityTargetKey: null,
         _lastKnownQuality: null,
         _fab: null,
@@ -725,8 +641,26 @@ function mk(tag, cls, text, attrs) {
     return el;
 }
 
+// Carries the failing resource name + reason so an intentional all-or-nothing
+// abort can surface a precise, actionable message instead of a bare throw.
+class RainTubeResourceError extends Error {
+    constructor(resource, reason, cause) {
+        super(`RainTube resource "${resource}" ${reason}`);
+        this.name = 'RainTubeResourceError';
+        this.resource = resource;
+        this.reason = reason;
+        if (cause !== undefined) this.cause = cause;
+    }
+}
+
 async function readTextResource(resourceName) {
-    const url = await GM.getResourceUrl(resourceName);
+    let url;
+    try {
+        url = await GM.getResourceUrl(resourceName);
+    } catch (err) {
+        throw new RainTubeResourceError(resourceName, 'unavailable', err);
+    }
+
     const r = await gmRequest({
         method: 'GET',
         url,
@@ -736,10 +670,10 @@ async function readTextResource(resourceName) {
     });
 
     if (!r.ok) {
-        const reason = r.status ? `HTTP ${r.status}` : (r.reason || 'network');
-        throw new Error(`RainTube resource ${resourceName} failed to load: ${reason}`);
+        const reason = r.status ? `failed (HTTP ${r.status})` : `failed (${r.reason || 'network'})`;
+        throw new RainTubeResourceError(resourceName, reason);
     }
-    if (!r.responseText?.trim()) throw new Error(`RainTube resource ${resourceName} loaded empty`);
+    if (!r.responseText?.trim()) throw new RainTubeResourceError(resourceName, 'loaded empty');
     return r.responseText;
 }
 
@@ -758,22 +692,18 @@ function quoteCssString(value) {
 }
 
 async function buildRainTubeFontCss() {
-    // Resolve all resource URLs in parallel — they're independent local lookups
-    // and serialising them adds 2 unnecessary async hops on managers where
-    // GM.getResourceUrl genuinely round-trips.
-    //
-    // This is intentionally all-or-nothing. RainTube's panel typography is a
-    // core part of the skin, and silently falling back to platform fonts makes
-    // the UI look different across machines. If a manager cannot resolve one
-    // of the packaged @resource fonts, startup should fail loudly instead of
-    // rendering a close-enough-but-not-identical interface.
-    //
-    // The files are variable WOFF2 fonts. Standard Greasemonkey on Firefox
-    // accepts the explicit `woff2-variations` descriptor here, so keep one
-    // precise source descriptor and avoid a redundant plain-`woff2` fallback.
-    const urls = await Promise.all(
-        RT_FONT_RESOURCES.map(font => GM.getResourceUrl(font.resource))
-    );
+    // All-or-nothing by design: a failed packaged font stops startup instead
+    // of silently changing RainTube's look across platforms. Resolve each
+    // resource individually so the abort can name the font that went missing.
+    const urls = await Promise.all(RT_FONT_RESOURCES.map(async font => {
+        try {
+            const url = await GM.getResourceUrl(font.resource);
+            if (!url) throw new Error('empty resource URL');
+            return url;
+        } catch (err) {
+            throw new RainTubeResourceError(font.resource, 'unavailable', err);
+        }
+    }));
 
     return RT_FONT_RESOURCES.map((font, i) => `@font-face {
         font-family: '${quoteCssString(font.family)}';
@@ -815,20 +745,20 @@ function getVideoId(url = location.href) {
 
 const TITLE_SEL = [
     'ytd-watch-metadata h1 yt-formatted-string',
-'#title h1 yt-formatted-string',
-'h2 span.yt-core-attributed-string[role="text"]',
-'.title.ytd-video-primary-info-renderer',
+    '#title h1 yt-formatted-string',
+    'h2 span.yt-core-attributed-string[role="text"]',
+    '.title.ytd-video-primary-info-renderer',
 ];
 
 const AUTHOR_SEL = [
     'ytd-watch-metadata #owner ytd-channel-name #text a',
-'ytd-watch-metadata #owner ytd-channel-name yt-formatted-string',
-'#owner ytd-channel-name #text a',
-'#owner #channel-name #text a',
-'ytd-video-owner-renderer ytd-channel-name a',
-'ytd-reel-video-renderer[is-active] h2 a',
-'ytd-reel-video-renderer[is-active] #channel-name',
-'meta[itemprop="author"][content]',
+    'ytd-watch-metadata #owner ytd-channel-name yt-formatted-string',
+    '#owner ytd-channel-name #text a',
+    '#owner #channel-name #text a',
+    'ytd-video-owner-renderer ytd-channel-name a',
+    'ytd-reel-video-renderer[is-active] h2 a',
+    'ytd-reel-video-renderer[is-active] #channel-name',
+    'meta[itemprop="author"][content]',
 ];
 
 function getVideoTitle() {
@@ -890,10 +820,7 @@ function playerQueryAll(root, selector) {
 function menuText(el) {
     if (!el) return '';
 
-    // YouTube often renders newer quality badges as nested/ARIA-only labels.
-    // Reading only textContent can turn a visible "1080p Super resolution"
-    // row into plain "1080p", so collect the visible text plus nearby
-    // accessibility labels before parsing.
+    // Include ARIA/title text so newer quality badges stay detectable.
     const parts = [];
     const seen = new Set();
     const add = value => {
@@ -982,10 +909,6 @@ function menuItemsFromPanel(panel) {
 }
 
 function afterYouTubeMenuClick() {
-    // YouTube's player menu usually updates synchronously, but yielding one
-    // frame keeps us out of framework-internal timing details without adding a
-    // second polling/timeout layer inside the already readiness-gated quality
-    // path.
     return new Promise(resolve => requestAnimationFrame(resolve));
 }
 
@@ -1017,14 +940,11 @@ function parseQualityMenuOption(item) {
     const textSaysPremium = QUALITY_PREMIUM_RE.test(fullText);
     const isSuperResolution = QUALITY_SUPER_RESOLUTION_RE.test(fullText)
         || (hasPremiumBadgeClass && !textSaysPremium);
-    // YouTube has historically used .ytp-premium-label for quality badges.
-    // Treat a Super resolution badge as its own variant before applying the
-    // Premium skip rule, otherwise upscaled rows get filtered out.
     const isPremium = !isSuperResolution && (hasPremiumBadgeClass || textSaysPremium);
     const disabled = item.matches('[disabled], [aria-disabled="true"]')
         || item.classList.contains('ytp-disabled')
         || item.getAttribute('aria-hidden') === 'true';
-    const level = qualityLevelFromHeight(height);
+    const level = QUALITY_LEVEL_BY_HEIGHT[height] || null;
     const variant = isPremium ? 'Premium' : (isSuperResolution ? 'Super resolution' : '');
     const compactVariant = isPremium ? 'Premium' : (isSuperResolution ? 'SR' : '');
     const baseLabel = (level && QUALITY_LABEL[level]) || `${height}p`;
@@ -1055,9 +975,6 @@ function setKnownQuality(choice, videoId = getVideoId()) {
     } : null;
 }
 
-// Forget every per-video quality memo at once. Called whenever the context
-// the memos describe is no longer valid (video changed, target setting
-// changed, quality targeting toggled). The pair always travels together.
 function clearQualityMemos() {
     setKnownQuality(null);
     S._lastQualityTargetKey = null;
@@ -1070,14 +987,10 @@ function pickQualityMenuOption(options, targetLevel, { includeSuperResolution = 
         return includeSuperResolution || !opt.isSuperResolution;
     });
 
-    // YouTube lists manual qualities best-first. Keep that order instead of
-    // re-ranking same-height variants: when Super Resolution is enabled, the
-    // menu's first eligible row is the row the user would naturally click.
+    // YouTube lists manual qualities best-first, including same-height variants.
     const bestAtOrBelow = eligible.find(opt => opt.height <= targetHeight);
     if (bestAtOrBelow) return bestAtOrBelow;
 
-    // If only higher qualities are exposed, choose the lowest eligible manual
-    // option instead of leaving the player on Auto.
     return eligible[eligible.length - 1] || null;
 }
 
@@ -1166,8 +1079,8 @@ async function applyBestQualityFromMenu({ silent = false } = {}) {
     } else if (!['settings-menu-already-open', 'quality-no-longer-current'].includes(result?.reason)) {
         console.debug('[RainTube] Quality targeting skipped:', {
             videoId: S.videoId || getVideoId() || null,
-                      target,
-                      result,
+            target,
+            result,
         });
     }
     return result;
@@ -1256,13 +1169,13 @@ function normalizeHost(value) {
 
 function resolveMediaUrl(instance, url) {
     if (!url) return null;
-    try {
-        const raw = String(url).trim();
-        const href = raw.startsWith('//')
-        ? `https:${raw}`
-        : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
-        const parsed = new URL(href);
-        return parsed.protocol === 'https:' ? parsed.href : null;
+        try {
+            const raw = String(url).trim();
+            const href = raw.startsWith('//')
+                ? `https:${raw}`
+                : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
+            const parsed = new URL(href);
+            return parsed.protocol === 'https:' ? parsed.href : null;
     } catch {
         return null;
     }
@@ -1287,42 +1200,22 @@ function isProbablyHls(url, stream) {
         || m.includes('mpegurl') || m.includes('x-mpegurl');
 }
 
-/**
- * Whether a stream represents the *original* audio language. Used to skip
- * auto-translated dubs YouTube serves by default. Returns true when the
- * stream has no language metadata at all (single-language video) so the
- * filter is a no-op on those.
- *
- * Piped exposes NewPipeExtractor's `audioTrackType` enum directly:
- *   ORIGINAL / DUBBED / DESCRIPTIVE / SECONDARY / AUTO_DUBBED
- * Invidious exposes YouTube's `audioTrack` object with an `audioIsDefault`
- * boolean (the original track is the default one).
- */
 function isOriginalAudioTrack(stream) {
     if (!stream) return true;
 
-    // Piped path.
     const trackType = stream.audioTrackType;
     if (typeof trackType === 'string') return trackType.toUpperCase() === 'ORIGINAL';
 
-    // Invidious path.
     const track = stream.audioTrack;
     if (track && typeof track === 'object') {
         if (typeof track.audioIsDefault === 'boolean') return track.audioIsDefault;
-        // Fallback for older Invidious payloads: the original track's id ends
-        // in ".4"; dubs use .0/.1/etc.
         if (typeof track.id === 'string') return /\.4$/.test(track.id);
     }
 
-    // No track metadata at all — treat as original (single-language video).
     return true;
 }
 
 function extFromMimeOrFormat(stream, mode) {
-    // Piped documents audio as M4A/audio-mp4 and video as MPEG_4/video-mp4.
-    // Invidious exposes the same practical split through `container`/`type`.
-    // Keep this intentionally narrow: detect WebM when the provider says WebM;
-    // otherwise use the normal YouTube download extension for the requested mode.
     const container = String(stream?.container || stream?.format || '').toLowerCase();
     const mimeType = String(stream?.mimeType || stream?.type || '').toLowerCase();
     const isWebm = container.includes('webm') || mimeType.includes('webm');
@@ -1331,16 +1224,6 @@ function extFromMimeOrFormat(stream, mode) {
     return isWebm ? 'webm' : 'mp4';
 }
 
-/**
- * Score an audio stream for ranking within a single provider's stream
- * list. The absolute units don't matter — sort order is what's used —
- * because we never mix streams across providers in the same comparison.
- *
- * Piped audio sets `bitrate: 0` and puts the value in `quality` as a
- * human label like "128 kbps". Invidious gives `bitrate` as a numeric
- * string in bps ("135033"). The first parseable integer from either
- * field is enough to rank correctly within either format.
- */
 function streamAudioScore(stream) {
     return parseInt(stream?.bitrate, 10)
         || parseInt(stream?.quality, 10)
@@ -1348,12 +1231,6 @@ function streamAudioScore(stream) {
         || 0;
 }
 
-/**
- * Score a video stream for ranking. Piped sets `height: 0` on most
- * streams and exposes the resolution in `quality` ("360p" / "720p").
- * Invidious normalisation precomputes `height` from `qualityLabel` /
- * `resolution`, so it's reliable on that side.
- */
 function streamVideoScore(stream) {
     return parseInt(stream?.height, 10)
         || parseHeight(stream?.qualityLabel || stream?.quality
@@ -1368,37 +1245,22 @@ function isUsablePrivateStream(stream, mode) {
     return stream.videoOnly !== true && streamVideoScore(stream) > 0;
 }
 
-/**
- * Human-readable quality label for the UI ("128 kbps", "720p"). Used in
- * the FAB busy state and toast text. Without formatting, Invidious's raw
- * adaptive-format bitrate (a bps integer like "135033") would leak into
- * the UI, which looks like a tracking number or download progress.
- */
 function describeStreamQuality(stream, mode) {
     if (mode === 'audio') {
-        // Piped audio already carries a human label: "128 kbps".
         const label = String(stream?.quality || '');
         if (/k?bps/i.test(label)) return label;
 
-        // Invidious adaptive audio gives bps in stream.bitrate.
         const bps = parseInt(stream?.bitrate, 10);
         if (bps > 0) return `${Math.round(bps / 1000)} kbps`;
         return 'audio';
     }
 
-    // Video — qualityLabel is the cleanest source ("720p" / "720p60") on
-    // Invidious; Piped surfaces it in quality. Synthesise from height as
-    // a last resort.
     const label = String(stream?.qualityLabel || stream?.quality || '');
     if (/^\d+p/i.test(label)) return label;
     const height = streamVideoScore(stream);
     return height > 0 ? `${height}p` : 'video';
 }
 
-/**
- * Detect bot/captcha walls in Piped error messages. These warrant a longer
- * cooldown because the instance won't recover by retrying soon.
- */
 function isBotOrLoginFailure(text) {
     const s = String(text || '').toLowerCase();
     return s.includes('login_required') || s.includes('sign in to confirm')
@@ -1428,7 +1290,6 @@ function isPrivateCancelled() { return S.privateCancelRequested; }
 
 /* ── Network with provider-friendly headers ─────────────────────────────── */
 
-/** Default Piped headers. Some instances expect requests to resemble piped.video. */
 const PIPED_HEADERS = Object.freeze({
     Accept: 'application/json',
     Origin: CFG.api.spoofedOrigin,
@@ -1467,12 +1328,6 @@ function selectedPrivateProviders() {
         : [PRIVATE_PROVIDER_INFO[choice] || PRIVATE_PROVIDER_INFO.piped];
 }
 
-/**
- * Strict GM4 request wrapper. Greasemonkey's GM.xmlHttpRequest does not expose
- * a portable abort handle, so cancellation is cooperative: callers set
- * S.privateCancelRequested and skip any further work once the current network
- * request finishes or times out.
- */
 function gmRequest({ method = 'GET', url, headers = {}, responseType = 'text', timeout, onprogress }) {
     return new Promise(resolve => {
         let settled = false;
@@ -1513,14 +1368,14 @@ function gmRequest({ method = 'GET', url, headers = {}, responseType = 'text', t
                         ok: status >= 200 && status < 300,
                         status,
                         responseHeaders: String(r.responseHeaders || ''),
-                           response: r.response ?? null,
-                           responseText: r.responseText || '',
-                           finalUrl: r.finalUrl || url,
+                        response: r.response ?? null,
+                        responseText: r.responseText || '',
+                        finalUrl: r.finalUrl || url,
                     });
                 },
                 onerror: fail('network'),
-                       ontimeout: fail('timeout'),
-                       onabort: fail('abort'),
+                ontimeout: fail('timeout'),
+                onabort: fail('abort'),
             };
 
             if (typeof onprogress === 'function') details.onprogress = onprogress;
@@ -1574,12 +1429,6 @@ async function fetchText(url, timeout) {
 
 /* ── Parallel private-provider stream batch probe ────────────────────────── */
 
-/**
- * Probe provider stream endpoints across one batch concurrently. Strict GM4
- * does not give us a portable abort handle, so the batch waits for every
- * mirror to return, fail, or time out. Every usable response is then handed
- * to the download job ordered by metadata response time.
- */
 async function raceStreamsRequest(videoId, instances, mode, provider) {
     if (!instances.length) return { ok: false, provider, winners: [], failed: [] };
 
@@ -1599,7 +1448,7 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
         const raw = parseJsonMaybe(r.response || r.responseText);
         const data = raw ? provider.normalizeData(raw, instance) : null;
         const message = raw?.message || raw?.error || raw?.reason
-        || data?.message || data?.error || data?.reason || null;
+            || data?.message || data?.error || data?.reason || null;
 
         if (r.ok && hasUsableStreams(data, mode)) {
             return {
@@ -1627,8 +1476,8 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
             instance,
             status: r.status,
             reason: data ? 'no-streams' : (r.reason || 'bad-response'),
-                               message,
-                               killedHost: killHost,
+            message,
+            killedHost: killHost,
         };
     });
 
@@ -1641,7 +1490,6 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
         .filter(result => result.winner)
         .map(({ winner, ...entry }) => entry)
         .sort((a, b) => a.responseMs - b.responseMs);
-    // No need to filter cancelled — the early-return above bails if any are.
     const failed = results.filter(result => !result.winner);
 
     return { ok: winners.length > 0, provider, winners, failed };
@@ -1649,7 +1497,6 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
 
 /* ── Progress + download ────────────────────────────────────────────────── */
 
-/** Look up the progress widget's elements; returns null if any are missing. */
 function getProgressEls() {
     const wrap = document.getElementById('rt_progress');
     const fill = document.getElementById('rt_progress_fill');
@@ -1742,12 +1589,6 @@ function parseResponseHeaders(headers, fallbackSize = 0) {
     return { total, contentType, isMedia };
 }
 
-/**
- * Probe a media URL before fetching it as a blob. HEAD avoids pulling the body
- * when the proxy exposes usable media headers. If HEAD is blocked or
- * inconclusive, a one-byte ranged GET is used as a stricter fallback and only
- * accepted when the server honors Range with 206 Partial Content.
- */
 async function probeMediaUrl(url) {
     try {
         const head = await gmRequest({
@@ -1797,10 +1638,7 @@ function triggerBlobDownload(blob, filename) {
         link.click();
         link.remove();
     } finally {
-        // Keep the object URL alive long enough for the browser to claim the
-        // download (sub-second on every tested platform). 5s is comfortably
-        // conservative without pinning hundreds of MB of blob memory for a
-        // full minute after the click.
+        // Let the browser claim the download before releasing blob memory.
         setTimeout(() => URL.revokeObjectURL(blobUrl), 5_000);
     }
 }
@@ -1884,35 +1722,17 @@ async function downloadUrlWithProgress(url, filename, btn, sourceLabel) {
     }
 }
 
-
 function openConverterTab(videoId, format) {
     if (!videoId) { toast('⚠ Open a video first', 'warn'); return; }
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const wantedFormat = format === 'audio' ? 'mp3' : 'mp4';
     const fallback = new URL(CFG.dl.fallbackUrl);
-    // Keep the autofill payload in the fragment so the browser does not send
-    // the YouTube URL to CnvMP3 before the user chooses to submit the form.
+    // Keep the YouTube URL client-side until the user submits CnvMP3.
     fallback.hash = new URLSearchParams({ rt_url: watchUrl, rt_format: wantedFormat }).toString();
     void GM.openInTab(fallback.href, false);
 }
 
 /* ── CnvMP3 autofill (rewritten) ────────────────────────────────────────── */
-
-/*
- * The CnvMP3 page has three dropdowns: Quality (video resolution), Bitrate
- * (audio kbps), and "MP3 / MP4" (format). The autofill path only needs the
- * visible YouTube URL field plus the format dropdown.
- *
- * The robust approach:
- *  1. Find every visible dropdown-icon.svg image on the page.
- *  2. Walk upward to the most plausible clickable wrapper, preferring real
- *     buttons, role=button, tabindex, aria-expanded, onclick, or cursor:pointer.
- *  3. Identify the format dropdown from nearby heading text rather than from
- *     option text, so the MP3 option and the "MP3 / MP4" label do not collide.
- *  4. Click the wrapper, then click the requested MP3/MP4 option when it is
- *     visible. Both directions are explicit because CnvMP3 may remember the
- *     user's previous selection.
- */
 
 function getFallbackPayloadFromUrl() {
     const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
@@ -1928,7 +1748,7 @@ function isValidYouTubeUrlForFallback(value) {
         const u = new URL(s);
         const host = u.hostname.toLowerCase();
         return host === 'youtu.be' || host.endsWith('.youtu.be')
-        || host === 'youtube.com' || host.endsWith('.youtube.com');
+            || host === 'youtube.com' || host.endsWith('.youtube.com');
     } catch { return false; }
 }
 
@@ -1959,10 +1779,6 @@ function normalizedText(el) {
     return String(el?.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
-/**
- * Find the YouTube URL input. CnvMP3 has multiple inputs (one per supported
- * site); the visible YouTube one is what we want.
- */
 function findCnvMp3UrlField() {
     const candidates = Array.from(document.querySelectorAll('input, textarea')).filter(el => {
         if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return false;
@@ -1972,13 +1788,11 @@ function findCnvMp3UrlField() {
     });
 
     const hintFor = el => [el.placeholder, el.name, el.id, el.className,
-    el.getAttribute?.('aria-label')].filter(Boolean).join(' ').toLowerCase();
+        el.getAttribute?.('aria-label')].filter(Boolean).join(' ').toLowerCase();
 
-    // Prefer one whose placeholder/name/ARIA label mentions YouTube.
     const ytField = candidates.find(el => hintFor(el).includes('youtube'));
     if (ytField) return ytField;
 
-    // Otherwise pick a URL/link/paste-looking input.
     const urlish = candidates.find(el => {
         const hint = hintFor(el);
         return hint.includes('url') || hint.includes('link') || hint.includes('paste');
@@ -1986,11 +1800,6 @@ function findCnvMp3UrlField() {
     return urlish || candidates[0] || null;
 }
 
-/**
- * For a given dropdown-icon image, find its clickable wrapper. Prefer actual
- * clickable ancestors, but keep a near-parent fallback for framework builds
- * that bind handlers to a plain wrapper.
- */
 function findClickWrapperForIcon(iconImg) {
     let node = iconImg.parentElement;
     let fallback = null;
@@ -2005,11 +1814,11 @@ function findClickWrapperForIcon(iconImg) {
         const style = getComputedStyle(node);
         const role = String(node.getAttribute?.('role') || '').toLowerCase();
         const clickable = node.tagName === 'BUTTON'
-        || role === 'button'
-        || node.onclick
-        || node.tabIndex >= 0
-        || node.hasAttribute?.('aria-expanded')
-        || style.cursor === 'pointer';
+            || role === 'button'
+            || node.onclick
+            || node.tabIndex >= 0
+            || node.hasAttribute?.('aria-expanded')
+            || style.cursor === 'pointer';
 
         if (clickable) return node;
     }
@@ -2017,11 +1826,6 @@ function findClickWrapperForIcon(iconImg) {
     return fallback || iconImg.parentElement;
 }
 
-/**
- * For a dropdown wrapper, identify which dropdown it controls. We do this
- * by looking at the previous element-sibling chain for a section heading
- * (Quality / Bitrate / MP3 / MP4).
- */
 function dropdownKindFromText(value) {
     const text = String(value || '').replace(/\s+/g, ' ').trim().toUpperCase();
     if (text === 'QUALITY') return 'quality';
@@ -2038,11 +1842,6 @@ function identifyDropdownKind(wrapper) {
             if (kind) return kind;
         }
 
-        // Some framework builds wrap the heading and trigger in one section
-        // instead of sibling nodes. Keep this narrow and require exactly one
-        // heading kind so a compact container holding all dropdowns cannot
-        // misidentify the format dropdown as Quality just because Quality is
-        // mentioned earlier in the same text block.
         const text = normalizedText(node);
         if (text.length <= 90) {
             const hits = [];
@@ -2055,7 +1854,6 @@ function identifyDropdownKind(wrapper) {
     return null;
 }
 
-/** Locate the format dropdown trigger by finding all dropdown-icons and identifying. */
 function findFormatDropdownTrigger() {
     const icons = Array.from(document.querySelectorAll('img'))
         .filter(img => /dropdown-icon\.svg/i.test(String(img.src || img.getAttribute('src') || '')))
@@ -2069,17 +1867,10 @@ function findFormatDropdownTrigger() {
     return null;
 }
 
-/**
- * After clicking the trigger, the option list becomes visible nearby. We
- * find it by scanning for visible elements whose normalized text equals the
- * target option name AND which are NOT the trigger we just clicked AND
- * which don't themselves contain a dropdown icon.
- */
 function findOptionNear(trigger, optionText) {
     const target = String(optionText).toUpperCase();
     const container = trigger.parentElement || document.body;
 
-    // Search near the trigger first, then the document body for portals.
     const roots = [];
     for (const root of [container, container.parentElement, document.body]) {
         if (root && !roots.includes(root)) roots.push(root);
@@ -2096,17 +1887,10 @@ function findOptionNear(trigger, optionText) {
     return null;
 }
 
-/**
- * Click the trigger, then wait for the desired option to appear and click it.
- * Uses HTMLElement.click() — that triggers more of the framework's click
- * pathways than synthesized PointerEvents.
- */
 function openDropdownAndPick(trigger, optionText, timeoutMs = 1800) {
     return new Promise(resolve => {
         if (!trigger) { resolve(false); return; }
 
-        // If the option is already visible (some pages show all options
-        // statically), just click it.
         const existing = findOptionNear(trigger, optionText);
         if (existing) {
             try { existing.click(); } catch {}
@@ -2114,8 +1898,6 @@ function openDropdownAndPick(trigger, optionText, timeoutMs = 1800) {
             return;
         }
 
-        // Open the dropdown, then immediately re-check in case the option was
-        // rendered synchronously before the observer starts.
         try { trigger.click(); } catch {}
 
         const immediate = findOptionNear(trigger, optionText);
@@ -2144,8 +1926,6 @@ function openDropdownAndPick(trigger, optionText, timeoutMs = 1800) {
         });
 
         timer = setTimeout(() => {
-            // One last synchronous attempt before giving up — in case the
-            // observer missed the visibility transition.
             const lastChance = findOptionNear(trigger, optionText);
             observer.disconnect();
             if (lastChance) {
@@ -2173,7 +1953,6 @@ async function trySetCnvMp3Format(format) {
 
         if (await openDropdownAndPick(trigger, wanted, 1800)) return true;
 
-        // Short rest before retrying — gives the page time to settle.
         await new Promise(r => setTimeout(r, 300));
     }
 
@@ -2204,20 +1983,16 @@ async function runCnvMp3Autofill() {
 
     setNativeValue(field, payload.url);
 
-    // Re-check after a beat in case the page revalidates and clears the value.
     setTimeout(() => {
         if (field.value !== payload.url) setNativeValue(field, payload.url);
     }, 300);
 
-        if (payload.format === 'mp3' || payload.format === 'mp4') {
-            // Wait briefly for the dropdown icons to be in the DOM, then set the
-            // explicit format. This matters in both directions because CnvMP3 can
-            // remember a previous MP4/MP3 selection between visits.
-            await waitForElement(findFormatDropdownTrigger, 200, 50);
-            await trySetCnvMp3Format(payload.format);
-        }
+    if (payload.format === 'mp3' || payload.format === 'mp4') {
+        await waitForElement(findFormatDropdownTrigger, 200, 50);
+        await trySetCnvMp3Format(payload.format);
+    }
 
-        try { field.focus(); field.select?.(); } catch {}
+    try { field.focus(); field.select?.(); } catch {}
 }
 
 /* ── Piped instance discovery (docs markdown source) ───────────────────── */
@@ -2253,7 +2028,7 @@ async function getPipedInstances() {
 
     const values = await loadInstancesFromMd();
     if (values === null) {
-        return null; // cancelled
+        return null;
     }
     if (!values?.length) {
         console.warn('[RainTube] Piped public instance source returned empty.');
@@ -2309,21 +2084,16 @@ function parseHeight(value) {
     if (value === null || value === undefined) return 0;
     if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
     const text = String(value);
-    // YouTube qualityLabel format: "<height>p" or "<height>p<fps>" (e.g. "720p60").
-    // The number directly before the literal "p" is the height; the trailing
-    // framerate must not be treated as part of it.
     const qualityMatch = /(\d+)\s*p/i.exec(text);
     if (qualityMatch) {
         const n = parseInt(qualityMatch[1], 10);
         if (Number.isFinite(n) && n > 0) return n;
     }
-    // Resolution format: "WIDTHxHEIGHT" (e.g. "1280x720"). Take the height.
     const resMatch = /(\d+)\s*x\s*(\d+)/i.exec(text);
     if (resMatch) {
         const n = parseInt(resMatch[2], 10);
         if (Number.isFinite(n) && n > 0) return n;
     }
-    // Fallback: first run of digits ("hd720" → 720, plain "720" → 720).
     const numMatch = /\d+/.exec(text);
     if (numMatch) {
         const n = parseInt(numMatch[0], 10);
@@ -2368,19 +2138,7 @@ function pickPrivateCandidates(data, mode) {
     const streams = Array.isArray(rawStreams) ? rawStreams : [];
     const scoreOf = isAudio ? streamAudioScore : streamVideoScore;
 
-    // The audio filter prefers the original-language track when YouTube has
-    // attached auto-translated dubs; the helper short-circuits to true on
-    // streams without language metadata, so single-language videos are
-    // untouched.
-    //
-    // For audio, the picker returns the highest-bitrate streams: YouTube's
-    // free tiers (48 / 128 / 160 kbps depending on the video) are similar
-    // enough between providers that exposing a chooser is more confusing
-    // than useful.
-    //
-    // For video, there is no quality choice: public proxied APIs only expose
-    // muxed/progressive downloads here, so just pick the best usable stream
-    // the provider offers.
+    // Audio filters out auto-dubs when metadata exists; video stays best muxed/progressive.
     return streams
         .filter(stream => isUsablePrivateStream(stream, mode))
         .map(s => ({ stream: s, score: scoreOf(s) }))
@@ -2656,15 +2414,6 @@ async function downloadViaPublicApisOrFallback(videoId, mode, btn) {
 
 /* ── Toasts (redesigned) ────────────────────────────────────────────────── */
 
-/*
- * Each toast is a stack item. We support multiple visible toasts (e.g. quality
- * change + download warning within a second of each other), they stack from bottom up,
- * each carries its own dismiss progress bar, and optional action button.
- *
- * The container re-parents into document.fullscreenElement when fullscreen
- * so toasts stay visible above the YouTube player chrome.
- */
-
 const TOAST_VIEWPORT_MARGIN = 12;
 const TOAST_VIDEO_SIDE_INSET = 16;
 // Keep the stack clear of YouTube's controls/seeker so timeline clicks pass through.
@@ -2672,7 +2421,7 @@ const TOAST_VIDEO_CONTROL_CLEARANCE = 78;
 const TOAST_VARIANT_META = Object.freeze({
     shorts:     { label: 'Shorts', icon: 'shorts' },
     quality:    { label: 'Quality', icon: 'quality' },
-    stats:      { label: 'Statistics', icon: 'chart' },
+    stats:      { label: STATS_TITLE, icon: 'chart' },
     dl:         { label: 'Download', icon: 'private' },
     warn:       { label: 'Heads up', icon: 'warn' },
     off:        { label: '', icon: 'general' },
@@ -2693,8 +2442,8 @@ function getToastAnchorRect() {
         if (!el?.isConnected || typeof el.getBoundingClientRect !== 'function') continue;
         const rect = el.getBoundingClientRect();
         const visible = rect.width >= 120 && rect.height >= 80
-        && rect.right > 0 && rect.bottom > 0
-        && rect.left < window.innerWidth && rect.top < window.innerHeight;
+            && rect.right > 0 && rect.bottom > 0
+            && rect.left < window.innerWidth && rect.top < window.innerHeight;
         if (visible) return rect;
     }
     return null;
@@ -2702,9 +2451,6 @@ function getToastAnchorRect() {
 
 function syncToastPosition(container = document.getElementById('rt_toasts')) {
     if (!container) return;
-    // The container persists in the DOM even with no toasts. Skip the
-    // getBoundingClientRect + style writes when it's empty — otherwise every
-    // scroll/resize frame pays for a forced reflow with nothing to position.
     if (!container.firstElementChild) return;
     const placement = readToastPlacementSetting(S.toastPlacement);
 
@@ -2769,9 +2515,6 @@ function currentScaleX(el) {
 }
 
 function getToastParent() {
-    // When YouTube enters fullscreen it picks an ancestor element (typically
-    // #movie_player or its container). Parent the toasts into that element
-    // so they layer over the fullscreen content; otherwise use document.body.
     return document.fullscreenElement || document.body;
 }
 
@@ -2815,7 +2558,6 @@ function toast(message, variant = 'default', opts = {}) {
     else iconWrap.appendChild(RT_ICONS.general());
     el.appendChild(iconWrap);
 
-    // Heading row (small variant label + close X)
     const main = mk('div', 'rt-toast-main');
     const header = mk('div', 'rt-toast-header');
     if (meta.label) header.appendChild(mk('span', 'rt-toast-kind', meta.label));
@@ -2823,7 +2565,6 @@ function toast(message, variant = 'default', opts = {}) {
 
     main.appendChild(header);
 
-    // Optional action button (e.g. Undo).
     if (opts.action && opts.action.label && typeof opts.action.handler === 'function') {
         const btn = mk('button', 'rt-toast-action', opts.action.label, { type: 'button' });
         btn.addEventListener('click', () => {
@@ -2834,20 +2575,17 @@ function toast(message, variant = 'default', opts = {}) {
     }
     el.appendChild(main);
 
-    // Close button (always present)
     const close = mk('button', 'rt-toast-close', '×',
                      { type: 'button', 'aria-label': 'Dismiss' });
     close.addEventListener('click', dismiss);
     el.appendChild(close);
 
-    // Dismiss progress bar
     const bar = mk('div', 'rt-toast-bar');
     el.appendChild(bar);
 
     container.appendChild(el);
     scheduleToastPositionSync();
 
-    // Force reflow so the animation starts from 0.
     void el.offsetWidth;
     el.classList.add('show');
 
@@ -2866,7 +2604,6 @@ function toast(message, variant = 'default', opts = {}) {
         setTimeout(() => el.remove(), 220);
     }
 
-    // Pause-on-hover: freeze the bar at its current scaleX, cancel the timer.
     el.addEventListener('pointerenter', () => {
         if (dismissed) return;
         const scale = currentScaleX(bar);
@@ -2986,13 +2723,6 @@ function initTooltips(root = document) {
 
 /* ── UI assembly ────────────────────────────────────────────────────────── */
 
-/*
- * Custom 24×24 marks. Each uses currentColor so parent classes can tint it.
- * The feature icons stay geometric and small-screen friendly:
- *  - shorts: a vertical-phone "shorts" frame with a diagonal slash.
- *  - quality: a four-point sparkle.
- *  - private: a shield with a protected download arrow.
- */
 function makeSvgIcon(pathData, opts = {}) {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
@@ -3002,7 +2732,6 @@ function makeSvgIcon(pathData, opts = {}) {
     svg.setAttribute('aria-hidden', 'true');
     svg.classList.add('rt-icon');
     if (opts.extraClass) svg.classList.add(opts.extraClass);
-    // Build paths from an array of {d, fill, stroke, fillRule} objects.
     for (const layer of (Array.isArray(pathData) ? pathData : [pathData])) {
         const path = document.createElementNS(ns, 'path');
         path.setAttribute('d', layer.d);
@@ -3019,12 +2748,6 @@ function makeSvgIcon(pathData, opts = {}) {
     return svg;
 }
 
-/**
- * The RainTube brand mark. A raindrop containing a play-triangle cutout —
- * the drop reads as "rain," the inner triangle reads as "tube/video."
- * Single path with fill-rule:evenodd so the triangle is a true cutout
- * (transparent against the gradient backdrop).
- */
 function makeRaintubeLogo(size) {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
@@ -3035,19 +2758,12 @@ function makeRaintubeLogo(size) {
     svg.classList.add('rt-logo-svg');
 
     const path = document.createElementNS(ns, 'path');
-    // Two subpaths:
-    //   1. Raindrop outline (CW): apex at top, symmetric cubic bulges
-    //      meeting at a rounded base.
-    //   2. Play triangle (CCW): right-pointing, sits inside the drop's
-    //      lower bulge. With fill-rule:evenodd the triangle is cut out.
     path.setAttribute('d', [
-        // Drop
         'M12 2.2',
         'C 9 6.5, 4.5 11, 4.5 15',
         'A 7.5 7.5 0 0 0 19.5 15',
         'C 19.5 11, 15 6.5, 12 2.2',
         'Z',
-        // Play triangle cutout (CCW)
         'M10 11.6',
         'L10 17',
         'L15 14.3',
@@ -3062,111 +2778,119 @@ function makeRaintubeLogo(size) {
 }
 
 const RT_ICONS = Object.freeze({
-    // Vertical "phone" frame (tall portrait rectangle, the visual shorthand
-    // for the Shorts UI), a small play triangle inside, and a diagonal slash
-    // through the whole thing to signal "blocked."
     shorts: () => makeSvgIcon([
-        // Portrait frame rounded at the corners
-        { d: 'M8 3.2 H16 A1.6 1.6 0 0 1 17.6 4.8 V19.2 A1.6 1.6 0 0 1 16 20.8 H8 A1.6 1.6 0 0 1 6.4 19.2 V4.8 A1.6 1.6 0 0 1 8 3.2 Z',
-            strokeWidth: 1.7 },
-            // Play triangle centered in the frame
-            { d: 'M10.6 9 L14.4 12 L10.6 15 Z',
-                fill: 'currentColor', stroke: 'none' },
-                // Diagonal slash from upper-right to lower-left (the "blocked" mark)
-                { d: 'M19.5 4.5 L4.5 19.5',
-                    strokeWidth: 2.2 },
+        {
+            d: 'M8 3.2 H16 A1.6 1.6 0 0 1 17.6 4.8 V19.2 A1.6 1.6 0 0 1 16 20.8 H8 A1.6 1.6 0 0 1 6.4 19.2 V4.8 A1.6 1.6 0 0 1 8 3.2 Z',
+            strokeWidth: 1.7,
+        },
+        {
+            d: 'M10.6 9 L14.4 12 L10.6 15 Z',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
+        {
+            d: 'M19.5 4.5 L4.5 19.5',
+            strokeWidth: 2.2,
+        },
     ]),
 
-    // Portrait Shorts player with a play triangle and no blocking slash. Used
-    // for "Shorts opened" so it does not visually collide with Shorts blocked.
     shortsOpen: () => makeSvgIcon([
-        { d: 'M8 3.2 H16 A1.6 1.6 0 0 1 17.6 4.8 V19.2 A1.6 1.6 0 0 1 16 20.8 H8 A1.6 1.6 0 0 1 6.4 19.2 V4.8 A1.6 1.6 0 0 1 8 3.2 Z',
-            strokeWidth: 1.7 },
-            { d: 'M10.5 8.7 L14.8 12 L10.5 15.3 Z',
-                fill: 'currentColor', stroke: 'none' },
-                { d: 'M9.5 5.8 H14.5',
-                    strokeWidth: 1.4 },
-                    { d: 'M10 18.2 H14',
-                        strokeWidth: 1.4 },
+        {
+            d: 'M8 3.2 H16 A1.6 1.6 0 0 1 17.6 4.8 V19.2 A1.6 1.6 0 0 1 16 20.8 H8 A1.6 1.6 0 0 1 6.4 19.2 V4.8 A1.6 1.6 0 0 1 8 3.2 Z',
+            strokeWidth: 1.7,
+        },
+        {
+            d: 'M10.5 8.7 L14.8 12 L10.5 15.3 Z',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
+        { d: 'M9.5 5.8 H14.5', strokeWidth: 1.4 },
+        { d: 'M10 18.2 H14', strokeWidth: 1.4 },
     ]),
 
-    // Circle with one half filled — a standard "theme / appearance" glyph
-    // (the same metaphor most material-design libraries use for light/dark
-    // theming and visual customization). Two-tone, instantly readable at
-    // small sizes, doesn't look like any other icon in the set.
     customize: () => makeSvgIcon([
-        // Outer circle outline
-        { d: 'M12 3.5 A8.5 8.5 0 1 1 11.99 3.5 Z',
-            strokeWidth: 1.8 },
-            // Right half-disc, filled
-            { d: 'M12 3.5 A8.5 8.5 0 0 1 12 20.5 Z',
-                fill: 'currentColor', stroke: 'none' },
+        { d: 'M12 3.5 A8.5 8.5 0 1 1 11.99 3.5 Z', strokeWidth: 1.8 },
+        {
+            d: 'M12 3.5 A8.5 8.5 0 0 1 12 20.5 Z',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
     ]),
 
-    // Asymmetric four-point sparkle: tall vertical points, short horizontal
-    // points, with a small center dot. Reads as "shine / quality."
     quality: () => makeSvgIcon([
-        // Main four-point sparkle (diamond with concave sides via two paths)
-        { d: 'M12 2.5 L13.6 10.4 L21.5 12 L13.6 13.6 L12 21.5 L10.4 13.6 L2.5 12 L10.4 10.4 Z',
-            fill: 'currentColor', stroke: 'none' },
-            // Small accent sparkle in the upper right corner
-            { d: 'M18.5 4.5 L19 6.7 L21.2 7.2 L19 7.7 L18.5 9.9 L18 7.7 L15.8 7.2 L18 6.7 Z',
-                fill: 'currentColor', stroke: 'none' },
+        {
+            d: 'M12 2.5 L13.6 10.4 L21.5 12 L13.6 13.6 L12 21.5 L10.4 13.6 L2.5 12 L10.4 10.4 Z',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
+        {
+            d: 'M18.5 4.5 L19 6.7 L21.2 7.2 L19 7.7 L18.5 9.9 L18 7.7 L15.8 7.2 L18 6.7 Z',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
     ]),
 
-    // Shield outline with downward arrow inside — privacy + download.
     private: () => makeSvgIcon([
-        // Shield outline
-        { d: 'M12 3.2 L19.5 5.8 V12.4 C19.5 16.2 16.4 19.5 12 20.8 C7.6 19.5 4.5 16.2 4.5 12.4 V5.8 Z',
-            strokeWidth: 1.7 },
-            // Downward arrow shaft + V chevron
-            { d: 'M12 7.5 V14.5 M8.5 11.5 L12 15 L15.5 11.5',
-                strokeWidth: 2 },
+        {
+            d: 'M12 3.2 L19.5 5.8 V12.4 C19.5 16.2 16.4 19.5 12 20.8 C7.6 19.5 4.5 16.2 4.5 12.4 V5.8 Z',
+            strokeWidth: 1.7,
+        },
+        { d: 'M12 7.5 V14.5 M8.5 11.5 L12 15 L15.5 11.5', strokeWidth: 2 },
     ]),
 
-    // Rounded screen with a large play cut. More legible in the compact
-    // download tile than the previous film-frame/sprocket mark.
     video: () => makeSvgIcon([
-        { d: 'M4.8 6.6 H19.2 C20.2 6.6 21 7.4 21 8.4 V15.6 C21 16.6 20.2 17.4 19.2 17.4 H4.8 C3.8 17.4 3 16.6 3 15.6 V8.4 C3 7.4 3.8 6.6 4.8 6.6 Z',
-            strokeWidth: 1.9 },
-            { d: 'M10.2 9.2 L15.4 12 L10.2 14.8 Z',
-                fill: 'currentColor', stroke: 'none' },
+        {
+            d: 'M4.8 6.6 H19.2 C20.2 6.6 21 7.4 21 8.4 V15.6 C21 16.6 20.2 17.4 19.2 17.4 H4.8 C3.8 17.4 3 16.6 3 15.6 V8.4 C3 7.4 3.8 6.6 4.8 6.6 Z',
+            strokeWidth: 1.9,
+        },
+        {
+            d: 'M10.2 9.2 L15.4 12 L10.2 14.8 Z',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
     ]),
 
-    // Speaker body plus two strong waves. Reads faster than the older
-    // concentric-arc source-dot mark at button size.
     audio: () => makeSvgIcon([
-        { d: 'M4 9.7 H7.2 L11.3 6.6 V17.4 L7.2 14.3 H4 Z',
-            fill: 'currentColor', stroke: 'none' },
-            { d: 'M14.2 9.2 C15.1 10 15.6 10.9 15.6 12 C15.6 13.1 15.1 14 14.2 14.8',
-                strokeWidth: 2 },
-                { d: 'M16.8 6.8 C18.4 8.2 19.4 10 19.4 12 C19.4 14 18.4 15.8 16.8 17.2',
-                    strokeWidth: 2 },
+        {
+            d: 'M4 9.7 H7.2 L11.3 6.6 V17.4 L7.2 14.3 H4 Z',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
+        {
+            d: 'M14.2 9.2 C15.1 10 15.6 10.9 15.6 12 C15.6 13.1 15.1 14 14.2 14.8',
+            strokeWidth: 2,
+        },
+        {
+            d: 'M16.8 6.8 C18.4 8.2 19.4 10 19.4 12 C19.4 14 18.4 15.8 16.8 17.2',
+            strokeWidth: 2,
+        },
     ]),
 
-    // Three horizontal sliders at different positions, each with a small
-    // knob — a "mixer/preferences" mark that signals tunable settings
-    // without colliding with the gear glyph used elsewhere.
     general: () => makeSvgIcon([
-        // Three horizontal tracks
         { d: 'M4 7.5 H20 M4 12 H20 M4 16.5 H20', strokeWidth: 1.6 },
-        // Knobs (filled circles at varying positions)
-        { d: 'M14 7.5 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
-            fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
-            { d: 'M8 12 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
-                fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
-                { d: 'M16 16.5 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
-                    fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
-                    // White dot in the center of each knob for the "tuning point"
-                    { d: 'M14 7.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
-                        fill: '#0d0d10', stroke: 'none' },
-                        { d: 'M8 12 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
-                            fill: '#0d0d10', stroke: 'none' },
-                            { d: 'M16 16.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
-                                fill: '#0d0d10', stroke: 'none' },
+        {
+            d: 'M14 7.5 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
+            fill: 'currentColor',
+            stroke: 'currentColor',
+            strokeWidth: 0,
+        },
+        {
+            d: 'M8 12 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
+            fill: 'currentColor',
+            stroke: 'currentColor',
+            strokeWidth: 0,
+        },
+        {
+            d: 'M16 16.5 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
+            fill: 'currentColor',
+            stroke: 'currentColor',
+            strokeWidth: 0,
+        },
+        { d: 'M14 7.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0', fill: '#0d0d10', stroke: 'none' },
+        { d: 'M8 12 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0', fill: '#0d0d10', stroke: 'none' },
+        { d: 'M16 16.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0', fill: '#0d0d10', stroke: 'none' },
     ]),
 
-    // Clock face for watch-time statistics.
     clock: () => makeSvgIcon([
         { d: 'M12 3.5 A8.5 8.5 0 1 1 11.99 3.5 Z', strokeWidth: 1.7 },
         { d: 'M12 12 L14 7', strokeWidth: 2 },
@@ -3174,18 +2898,15 @@ const RT_ICONS = Object.freeze({
         { d: 'M12 12 m-1 0 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0', fill: 'currentColor', stroke: 'none' },
     ]),
 
-    // Play triangle inside a rounded frame for opened videos.
     play: () => makeSvgIcon([
         { d: 'M5 4.5 H19 A1.5 1.5 0 0 1 20.5 6 V18 A1.5 1.5 0 0 1 19 19.5 H5 A1.5 1.5 0 0 1 3.5 18 V6 A1.5 1.5 0 0 1 5 4.5 Z', strokeWidth: 1.7 },
         { d: 'M10 8.5 L16 12 L10 15.5 Z', fill: 'currentColor', stroke: 'none' },
     ]),
 
-    // Filled star for the top/favorite channel metric.
     star: () => makeSvgIcon([
         { d: 'M12 3.2 L14.5 9.5 L21.2 10 L16 14.3 L17.6 21 L12 17.2 L6.4 21 L8 14.3 L2.8 10 L9.5 9.5 Z', fill: 'currentColor', stroke: 'currentColor', strokeWidth: 1 },
     ]),
 
-    // Trophy for ranked favorite channels.
     trophy: () => makeSvgIcon([
         { d: 'M8 4.5 H16 V7.2 C16 10.2 14.5 12.2 12 12.8 C9.5 12.2 8 10.2 8 7.2 Z', fill: 'currentColor', stroke: 'currentColor', strokeWidth: 1.2 },
         { d: 'M8 6 H4.8 V7.5 C4.8 9.7 6.2 11 8.7 11.2', strokeWidth: 1.7 },
@@ -3195,7 +2916,6 @@ const RT_ICONS = Object.freeze({
         { d: 'M10 16.5 H14 L14.9 19.5 H9.1 Z', fill: 'currentColor', stroke: 'currentColor', strokeWidth: 1 },
     ]),
 
-    // Simple bars + trend line for local statistics.
     chart: () => makeSvgIcon([
         { d: 'M5 19.5 V10.5', strokeWidth: 2 },
         { d: 'M12 19.5 V5.5', strokeWidth: 2 },
@@ -3204,15 +2924,16 @@ const RT_ICONS = Object.freeze({
         { d: 'M5 8.5 L10.5 6 L15 11 L20 8', strokeWidth: 1.7 },
     ]),
 
-    // Soft warning triangle for generic "heads up" toasts.
     warn: () => makeSvgIcon([
         { d: 'M12 3.6 L21 19.2 H3 Z', strokeWidth: 1.8 },
         { d: 'M12 9.2 V13.2', strokeWidth: 2.1 },
-        { d: 'M12 16.7 m-1 0 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0',
-            fill: 'currentColor', stroke: 'none' },
+        {
+            d: 'M12 16.7 m-1 0 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0',
+            fill: 'currentColor',
+            stroke: 'none',
+        },
     ]),
 });
-
 
 /* ── Statistics (GM v4 storage, rewritten) ─────────────────────────────── */
 
@@ -3257,17 +2978,6 @@ const StatsTracker = (() => {
     let inlineRetryTimers = [];
     let favoriteChannelIndex = 0;
     const STATS_UI_SELECTOR = [
-        '#rt_inline_stats',
-        '#rt_stats_panel',
-        '#rt_panel',
-        '#rt_settings_root',
-        '#rt_toasts',
-        '#rt_tip',
-        '.rt-stat-channel-menu',
-        '.rt-stats-range-menu',
-    ].join(',');
-    const STATS_UI_ROOT_SELECTOR = [
-        '#rt_inline_stats',
         '.rt-inline-stats',
         '#rt_stats_panel',
         '#rt_panel',
@@ -3309,9 +3019,6 @@ const StatsTracker = (() => {
                 channelAvatar: {},
             };
         }
-        // No defensive coercion needed here: sanitizeStatsBuckets validates
-        // every field at load time, and every write site (recordShortsHidden,
-        // recordOpen, tickWatchTime) starts from numeric values.
         return bucket;
     }
 
@@ -3367,7 +3074,7 @@ const StatsTracker = (() => {
         for (const sel of selectors) {
             const img = document.querySelector(sel);
             const src = img?.currentSrc || img?.src || img?.getAttribute?.('src')
-            || img?.getAttribute?.('data-thumb') || '';
+                || img?.getAttribute?.('data-thumb') || '';
             const clean = sanitizeStatsAvatarUrl(src);
             if (clean) return clean;
         }
@@ -3406,8 +3113,6 @@ const StatsTracker = (() => {
         lastWatchTickMs = now;
         if (!getEnabled()) return;
         if (document.hidden || activeVideo.paused || activeVideo.ended) return;
-        // getVideoId() handles both /watch?v=... and /shorts/... URLs, so
-        // Shorts and full videos contribute to the same overall watch-time total.
         if (!getVideoId()) return;
 
         const capped = Math.max(0, Math.min(elapsed, (STATS_WATCH_TICK_MS / 1000) + 1));
@@ -3416,11 +3121,7 @@ const StatsTracker = (() => {
         const bucket = ensureBucket();
         bucket.watchSec += capped;
 
-        // Favorite channel is based on watched seconds, not opens. We only
-        // re-query the DOM when we don't already have a name or avatar —
-        // once metadata has been captured for the current video it doesn't
-        // change, and avoiding the per-second querySelector sweep is a
-        // meaningful saving across a long watch session.
+        // Cache channel metadata to avoid a per-second querySelector sweep.
         if (!currentChannelName) {
             const freshChannel = readChannelName();
             if (freshChannel) currentChannelName = freshChannel;
@@ -3507,10 +3208,10 @@ const StatsTracker = (() => {
         const cleanRange = readStatsRange(range);
         const prefix = rangeKeyPrefix(cleanRange);
         const keys = cleanRange === 'alltime'
-        ? Object.keys(state.buckets)
-        : cleanRange === 'daily'
-        ? (state.buckets[prefix] ? [prefix] : [])
-        : Object.keys(state.buckets).filter(key => key.startsWith(prefix));
+            ? Object.keys(state.buckets)
+            : cleanRange === 'daily'
+                ? (state.buckets[prefix] ? [prefix] : [])
+                : Object.keys(state.buckets).filter(key => key.startsWith(prefix));
 
         let shortsOpened = 0;
         let shortsBlocked = 0;
@@ -3529,23 +3230,21 @@ const StatsTracker = (() => {
             for (const [channel, sec] of Object.entries(bucket.channelSec || {})) {
                 channelSec[channel] = (channelSec[channel] || 0) + (Number(sec) || 0);
             }
-            // Avatars are sanitized at write (readChannelAvatar) and again
-            // by sanitizeStatsBuckets at load, so they can be trusted here.
             for (const [channel, avatarUrl] of Object.entries(bucket.channelAvatar || {})) {
                 if (channel && avatarUrl) channelAvatar[channel] = avatarUrl;
             }
         }
 
         const topFavoriteChannels = Object.entries(channelSec)
-        .map(([name, sec]) => ({
-            name,
-            sec: Math.round(Number(sec) || 0),
-                               avatar: channelAvatar[name] || '',
-        }))
-        .filter(channel => channel.name && channel.sec > 0)
-        .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
-        .slice(0, 5)
-        .map((channel, index) => ({ ...channel, rank: index + 1 }));
+            .map(([name, sec]) => ({
+                name,
+                sec: Math.round(Number(sec) || 0),
+                avatar: channelAvatar[name] || '',
+            }))
+            .filter(channel => channel.name && channel.sec > 0)
+            .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
+            .slice(0, 5)
+            .map((channel, index) => ({ ...channel, rank: index + 1 }));
 
         const favorite = topFavoriteChannels[0] || null;
 
@@ -3572,7 +3271,7 @@ const StatsTracker = (() => {
         return !!nodes.length && nodes.every(node => {
             if (node instanceof Element) {
                 return isStatsUiNode(node)
-                    || node.matches?.(STATS_UI_ROOT_SELECTOR);
+                    || node.matches?.(STATS_UI_SELECTOR);
             }
             return true;
         });
@@ -3587,9 +3286,6 @@ const StatsTracker = (() => {
         if (key === 'videosWatched') return formatStatsCount(totals.videosWatched);
         if (key === 'shortsOpened') return formatStatsCount(totals.shortsOpened);
         if (key === 'shortsBlocked') return formatStatsCount(totals.shortsBlocked);
-        // Unreachable in practice: callers filter favoriteChannel out beforehand,
-        // and every other key in STATS_METRICS_ORDER is handled above. The empty
-        // string makes a missing branch visibly broken rather than silently zero.
         return '';
     }
 
@@ -3607,8 +3303,6 @@ const StatsTracker = (() => {
             ? totals.topFavoriteChannels.slice(0, 5) : [];
     }
 
-    // Move a portaled menu back to its home node and hide it. Returning it to
-    // the home keeps home-relative lookups working for the build/sync code.
     function hidePortaledMenu(menu, homeProp) {
         if (!menu) return;
         menu.hidden = true;
@@ -3621,8 +3315,6 @@ const StatsTracker = (() => {
         for (const button of document.querySelectorAll(`${buttonSelector}[aria-expanded="true"]`)) {
             button.setAttribute('aria-expanded', 'false');
         }
-        // Menus may be portaled onto document.body while open, so search the
-        // whole document rather than a tile/card-scoped root.
         for (const menu of document.querySelectorAll(menuSelector)) hideMenu(menu);
     }
 
@@ -3677,15 +3369,12 @@ const StatsTracker = (() => {
             return;
         }
 
-        // Portal to document.body so the menu escapes #rt_panel's
-        // backdrop-filter subtree (which would otherwise clip its fill where
-        // it overhangs). Positioned with fixed coords from the picker rect.
+        // Escape #rt_panel backdrop clipping while open.
         menu._rtHomeWrap = wrap;
         if (menu.parentNode !== document.body) document.body.appendChild(menu);
         menu.hidden = false;
         menu.style.display = '';
 
-        // Left-align to the range eyebrow.
         positionPortaledMenu(menu, button, { align: 'left' });
 
         if (focusSelected) {
@@ -3706,19 +3395,12 @@ const StatsTracker = (() => {
             return;
         }
 
-        // Portal the menu onto document.body so it escapes #rt_panel's
-        // backdrop-filter subtree. A backdrop-filter ancestor clips the
-        // background fill of its descendants; with the menu reparented to the
-        // body it no longer has that ancestor, so its fill paints solidly even
-        // where the menu overhangs the stats card. Positioned with fixed
-        // coords derived from the picker's viewport rect.
+        // Escape #rt_panel backdrop clipping while open.
         menu._rtHomeTile = tile;
         if (menu.parentNode !== document.body) document.body.appendChild(menu);
         menu.hidden = false;
         menu.style.display = '';
 
-        // Measure after it's visible (it sizes to content, < the max-width cap).
-        // Right-align to the rank picker.
         positionPortaledMenu(menu, button, { align: 'right' });
 
         if (focusSelected) {
@@ -3747,11 +3429,7 @@ const StatsTracker = (() => {
     }
 
     function syncFavoriteChannelPicker(tile, topChannels, selectedIndex) {
-        // Picker mounts directly into the tile and rides at the right edge
-        // of the flex row — alongside avatar and copy.
         let button = tile.querySelector('.rt-stat-channel-picker');
-        // The menu may be portaled to document.body while open, so prefer the
-        // stored reference over a tile-scoped query.
         let menu = tile._rtChannelMenu || tile.querySelector('.rt-stat-channel-menu');
         const wasOpen = button?.getAttribute('aria-expanded') === 'true';
 
@@ -3784,9 +3462,6 @@ const StatsTracker = (() => {
             menu.style.display = 'none';
             tile.appendChild(menu);
         }
-        // Cross-link tile and menu: the menu is portaled to document.body while
-        // open (to escape the panel's backdrop-filter), so tile-relative
-        // queries can't always find it.
         tile._rtChannelMenu = menu;
         menu._rtHomeTile = tile;
 
@@ -3858,8 +3533,6 @@ const StatsTracker = (() => {
         const headSub = tile.querySelector('.rt-stat-channel-sub');
         if (!avatar || !nameEl || !headSub) return;
 
-        // Trophy lives inside the avatar wrapper as a corner badge. Clear any
-        // previous img/icon AND any previous trophy before repopulating.
         avatar.replaceChildren();
         if (channel?.avatar) {
             const img = mk('img', null, null, { src: channel.avatar, alt: '' });
@@ -3886,6 +3559,17 @@ const StatsTracker = (() => {
         renderFavoriteChannel(tile, topChannels, selectedIndex);
     }
 
+    function buildMetricHead(info, ...extraChildren) {
+        const head = mk('div', 'rt-stat-head');
+        const ico = mk('span', 'rt-stat-ico');
+        const iconFn = RT_ICONS[info.icon];
+        if (typeof iconFn === 'function') ico.appendChild(iconFn());
+        head.appendChild(ico);
+        head.appendChild(mk('span', 'rt-stat-name', info.label));
+        for (const child of extraChildren) head.appendChild(child);
+        return head;
+    }
+
     function buildMetricTile(key, totals) {
         const info = STATS_METRIC_INFO[key];
         const tile = mk('div', `rt-stat-tile rt-stat-tile-${key}`);
@@ -3896,34 +3580,16 @@ const StatsTracker = (() => {
             tile.appendChild(avatar);
 
             const channelCopy = mk('div', 'rt-stat-channel-copy');
-            const head = mk('div', 'rt-stat-head');
-            const ico = mk('span', 'rt-stat-ico');
-            const iconFn = RT_ICONS[info.icon];
-            if (typeof iconFn === 'function') ico.appendChild(iconFn());
-            head.appendChild(ico);
-            head.appendChild(mk('span', 'rt-stat-name', info.label));
-            // Inline watch-time pill so the channel's read-out lives on the
-            // eyebrow row instead of taking its own line below the name.
-            head.appendChild(mk('span', 'rt-stat-channel-sub'));
-            channelCopy.appendChild(head);
+            channelCopy.appendChild(buildMetricHead(info, mk('span', 'rt-stat-channel-sub')));
             channelCopy.appendChild(mk('strong', 'rt-stat-tile-val rt-stat-channel-name', '—'));
             tile.appendChild(channelCopy);
-            // Picker (rank pill) is appended in-place by syncFavoriteChannelPicker
-            // when there are 2+ channels to choose from.
 
             tile.classList.add('rt-stat-tile-channel');
             syncFavoriteChannelTile(tile, totals);
             return tile;
         }
 
-        // Stacked column layout: icon on top, two-line label below,
-        // value at the bottom. Glow emanates from the icon's position
-        // at the top-left of each tile.
-        const ico = mk('span', 'rt-stat-ico');
-        const iconFn = RT_ICONS[info.icon];
-        if (typeof iconFn === 'function') ico.appendChild(iconFn());
-        tile.appendChild(ico);
-        tile.appendChild(mk('span', 'rt-stat-name', info.label));
+        tile.appendChild(buildMetricHead(info));
         tile.appendChild(mk('strong', 'rt-stat-tile-val', metricDisplayValue(key, totals)));
         return tile;
     }
@@ -3934,6 +3600,11 @@ const StatsTracker = (() => {
             syncFavoriteChannelTile(tile, totals);
             return true;
         }
+        const head = tile.querySelector(':scope > .rt-stat-head');
+        if (!head) return false;
+        const nameEl = head.querySelector('.rt-stat-name');
+        if (!nameEl) return false;
+        nameEl.textContent = STATS_METRIC_INFO[key].label;
         const valueEl = tile.querySelector('.rt-stat-tile-val');
         if (!valueEl) return false;
         valueEl.textContent = metricDisplayValue(key, totals);
@@ -3946,9 +3617,8 @@ const StatsTracker = (() => {
         const rangeLabel = card.querySelector('.rt-stats-range-label');
         const title = card.querySelector('.rt-stats-card-title');
         if (!rangeLabel || !title) return false;
-        rangeLabel.textContent = STATS_RANGE_LABEL[range] || 'Statistics';
-        title.textContent = 'Your YouTube';
-        // Keep the picker's active-item marker in sync with the range.
+        rangeLabel.textContent = STATS_RANGE_LABEL[range] || STATS_TITLE;
+        title.textContent = STATS_TITLE;
         const rangeWrap = card.querySelector('.rt-stats-range');
         const rangeMenu = rangeWrap?._rtRangeMenu || rangeWrap?.querySelector('.rt-stats-range-menu');
         if (rangeMenu) {
@@ -3961,8 +3631,6 @@ const StatsTracker = (() => {
         if (!enabled.length) return false;
         const grid = card.querySelector('.rt-stat-grid');
         if (!grid) return false;
-        // grid.children is an HTMLCollection — Elements only, no text nodes —
-        // so no further filtering is needed.
         const tiles = Array.from(grid.children);
         if (tiles.length !== enabled.length) return false;
         for (let i = 0; i < enabled.length; i++) {
@@ -3976,24 +3644,19 @@ const StatsTracker = (() => {
         return true;
     }
 
-    function buildStatsCardHead(range, title) {
+    function buildStatsCardHead(range) {
         const head = mk('div', 'rt-stats-card-head');
         const logo = mk('span', 'rt-stats-card-logo');
         logo.appendChild(RT_ICONS.chart());
         head.appendChild(logo);
 
         const text = mk('div', 'rt-stats-card-heading');
-        text.appendChild(mk('span', 'rt-stats-card-title', title));
+        text.appendChild(mk('span', 'rt-stats-card-title', STATS_TITLE));
         text.appendChild(buildStatsRangePicker(range));
         head.appendChild(text);
         return head;
     }
 
-    // The range eyebrow doubles as a picker: it shows the active range and,
-    // when clicked, opens a menu to switch the displayed range. This is a
-    // transient view change only — it does NOT persist. The saved default
-    // (set in settings) is what loads on every visit; switching here resets
-    // to that default on the next load.
     function buildStatsRangePicker(activeRange) {
         const clean = readStatsRange(activeRange);
         const wrap = mk('span', 'rt-stats-range');
@@ -4005,7 +3668,7 @@ const StatsTracker = (() => {
             'aria-expanded': 'false',
             'aria-label': 'Choose statistics time range',
         });
-        button.appendChild(mk('span', 'rt-stats-range-label', STATS_RANGE_LABEL[clean] || 'Statistics'));
+        button.appendChild(mk('span', 'rt-stats-range-label', STATS_RANGE_LABEL[clean] || STATS_TITLE));
         button.appendChild(mk('span', 'rt-stats-range-caret', null, { 'aria-hidden': 'true' }));
         wrap.appendChild(button);
 
@@ -4079,7 +3742,6 @@ const StatsTracker = (() => {
 
     function chooseStatsRange(value) {
         closeStatsRangeMenus();
-        // Transient view change only — does not alter the saved default.
         setActiveRange(value);
     }
 
@@ -4089,7 +3751,7 @@ const StatsTracker = (() => {
         const range = readStatsRange(state.range);
 
         const card = mk('div', 'rt-stats-card');
-        card.appendChild(buildStatsCardHead(range, 'Your YouTube'));
+        card.appendChild(buildStatsCardHead(range));
 
         const enabled = STATS_METRICS_ORDER.filter(key => state.metrics[key] !== false);
         if (!enabled.length) {
@@ -4106,9 +3768,19 @@ const StatsTracker = (() => {
 
     function buildStatsLoadingCard() {
         const card = mk('div', 'rt-stats-card');
-        card.appendChild(buildStatsCardHead(readStatsRange(state.range), 'Your YouTube'));
+        card.appendChild(buildStatsCardHead(readStatsRange(state.range)));
         card.appendChild(mk('div', 'rt-stats-empty', 'Loading local statistics…'));
         return card;
+    }
+
+    function renderStatsCardInto(wrapper, { loading = false } = {}) {
+        const existingCard = wrapper.querySelector(':scope > .rt-stats-card');
+        if (!loading && patchStatsCard(existingCard)) return true;
+
+        const card = loading ? buildStatsLoadingCard() : buildStatsCard();
+        if (!card) return false;
+        wrapper.replaceChildren(card);
+        return true;
     }
 
     function renderStatsPanelSlot() {
@@ -4120,6 +3792,8 @@ const StatsTracker = (() => {
             return;
         }
 
+        syncStatsPanelWidth();
+
         let wrapper = slot.querySelector(':scope > .rt-inline-stats');
         if (!wrapper) {
             slot.replaceChildren();
@@ -4127,15 +3801,7 @@ const StatsTracker = (() => {
             slot.appendChild(wrapper);
         }
 
-        const existingCard = wrapper.querySelector(':scope > .rt-stats-card');
-        if (patchStatsCard(existingCard)) return;
-
-        const card = state.loaded ? buildStatsCard() : buildStatsLoadingCard();
-        if (!card) {
-            wrapper.remove();
-            return;
-        }
-        wrapper.replaceChildren(card);
+        if (!renderStatsCardInto(wrapper, { loading: !state.loaded })) wrapper.remove();
     }
 
     function findInlineHost() {
@@ -4144,30 +3810,57 @@ const StatsTracker = (() => {
         || document.querySelector('#secondary');
     }
 
+    function cssPx(value) {
+        return parseFloat(value) || 0;
+    }
+
+    function elementContentWidth(el) {
+        if (!el) return 0;
+        const rectWidth = el.getBoundingClientRect?.().width || 0;
+        const style = getComputedStyle(el);
+        return Math.max(0, rectWidth
+            - cssPx(style.borderLeftWidth)
+            - cssPx(style.borderRightWidth)
+            - cssPx(style.paddingLeft)
+            - cssPx(style.paddingRight));
+    }
+
+    function inlineStatsBaselineWidth() {
+        const inline = document.querySelector('#rt_inline_stats');
+        if (inline && !inline.closest?.('#rt_stats_panel')) {
+            return inline.getBoundingClientRect?.().width || 0;
+        }
+        return elementContentWidth(findInlineHost());
+    }
+
+    function statsPanelContentChromeWidth(panel) {
+        const body = panel.querySelector('.rt-stats-menu-body');
+        const panelStyle = getComputedStyle(panel);
+        const bodyStyle = body ? getComputedStyle(body) : null;
+        return Math.round(
+            cssPx(panelStyle.borderLeftWidth)
+            + cssPx(panelStyle.borderRightWidth)
+            + cssPx(bodyStyle?.paddingLeft)
+            + cssPx(bodyStyle?.paddingRight)
+        );
+    }
+
     function syncStatsPanelWidth() {
         const panel = document.getElementById('rt_stats_panel');
         if (!panel) return;
 
-        const inline = document.querySelector('#rt_inline_stats');
-        const source = inline && !inline.closest?.('#rt_stats_panel')
-            ? inline
-            : findInlineHost();
-        const sourceWidth = source?.getBoundingClientRect?.().width || 0;
-        // Match the same column the always-visible card uses. If YouTube's
-        // generic #secondary fallback points at an oversized page container,
-        // ignore it instead of turning the collapsed panel into a sheet.
-        const targetWidth = sourceWidth >= 320 && sourceWidth <= 760
+        const sourceWidth = inlineStatsBaselineWidth();
+        // Mirror the inline stats card width, ignoring oversized #secondary fallbacks.
+        const cardWidth = sourceWidth >= 320 && sourceWidth <= 760
             ? Math.round(sourceWidth)
             : 420;
+        const targetWidth = cardWidth + statsPanelContentChromeWidth(panel);
 
         panel.style.setProperty('--rt-stats-panel-width', `${targetWidth}px`);
     }
 
     function removeInlineCards(except = null) {
-        for (const node of document.querySelectorAll('#rt_inline_stats, .rt-inline-stats')) {
-            // The floating stats panel intentionally reuses the inline-card
-            // class so both displays render identically; don't treat that copy
-            // as a stale above-recommendations card.
+        for (const node of document.querySelectorAll('.rt-inline-stats')) {
             if (node.closest?.('#rt_stats_panel')) continue;
             if (node !== except) node.remove();
         }
@@ -4184,23 +3877,12 @@ const StatsTracker = (() => {
 
         let wrapper = document.getElementById('rt_inline_stats');
         if (!wrapper) wrapper = mk('div', 'rt-inline-stats', null, { id: 'rt_inline_stats' });
-        // Either (a) we just created it and need to insert, or (b) it lives
-        // elsewhere from a previous mount and needs moving, or (c) it's in
-        // the right host but not at the top of the column.
         if (wrapper.parentElement !== host || host.firstElementChild !== wrapper) host.insertBefore(wrapper, host.firstChild);
 
-        const existingCard = wrapper.querySelector(':scope > .rt-stats-card');
-        if (patchStatsCard(existingCard)) {
-            removeInlineCards(wrapper);
-            return;
-        }
-
-        const card = buildStatsCard();
-        if (!card) {
+        if (!renderStatsCardInto(wrapper)) {
             removeInlineCards();
             return;
         }
-        wrapper.replaceChildren(card);
         removeInlineCards(wrapper);
     }
 
@@ -4402,7 +4084,6 @@ const StatsTracker = (() => {
         recordOpen,
         renderStatsPanelSlot,
         renderInlineCard,
-        syncStatsPanelWidth,
         applyVisibility,
         clearAll,
         resetSettings,
@@ -4499,8 +4180,8 @@ function buildFieldLabel(text, helpText, labelClass = 'rt-field-label') {
     help.addEventListener('keydown', event => {
         if (event.key === ' ' || event.key === 'Enter') stopLabelActivation(event);
     });
-        wrap.appendChild(help);
-        return wrap;
+    wrap.appendChild(help);
+    return wrap;
 }
 
 function buildCheckboxField({ inputId, text, checked, wide = false, helpText, onChange }) {
@@ -4854,7 +4535,7 @@ function createSettingsSections() {
         },
         statistics: {
             id: 'rt_set_statistics',
-            title: 'Statistics',
+            title: STATS_TITLE,
             icon: 'chart',
             eyebrow: 'Local rollups',
             hint: 'Local watch summaries for time watched, opened videos, Shorts, and favorite channels.',
@@ -5015,7 +4696,7 @@ function createSettingsSections() {
                         if (clearStats && resetSettings) {
                             toast('Statistics cleared and settings reset', 'off', { label: 'Danger Zone' });
                         } else if (clearStats) {
-                            toast('Statistics cleared', 'off', { label: 'Statistics' });
+                            toast('Statistics cleared', 'off', { label: STATS_TITLE });
                         } else if (resetSettings) {
                             toast('Settings reset to defaults', 'off', { label: 'Settings' });
                         }
@@ -5088,21 +4769,6 @@ function buildSettingsSections() {
         .map(key => buildSettingsSection(sections[key]));
 }
 
-/**
- * Native range input with JS-rendered fill/thumb. The transparent input keeps
- * the real interaction; the visible layer lerps toward
- * `targetPct`. The native input stays interactive underneath — clicks,
- * drags, keyboard, focus all still work — but the visible thumb and
- * fill are decoupled from input.value, so they can glide.
- *
- * Layout (track wrap, position: relative):
- *   ┌────────────────────────────────────┐
- *   │ .rt-slider-input   (transparent thumb + track)  ←── interactive
- *   │ .rt-slider-track   (gray background bar)        ←── presentational
- *   │ .rt-slider-fill    (colored, width = displayedPct%)
- *   │ .rt-slider-thumb-custom (left = displayedPct%)
- *   └────────────────────────────────────┘
- */
 function buildSlider({ labelText, helpText, sliderId, min, max, step, value, valueRender, onChange }) {
     const row = mk('div', 'rt-control-row rt-slider-row');
 
@@ -5114,9 +4780,6 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
 
     const sliderWrap = mk('div', 'rt-slider-track-wrap');
 
-    // Visual layer (below the input in z-stack, but visually on top because
-    // the input's track is fully transparent). All three are pointer-events:
-    // none so the input below still catches clicks/drags.
     const track = mk('div', 'rt-slider-track');
     const fill = mk('div', 'rt-slider-fill');
     const thumb = mk('div', 'rt-slider-thumb-custom');
@@ -5124,17 +4787,15 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
     sliderWrap.appendChild(fill);
     sliderWrap.appendChild(thumb);
 
-    // Interactive layer — the real input, painted transparent.
     const slider = mk('input', 'rt-slider-input', null, {
         id: sliderId, type: 'range',
         min: String(min), max: String(max), step: String(step),
-                      value: String(value),
+        value: String(value),
     });
     sliderWrap.appendChild(slider);
 
     row.appendChild(sliderWrap);
 
-    // ── Lerp state ─────────────────────────────────────────────────────
     const span = (max - min) || 1;
     const toPct = v => ((v - min) / span) * 100;
     let displayedPct = toPct(value);
@@ -5142,13 +4803,6 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
     let rafHandle = null;
 
     const render = pct => {
-        // Set both forms of the percentage so CSS calc() can produce an
-        // inset-thumb position that matches the native input's interaction
-        // zone. Native <input type=range> uses the convention where the
-        // thumb's center moves from thumb_w/2 to track_w − thumb_w/2 —
-        // never at the literal track edges. Our visible thumb must follow
-        // the same convention or the click target diverges from the visible
-        // position at extremes, making the slider feel hard to grab there.
         sliderWrap.style.setProperty('--rt-p', `${pct}%`);
         sliderWrap.style.setProperty('--rt-pf', String(pct / 100));
     };
@@ -5162,9 +4816,6 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
             rafHandle = null;
             return;
         }
-        // ~25% per frame at 60fps = visible 80-130ms glide that catches
-        // discrete jumps without feeling laggy on continuous drags (the
-        // pointer is moving frame-by-frame, so the "lag" is invisible).
         displayedPct += diff * 0.25;
         render(displayedPct);
         rafHandle = requestAnimationFrame(tick);
@@ -5175,42 +4826,39 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
         if (!rafHandle) rafHandle = requestAnimationFrame(tick);
     };
 
-        // ── Chip pulse on value-text change ────────────────────────────────
-        let lastChipText = chip.textContent;
-        const pulseChip = () => {
-            chip.classList.remove('rt-chip-pulse');
-            void chip.offsetWidth;
-            chip.classList.add('rt-chip-pulse');
-        };
+    let lastChipText = chip.textContent;
+    const pulseChip = () => {
+        chip.classList.remove('rt-chip-pulse');
+        void chip.offsetWidth;
+        chip.classList.add('rt-chip-pulse');
+    };
 
-        // ── Wire input events ──────────────────────────────────────────────
-        slider.addEventListener('input', e => {
-            const v = parseFloat(e.currentTarget.value);
-            const next = valueRender(v);
-            if (next !== lastChipText) {
-                chip.textContent = next;
-                lastChipText = next;
-                pulseChip();
-            }
-            setTarget(toPct(v));
-        });
-        slider.addEventListener('change', e => {
-            onChange?.(parseFloat(e.currentTarget.value), chip);
-        });
+    slider.addEventListener('input', e => {
+        const v = parseFloat(e.currentTarget.value);
+        const next = valueRender(v);
+        if (next !== lastChipText) {
+            chip.textContent = next;
+            lastChipText = next;
+            pulseChip();
+        }
+        setTarget(toPct(v));
+    });
+    slider.addEventListener('change', e => {
+        onChange?.(parseFloat(e.currentTarget.value), chip);
+    });
 
-        // ── Grabbing state for thumb styling ───────────────────────────────
-        const onDown = () => {
-            row.classList.add('rt-slider-grabbing');
-        };
-        const onUp = () => {
-            row.classList.remove('rt-slider-grabbing');
-        };
-        slider.addEventListener('pointerdown', onDown, { passive: true });
-        slider.addEventListener('pointerup', onUp, { passive: true });
-        slider.addEventListener('pointercancel', onUp, { passive: true });
-        slider.addEventListener('blur', onUp);
+    const onDown = () => {
+        row.classList.add('rt-slider-grabbing');
+    };
+    const onUp = () => {
+        row.classList.remove('rt-slider-grabbing');
+    };
+    slider.addEventListener('pointerdown', onDown, { passive: true });
+    slider.addEventListener('pointerup', onUp, { passive: true });
+    slider.addEventListener('pointercancel', onUp, { passive: true });
+    slider.addEventListener('blur', onUp);
 
-        return row;
+    return row;
 }
 
 function buildSelectField({ labelText, helpText, selectId, options, value, onChange }) {
@@ -5333,9 +4981,9 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 Math.max(DROP_MIN_COUNT, state.width / DROP_DENSITY_WIDTH),
             ));
             const targetDrops = quantityScale <= 0 ? 0
-            : Math.max(1, Math.round(baseDrops * quantityScale));
+                : Math.max(1, Math.round(baseDrops * quantityScale));
             const targetBeads = quantityScale <= 0 ? 0
-            : Math.max(1, Math.round(surfaceBeadCount * quantityScale));
+                : Math.max(1, Math.round(surfaceBeadCount * quantityScale));
 
             particles.ensureCount(state.drops, targetDrops);
             particles.ensureCount(state.beads, targetBeads);
@@ -5349,14 +4997,14 @@ function initHeaderRain(canvas, panel, opts = {}) {
             drop.depth = depth;
             drop.background = depth < BACKGROUND_DROP_DEPTH;
             drop.canHitSurface = depth > UI_IMPACT_TOP_DEPTH
-            && Math.random() < UI_IMPACT_CHANCE;
+                && Math.random() < UI_IMPACT_CHANCE;
             drop.x = random(-state.width * 0.15, state.width * 1.15);
             drop.y = initial
-            ? random(-state.height * 0.1, state.height * 1.1)
-            : random(-state.height * 0.75, -8);
+                ? random(-state.height * 0.1, state.height * 1.1)
+                : random(-state.height * 0.75, -8);
             drop.vy = random(118, 248) * (0.54 + depth * 0.68) *
-            RAIN_SPEED_SCALE *
-            (drop.background ? BACKGROUND_DROP_SPEED_SCALE : 1);
+                RAIN_SPEED_SCALE *
+                (drop.background ? BACKGROUND_DROP_SPEED_SCALE : 1);
             drop.vx = state.wind * (0.22 + depth * 0.48) + random(-9, 9);
             drop.len = random(5.5, 14) * (0.76 + depth * 0.72) * RAIN_SIZE_SCALE;
             drop.alpha = random(0.078, 0.25) * (0.8 + depth * 0.88);
@@ -5372,7 +5020,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
         resetBead(bead, initial = false) {
             bead.x = random(state.width * 0.08, state.width * 0.92);
             bead.y = initial ? random(state.height * 0.12, state.height * 0.78)
-            : random(-10, state.height * 0.25);
+                : random(-10, state.height * 0.25);
             bead.r = random(1.35, 3.15) * RAIN_SIZE_SCALE;
             bead.vx = state.wind * random(0.06, 0.18) + random(-0.7, 0.7);
             bead.vy = random(2.4, 8.5) * RAIN_SPEED_SCALE;
@@ -5408,8 +5056,8 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
         escaped(drop) {
             return drop.y - drop.len > state.height + 18
-            || drop.x < -state.width * 0.25
-            || drop.x > state.width * 1.25;
+                || drop.x < -state.width * 0.25
+                || drop.x > state.width * 1.25;
         },
 
         updateBead(bead, dt) {
@@ -5486,26 +5134,25 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             const canvasRect = canvas.getBoundingClientRect();
             state.targets = Array.from(panel.querySelectorAll(targetSelector))
-            .map(el => {
-                const rect = el.getBoundingClientRect();
-                if (rect.width < 1 || rect.height < 1) return null;
-                const kind = targetKind(el);
-                return {
-                    el,
-                    kind,
-                    x: rect.left - canvasRect.left,
-                    y: rect.top - canvasRect.top,
-                    w: rect.width,
-                    h: rect.height,
-                    pad: kind === 'logo' ? 5 : 4,
-                };
-            })
-            .filter(Boolean);
+                .map(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width < 1 || rect.height < 1) return null;
+                    const kind = targetKind(el);
+                    return {
+                        el,
+                        kind,
+                        x: rect.left - canvasRect.left,
+                        y: rect.top - canvasRect.top,
+                        w: rect.width,
+                        h: rect.height,
+                        pad: kind === 'logo' ? 5 : 4,
+                    };
+                })
+                .filter(Boolean);
             state.targetRefreshTs = now;
             return state.targets;
         },
     };
-
 
     const interaction = {
         markTarget(target, x, y, ts) {
@@ -5529,7 +5176,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 if (state.targetHits.get(target.el) === ts) target.el.classList.remove('rt-rain-hit');
             }, 380);
 
-                return true;
+            return true;
         },
 
         maybeHit(drop, prevX, prevY, ts, targets) {
@@ -5537,15 +5184,15 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             for (const target of targets) {
                 const topHit = prevY <= target.y + 1
-                && drop.y >= target.y - target.pad
-                && drop.x >= target.x - target.pad
-                && drop.x <= target.x + target.w + target.pad;
+                    && drop.y >= target.y - target.pad
+                    && drop.x >= target.x - target.pad
+                    && drop.x <= target.x + target.w + target.pad;
                 const insideTarget = drop.x >= target.x - target.pad
-                && drop.x <= target.x + target.w + target.pad
-                && drop.y >= target.y - target.pad
-                && drop.y <= target.y + target.h + target.pad;
+                    && drop.x <= target.x + target.w + target.pad
+                    && drop.y >= target.y - target.pad
+                    && drop.y <= target.y + target.h + target.pad;
                 const visibleHit = topHit
-                || (insideTarget && drop.depth > UI_IMPACT_INSIDE_DEPTH);
+                    || (insideTarget && drop.depth > UI_IMPACT_INSIDE_DEPTH);
 
                 if (!visibleHit) continue;
 
@@ -5564,8 +5211,8 @@ function initHeaderRain(canvas, panel, opts = {}) {
     const lightning = {
         schedule(ts, immediate = false) {
             state.nextLightningTs = ts + (immediate
-            ? random(LIGHTNING_FIRST_MIN_DELAY, LIGHTNING_FIRST_MAX_DELAY)
-            : random(LIGHTNING_MIN_DELAY, LIGHTNING_MAX_DELAY));
+                ? random(LIGHTNING_FIRST_MIN_DELAY, LIGHTNING_FIRST_MAX_DELAY)
+                : random(LIGHTNING_MIN_DELAY, LIGHTNING_MAX_DELAY));
         },
 
         maybeStrike(ts) {
@@ -5596,23 +5243,23 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 x += random(-18, 18) + drift * 0.18;
                 points.push({
                     x: clamp(x, state.width * 0.08, state.width * 0.92),
-                            y: topY + (bottomY - topY) * pct + yJitter,
+                    y: topY + (bottomY - topY) * pct + yJitter,
                 });
             }
 
             const branches = points.slice(1, -1)
-            .filter(() => Math.random() < 0.42)
-            .map(point => {
-                const side = Math.random() < 0.5 ? -1 : 1;
-                const len = random(14, 34);
-                return [
-                    point,
-                    {
-                        x: clamp(point.x + side * len, 4, state.width - 4),
-                 y: clamp(point.y + random(6, 22), 2, state.height - 2),
-                    },
-                ];
-            });
+                .filter(() => Math.random() < 0.42)
+                .map(point => {
+                    const side = Math.random() < 0.5 ? -1 : 1;
+                    const len = random(14, 34);
+                    return [
+                        point,
+                        {
+                            x: clamp(point.x + side * len, 4, state.width - 4),
+                            y: clamp(point.y + random(6, 22), 2, state.height - 2),
+                        },
+                    ];
+                });
 
             return {
                 born: ts,
@@ -5795,7 +5442,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             if (state.resizePending) layout.resize();
             const dt = state.lastTs ? Math.min(0.05, (ts - state.lastTs) / 1000)
-            : Math.min(0.05, interval / 1000);
+                : Math.min(0.05, interval / 1000);
             state.lastTs = ts;
 
             render.clear();
@@ -5887,7 +5534,7 @@ function buildPanel() {
     const statsFab = mk('button', 'rt-floating', null, {
         id: 'rt_stats_fab', type: 'button',
         'aria-label': 'Open RainTube statistics', 'aria-expanded': 'false',
-        'data-tip': 'Statistics', 'data-tip-place': 'bottom', 'data-tip-style': 'native',
+        'data-tip': STATS_TITLE, 'data-tip-place': 'bottom', 'data-tip-style': 'native',
     });
     // Start hidden until StatsTracker loads the user's display preference.
     // setToolbarButtonHidden() keeps the hidden state deterministic even while
@@ -5921,7 +5568,7 @@ function buildPanel() {
     statsHdrLeft.appendChild(statsMark);
     const statsHdrText = mk('div', 'rt-stats-menu-title-wrap');
     statsHdrText.appendChild(mk('span', 'rt-stats-menu-eyebrow', 'RainTube'));
-    statsHdrText.appendChild(mk('h2', 'rt-stats-menu-title', 'Statistics'));
+    statsHdrText.appendChild(mk('h2', 'rt-stats-menu-title', STATS_TITLE));
     statsHdrLeft.appendChild(statsHdrText);
     const statsHdrRight = mk('div', 'rt-hdr-r');
     const statsCloseBtn = mk('button', 'rt-hdr-btn rt-close rt-stats-menu-close', null,
@@ -5939,8 +5586,6 @@ function buildPanel() {
 
     const hdr = mk('header', 'rt-hdr', null, { id: 'rt_drag' });
 
-    // Rain animation layer: canvas keeps drops independent instead of moving
-    // a tiled diagonal texture behind the header.
     const rain = mk('canvas', 'rt-rain-canvas', null, { 'aria-hidden': 'true' });
     hdr.appendChild(rain);
 
@@ -5965,7 +5610,6 @@ function buildPanel() {
     hdr.appendChild(left);
     hdr.appendChild(hdrRight);
     panel.appendChild(hdr);
-
 
     const body = mk('div', 'rt-body');
 
@@ -6015,7 +5659,7 @@ function buildPanel() {
         ['shorts', 'rt_sw_shorts', 'Shorts', 'rt_sw_shorts_st', 'Hides Shorts across YouTube.'],
         ['quality', 'rt_sw_q', 'Quality', 'rt_sw_q_st', 'Sets playback to your target quality (or closest available).'],
         ['private', 'rt_sw_private', 'Private', 'rt_sw_private_st', 'Downloads through privacy-friendly mirrors.'],
-        ['chart', 'rt_sw_stats', 'Statistics', 'rt_sw_stats_st', 'Tracks local watch summaries.'],
+        ['chart', 'rt_sw_stats', STATS_TITLE, 'rt_sw_stats_st', 'Tracks local watch summaries.'],
     ].forEach(args => toggles.appendChild(buildToggleCard(...args)));
     body.appendChild(toggles);
 
@@ -6033,10 +5677,8 @@ function buildPanel() {
     initHeaderRain(rain, panel);
     initTooltips(panel);
     resetProgress();
-    // Make sure the toast container exists.
     getToastContainer();
 
-    // Build the master settings modal (hidden until opened).
     buildSettingsModal();
 
     return { panel, fab, statsFab, statsPanel };
@@ -6111,10 +5753,7 @@ function findYouTubeLikeActionSlot() {
 function setToolbarButtonHidden(btn, hidden) {
     if (!btn) return;
     btn.hidden = !!hidden;
-    // Keep an inline display guard in sync with the hidden attribute. YouTube's
-    // chrome occasionally restyles moved button children during initial
-    // hydration; the explicit inline value makes the hidden state deterministic
-    // across those boot-time restyles.
+    // YouTube can restyle moved buttons during masthead hydration.
     btn.style.display = hidden ? 'none' : '';
 }
 
@@ -6157,10 +5796,6 @@ function parkUnavailablePlacementButton(btn) {
 }
 
 function mountRainTubeButtons(statsFab, fab) {
-    // Do not insert hidden RainTube buttons into YouTube chrome. Relying only
-    // on [hidden] is fragile because YouTube can restyle slotted button
-    // children during boot; parking hidden buttons in <body> keeps the page
-    // chrome aligned with the user's display settings.
     parkHiddenToolbarButton(statsFab);
     parkHiddenToolbarButton(fab);
 
@@ -6178,9 +5813,6 @@ function mountRainTubeButtons(statsFab, fab) {
             insertRainTubeButtons(slot.row, slot.before, buttons, 'rt-watch-action');
             return;
         }
-        // The Like row only exists on watch pages. Until YouTube mounts it,
-        // keep the buttons available for the next mount pass but visually
-        // parked, rather than showing them somewhere the user did not choose.
         for (const btn of buttons) parkUnavailablePlacementButton(btn);
         return;
     }
@@ -6209,11 +5841,7 @@ function uiSync() {
     requestAnimationFrame(() => {
         _uiPending = false;
 
-        // Everything below updates elements inside #rt_panel. When the panel
-        // is closed (and no settings modal / active download needs it), the
-        // whole sweep — title/channel querySelector work, player quality
-        // reads, and control-state syncing — is invisible work. Opening the
-        // panel calls uiSync() directly, so skipping here is safe.
+        // Avoid invisible panel work unless something visible depends on it.
         const panelEl = document.getElementById('rt_panel');
         const panelOpen = panelEl?.classList.contains('show');
         if (!panelOpen && !isSettingsOpen() && !S.downloading) return;
@@ -6243,7 +5871,6 @@ function uiSync() {
             if (qualityEl.textContent !== text) qualityEl.textContent = text;
         }
 
-        // Download button enabled state.
         for (const id of ['rt_dl_v', 'rt_dl_a']) {
             const btn = document.getElementById(id);
             if (btn) btn.disabled = !vid || S.downloading;
@@ -6267,9 +5894,6 @@ function syncToggle(id, on) {
     sw.setAttribute('aria-checked', on ? 'true' : 'false');
     const st = document.getElementById(`${id}_st`);
     if (st) st.textContent = on ? 'ON' : 'OFF';
-    // Mirror the on/off state onto the parent toggle card so the icon
-    // glow can be styled via .rt-tc.on without depending on :has() (which
-    // some Tampermonkey/WebView contexts still lag on).
     const card = sw.closest('.rt-tc');
     if (card) card.classList.toggle('on', !!on);
 }
@@ -6314,17 +5938,13 @@ function initDrag(panel, fab, opts = {}) {
         const { width: pw, height: ph } = panelSize();
         ox = snapToDevicePixel(clamp(x, margin, Math.max(margin, vw - pw - margin)));
         oy = snapToDevicePixel(clamp(y, margin, Math.max(margin, vh - ph - margin)));
-        // Pixel-snapped 2D translation avoids the fuzzy text/rules that can
-        // appear when a translucent card is composited at fractional pixels.
         panel.style.transform = opts.snapToDevicePixels
-        ? `translate(${ox}px, ${oy}px)`
-        : `translate3d(${ox}px,${oy}px,0)`;
+            ? `translate(${ox}px, ${oy}px)`
+            : `translate3d(${ox}px,${oy}px,0)`;
         panel.__rtRainMoved?.();
     };
 
     const positionNearButton = (force = false) => {
-        // Preserve manual placement, but still pull it back inside the
-        // viewport after window snapping/resizing changes the available space.
         if (!force && userMoved) {
             setPos(ox, oy);
             return;
@@ -6353,8 +5973,10 @@ function initDrag(panel, fab, opts = {}) {
         if (e.target instanceof Element
             && e.target.closest('button, input, select, textarea, a, [role="button"], [data-no-drag]')) {
             return;
-            }
-            dragging = true; userMoved = true; pid = e.pointerId;
+        }
+        dragging = true;
+        userMoved = true;
+        pid = e.pointerId;
         ix = e.clientX - ox; iy = e.clientY - oy;
         panel.classList.add('rt-drag');
         try { handle.setPointerCapture(pid); } catch {}
@@ -6397,12 +6019,6 @@ function initDrag(panel, fab, opts = {}) {
 
 /* ── Master settings modal ──────────────────────────────────────────────── */
 
-/**
- * Build the master settings dialog. Contains General plus the feature
- * sections (Customization, Shorts, Statistics, Playback Quality, Private
- * Downloads) inside a single scrollable surface. Hidden by default; opened
- * from the header gear button.
- */
 function buildSettingsModal() {
     if (document.getElementById('rt_settings_root')) return;
 
@@ -6417,7 +6033,6 @@ function buildSettingsModal() {
         'aria-modal': 'true', 'aria-labelledby': 'rt_settings_title',
     });
 
-    // Header
     const hdr = mk('header', 'rt-settings-hdr');
     const hdrL = mk('div', 'rt-settings-hdr-l');
     const settingsTile = mk('div', 'rt-settings-icon');
@@ -6436,12 +6051,10 @@ function buildSettingsModal() {
     hdr.appendChild(settingsCloseBtn);
     modal.appendChild(hdr);
 
-    // Body: all sections, stacked
     const body = mk('div', 'rt-settings-body');
     for (const section of buildSettingsSections()) body.appendChild(section);
     modal.appendChild(body);
 
-    // Footer (just version + done)
     const foot = mk('footer', 'rt-settings-foot');
     foot.appendChild(mk('span', 'rt-settings-foot-ver', `RainTube · ${CFG.version}`));
     const done = mk('button', 'rt-settings-done', 'Done',
@@ -6467,20 +6080,14 @@ function setSettingsOpen(open) {
     const html = document.documentElement;
 
     if (willOpen) {
-        // Save the page's existing overflow and lock it for the duration.
-        // This prevents wheel/touch events from scrolling YouTube under
-        // the modal — `overscroll-behavior: contain` on the modal body
-        // handles chained scroll, but a small modal whose body doesn't
-        // need to scroll wouldn't catch any scroll events otherwise.
+        // Lock YouTube's page scroll while the settings dialog is active.
         if (html.dataset.rtPrevOverflow === undefined) html.dataset.rtPrevOverflow = html.style.overflow || '';
         html.style.overflow = 'hidden';
 
         root.classList.add('show');
         root.setAttribute('aria-hidden', 'false');
-        // Focus the modal's close button on open for keyboard users.
         setTimeout(() => document.getElementById('rt_settings_close')?.focus(), 50);
     } else {
-        // Restore page scrolling exactly as it was.
         if (html.dataset.rtPrevOverflow !== undefined) {
             html.style.overflow = html.dataset.rtPrevOverflow;
             delete html.dataset.rtPrevOverflow;
@@ -6503,9 +6110,6 @@ function registerMenuCommands({ openPanel, openSettings }) {
 }
 
 function bindEvents(panel, fab, statsFab, statsPanel) {
-    // Null-guarded listener binding. If buildPanel ever fails to inject an
-    // element (CSP, a future refactor), this logs once instead of throwing
-    // and killing the rest of boot().
     const on = (id, event, handler, opts) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener(event, handler, opts);
@@ -6518,9 +6122,6 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
     const setStatsOpen = value => {
         statsOpen = !!value && StatsTracker.isPanelEnabled();
         if (statsOpen) {
-            // Render before positioning: the collapsed stats GUI uses the
-            // same card renderer as the always-visible recommendations card.
-            StatsTracker.syncStatsPanelWidth();
             StatsTracker.renderStatsPanelSlot();
             statsPanel?.__rtPositionNearButton?.(false);
         } else {
@@ -6580,8 +6181,6 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
 
     on('rt_dl_stop', 'click', requestStopAfterCurrentRequest);
 
-    // Master settings modal — opens from the header gear, closes from the
-    // modal's own X button, "Done" button, backdrop click, or Escape.
     on('rt_settings_open', 'click', e => {
         e.stopPropagation();
         setSettingsOpen(true);
@@ -6591,8 +6190,6 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
     on('rt_settings_backdrop', 'click', () => setSettingsOpen(false));
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
-        // Innermost-first dismiss order: settings modal sits on top, then
-        // stats panel, then the main RainTube panel.
         if (isSettingsOpen()) {
             e.stopPropagation();
             setSettingsOpen(false);
@@ -6647,7 +6244,7 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
             uiSync();
             toast(enabled ? 'Statistics tracking paused' : 'Statistics tracking on',
                 enabled ? 'off' : 'stats',
-                { icon: 'chart', label: 'Statistics' });
+                { icon: 'chart', label: STATS_TITLE });
         } catch (err) {
             console.warn('[RainTube] Statistics toggle failed:', err);
             toast('Statistics toggle failed', 'warn');
@@ -6657,41 +6254,16 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
 
 /* ── Runtime controllers ────────────────────────────────────────────────── */
 
-/**
- * ShortsBlocker — hides YouTube Shorts everywhere using CSS gated by
- * per-surface body classes, and optionally redirects direct /shorts/<id>
- * visits.
- *
- * Why CSS and not DOM removal? YouTube is a single-page app that
- * constantly re-renders rich-grid items as the user scrolls or navigates.
- * A querySelector-based remover has to re-run on every mutation, and any
- * gap between mutation and removal lets a short flash on screen. A
- * stylesheet rule applies before paint, costs nothing per frame, and
- * survives every re-render automatically.
- *
- * Each surface (sidebar / home / search / channel / watch) gets its own
- * body class. apply() sets each class only when both the master toggle
- * AND that surface's toggle are on, so any combination is one classList
- * write per surface and the selectors stay simple — no compound gating
- * inside the CSS.
- */
 const ShortsBlocker = (() => {
     const STYLE_ID = 'rt_shorts_blocker_style';
 
-    // Each surface has a body class and a list of CSS selectors. When the
-    // class is on body, those selectors hide.
-    //
-    // Page-context prefixes (ytd-search, ytd-watch-flexy) scope shared
-    // components like ytd-reel-shelf-renderer to a specific page so the
-    // same DOM type can be controlled by different toggles depending on
-    // where it's rendered.
+    // Page-scoped selectors keep shared Shorts components tied to each toggle.
     const SURFACES = [
         {
             id: 'sidebar',
             stateKey: 'shortsHideSidebar',
             bodyClass: 'rt-shorts-hide-sidebar',
             selectors: [
-                // Expanded sidebar Shorts entry, and the mini-nav icon.
                 'ytd-guide-entry-renderer:has(a[title="Shorts"])',
                 'ytd-mini-guide-entry-renderer:has(a[title="Shorts"])',
             ],
@@ -6701,17 +6273,11 @@ const ShortsBlocker = (() => {
             stateKey: 'shortsHideHome',
             bodyClass: 'rt-shorts-hide-home',
             selectors: [
-                // Home page shorts shelf and its section wrapper.
                 'ytd-rich-shelf-renderer[is-shorts]',
                 'ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is-shorts])',
-                // Subscriptions and other feeds: the reel shelf scoped to
-                // ytd-browse so the watch-page version isn't caught here.
                 'ytd-browse ytd-reel-shelf-renderer',
-                // Individual shorts that appear in the home rich grid or
-                // the legacy grid view.
                 'ytd-rich-item-renderer:has(a[href^="/shorts/"])',
                 'ytd-grid-video-renderer:has(a[href^="/shorts/"])',
-                // Individual reel items in a shelf.
                 'ytd-reel-item-renderer',
             ],
         },
@@ -6720,18 +6286,12 @@ const ShortsBlocker = (() => {
             stateKey: 'shortsHideSearch',
             bodyClass: 'rt-shorts-hide-search',
             selectors: [
-                // Reel shelf (legacy) and the newer shorts-lockup view-model
-                // that YouTube has rolled out to search over 2025/26.
                 'ytd-search ytd-reel-shelf-renderer',
                 'ytd-search ytd-shorts-lockup-view-model',
                 'ytd-search ytd-shorts-shelf-renderer',
-                // Shelf wrappers that hold a row of shorts lockups.
                 'ytd-search ytd-shelf-renderer:has(ytd-shorts-lockup-view-model)',
                 'ytd-search ytd-shelf-renderer:has(ytd-reel-item-renderer)',
                 'ytd-search grid-shelf-view-model:has(a[href*="/shorts/"])',
-                // Search-result rows that link to a short. Some shorts
-                // surface in search as ytd-video-renderer with the SHORTS
-                // overlay rather than a /shorts/ href, so catch both.
                 'ytd-search ytd-video-renderer:has(a[href*="/shorts/"])',
                 'ytd-search ytd-video-renderer:has(ytd-thumbnail-overlay-time-status-renderer[overlay-style="SHORTS"])',
                 'ytd-search ytd-reel-video-renderer',
@@ -6742,7 +6302,6 @@ const ShortsBlocker = (() => {
             stateKey: 'shortsHideChannel',
             bodyClass: 'rt-shorts-hide-channel',
             selectors: [
-                // The "Shorts" tab on a channel page.
                 '[tab-title="Shorts"]',
             ],
         },
@@ -6751,8 +6310,6 @@ const ShortsBlocker = (() => {
             stateKey: 'shortsHideWatch',
             bodyClass: 'rt-shorts-hide-watch',
             selectors: [
-                // Watch-page up-next suggestions: the reel shelf and any
-                // compact video that links to a short.
                 'ytd-watch-flexy ytd-reel-shelf-renderer',
                 'ytd-watch-flexy ytd-compact-video-renderer:has(a[href*="/shorts/"])',
             ],
@@ -6762,10 +6319,6 @@ const ShortsBlocker = (() => {
     let observer = null;
     let counterTimer = null;
     let pendingCount = 0;
-    // Cache the combined selector for the currently-active surfaces. Rebuilt
-    // by apply() whenever the master or any surface toggle changes, so the
-    // hot tally path stays O(1) per node — one matches() and one
-    // querySelectorAll() against the union selector instead of 13.
     let activeSelector = '';
 
     function injectStyle() {
@@ -6791,14 +6344,9 @@ const ShortsBlocker = (() => {
             document.body.classList.toggle(surface.bodyClass, on);
             if (on) active.push(...surface.selectors);
         }
-        // Cache as a single :is() expression so the tally path can match
-        // against every currently-active surface in one querySelector call.
-        // Empty when nothing is active — the observer short-circuits then.
         activeSelector = active.length ? `:is(${active.join(',')})` : '';
     }
 
-    // Debounce hidden-Shorts statistics so a rich-grid render that hides
-    // many Shorts at once produces one stats write instead of many.
     function bumpCounter(n) {
         pendingCount += n;
         if (counterTimer) return;
@@ -6810,8 +6358,6 @@ const ShortsBlocker = (() => {
         }, 300);
     }
 
-    // Walk added nodes and count how many newly-matched shorts elements
-    // appeared. The CSS rule already hides them; this just tallies them.
     function tallyAdditions(node) {
         if (!(node instanceof Element) || !activeSelector) return 0;
         let count = 0;
@@ -6839,8 +6385,6 @@ const ShortsBlocker = (() => {
         injectStyle();
         apply();
 
-        // Observe for newly-added shorts elements to keep the stat tile
-        // honest. The CSS rules hide them either way; this is cosmetic.
         if (!observer) {
             observer = new MutationObserver(mutations => {
                 if (!S.shortsBlockerEnabled) return;
@@ -6850,8 +6394,6 @@ const ShortsBlocker = (() => {
                 }
                 if (total) bumpCounter(total);
             });
-            // Use documentElement as the root so the observer survives
-            // any body re-rendering on SPA transitions.
             observer.observe(document.documentElement, {
                 childList: true,
                 subtree: true,
@@ -6863,12 +6405,6 @@ const ShortsBlocker = (() => {
     return Object.freeze({ install, apply, onNavigate });
 })();
 
-/**
- * OledTheme — toggles `body.rt-oled` so the injected RainTube stylesheet
- * takes over YouTube's dark-mode background variables and pushes them to pure
- * black. Scoped to dark mode in the stylesheet itself, so the class on light
- * mode is a no-op.
- */
 const OledTheme = (() => {
     const BODY_CLASS = 'rt-oled';
 
@@ -6885,13 +6421,6 @@ const OledTheme = (() => {
     return Object.freeze({ install, apply });
 })();
 
-/**
- * TopbarTheme — gives YouTube's masthead the same dark RainTube atmosphere
- * as the panel: glassy black gradient, blue edge glow, and the shared canvas
- * rain engine. It is deliberately theme-agnostic; even on YouTube light mode
- * the masthead becomes dark because pale rain over a light top bar reads as
- * haze instead of weather.
- */
 const TopbarTheme = (() => {
     const BODY_CLASS = 'rt-topbar-theme';
     const HOST_CLASS = 'rt-topbar-theme-host';
@@ -6940,9 +6469,6 @@ const TopbarTheme = (() => {
             initHeaderRain(el, nextHost, {
                 targetSelector: TARGET_SELECTOR,
                 targetKind: topbarTargetKind,
-                // The panel header is narrow, so its default cap is modest.
-                // The top bar spans the viewport; lift that cap so the same
-                // per-pixel density formula scales across the wider surface.
                 maxDrops: 280,
                 surfaceBeadCount: 16,
                 shouldRun: () => !!S?.topbarThemeEnabled
@@ -7028,8 +6554,6 @@ const ChromeRuntime = (() => {
         if (currentFab) mountRainTubeButtons(S._statsFab, currentFab);
         TopbarTheme.apply();
 
-        // The panel gets an immediate sync on open. Between opens, avoid
-        // repainting hidden counters and labels unless active work is visible.
         if (force || isPanelOpen() || isSettingsOpen() || S.downloading) uiSync();
     };
 
@@ -7095,7 +6619,6 @@ function waitForQualityControlsReady(scheduleId, timeoutMs = QUALITY_READY_TIMEO
                 }
                 if (qualityControlsReady()) done(true);
             } catch {
-                // YouTube can replace player subtrees during SPA navigation.
             }
         };
 
@@ -7115,9 +6638,6 @@ function scheduleQualityApply() {
 
     clearQualitySchedule();
     const scheduleId = _qualityScheduleId;
-    // YouTube is a SPA, so route completion does not guarantee the player
-    // controls are mounted. Wait for the specific control RainTube needs
-    // instead of firing a timed retry ladder.
     void waitForQualityControlsReady(scheduleId).then(ready => {
         if (!ready || scheduleId !== _qualityScheduleId) return;
         if (!S.qualityEnabled || !getVideoId() || qualityTargetAlreadyHandled()) return;
@@ -7130,7 +6650,6 @@ function onNavigate() {
     _navTimer = setTimeout(() => {
         const vid = getVideoId();
 
-        // New video → reset per-video memos.
         S._player = null;
         S._video = null;
 
@@ -7139,15 +6658,9 @@ function onNavigate() {
         }
         S.videoId = vid;
 
-        // Cancel any pending quality readiness wait from the previous route;
-        // YouTube can replace the player subtree several times during a fast SPA
-        // navigation.
         clearQualitySchedule();
 
         if (vid && S.qualityEnabled) scheduleQualityApply();
-        // Record the original route before the Shorts blocker can rewrite
-        // /shorts/<id> to /watch?v=<id> or home. Shorts opens and normal
-        // video opens are mutually exclusive; watch time remains shared.
         StatsTracker.onNavigate();
         ShortsBlocker.onNavigate();
         ChromeRuntime.run(true);
@@ -7163,7 +6676,7 @@ function boot() {
     S._statsFab = statsFab;
     mountRainTubeButtons(statsFab, fab);
     initDrag(panel, fab);
-    initDrag(statsPanel, statsFab, { handleSelector: '#rt_stats_drag', fallbackW: 420, fallbackH: 380, snapToDevicePixels: true });
+    initDrag(statsPanel, statsFab, { handleSelector: '#rt_stats_drag', fallbackW: 454, fallbackH: 380, snapToDevicePixels: true });
     bindEvents(panel, fab, statsFab, statsPanel);
 
     StatsTracker.install();
@@ -7184,18 +6697,12 @@ function boot() {
 
 /* ── Entry ──────────────────────────────────────────────────────────────── */
 
-// Fast path: if this is a direct /shorts/ visit, fire the redirect now
-// instead of waiting for the full async boot to complete. Otherwise the
-// 5s+ delay between loading a short and being redirected lets the Shorts
-// player start playing. Reads only the two relevant settings.
+// Direct /shorts/ visits redirect before full async boot can let playback start.
 async function shortcutShortsVisit() {
     if (!IS_YOUTUBE) return false;
     const shortsId = getShortsVideoId();
     if (!shortsId) return false;
     try {
-        // Read everything we need in parallel: blocker settings + the
-        // stats-enabled flag + the buckets blob (so we can record the open
-        // before the redirect, preserving the pre-fast-path behavior).
         const [enabled, rawOnVisit, statsEnabled, rawBuckets] = await Promise.all([
             readStoredValue(CFG.storage.shortsBlocker, DEFAULT_SETTINGS.shortsBlockerEnabled),
             readStoredValue(CFG.storage.shortsOnVisit, DEFAULT_SETTINGS.shortsOnVisit),
@@ -7204,8 +6711,6 @@ async function shortcutShortsVisit() {
         ]);
         if (!enabled) return false;
 
-        // Record the shorts open. Best-effort: if anything goes wrong with
-        // the stats write, we still redirect.
         if (statsEnabled) {
             try {
                 const buckets = sanitizeStatsBuckets(rawBuckets);
@@ -7233,15 +6738,41 @@ async function shortcutShortsVisit() {
     }
 }
 
-// Resolve once document.body exists. At @run-at document-start the body
-// element may not be built yet, but most of our async preamble (style
-// injection, storage reads) is body-independent and can proceed in parallel.
 function waitForDocumentBody() {
     if (document.body) return Promise.resolve();
     return new Promise(resolve => {
         if (document.readyState !== 'loading' && document.body) return resolve();
         document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
     });
+}
+
+// Intentional all-or-nothing startup: a missing/unreadable packaged resource
+// stops RainTube so it never renders half-themed. Surface that as a desktop
+// notification (clean, no DOM, no dependency on the assets that just failed),
+// with the full diagnostic always logged in case the notification is blocked.
+async function reportFatalStartupFailure(err) {
+    const isResource = err instanceof RainTubeResourceError;
+    const resource = isResource ? err.resource : null;
+    const reason = isResource ? err.reason : (err?.message || String(err));
+
+    console.error('[RainTube] Startup aborted — packaged resource unavailable:', {
+        resource, reason, error: err,
+    });
+
+    const text = resource
+        ? `Couldn't load "${resource}" (${reason}). Click to reload; reinstall if it persists.`
+        : `Couldn't load a required asset (${reason}). Click to reload; reinstall if it persists.`;
+
+    try {
+        await GM.notification({
+            title: "RainTube didn't start",
+            text,
+            onclick: () => { try { location.reload(); } catch { /* tab already gone */ } },
+        });
+    } catch (notifyErr) {
+        // GM.notification unsupported or suppressed; the console error stands.
+        console.warn('[RainTube] GM.notification unavailable for startup notice:', notifyErr);
+    }
 }
 
 async function startRainTube() {
@@ -7252,20 +6783,23 @@ async function startRainTube() {
 
     if (!IS_YOUTUBE) return;
 
-    // Try the fast redirect before anything else. If it navigates, the rest
-    // of boot is moot for this page load (location.replace ends execution).
-    // Runs immediately at document-start — no DOM dependency.
     if (await shortcutShortsVisit()) return;
 
-    // The async preamble doesn't touch document.body (style injection uses
-    // document.head || document.documentElement), so it can run in parallel
-    // with DOMContentLoaded.
-    const [, , state] = await Promise.all([
-        injectRainTubeStyles(),
-        cleanupDeprecatedStorageKeys(),
+    // Style injection is intentionally all-or-nothing. Convert its rejection
+    // into a resolved value so the rest of startup settles cleanly (no
+    // unhandled rejections) before we decide to abort with a visible notice.
+    const [styleError, state] = await Promise.all([
+        injectRainTubeStyles().then(() => null, err => err || new Error('style injection failed')),
         loadRuntimeState(),
+        cleanupDeprecatedStorageKeys(),
         waitForDocumentBody(),
     ]);
+
+    if (styleError) {
+        await reportFatalStartupFailure(styleError);
+        return;
+    }
+
     S = state;
     boot();
 }
