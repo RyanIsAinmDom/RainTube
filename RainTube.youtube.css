@@ -1,11 +1,4 @@
-/*
- *  RainTube YouTube stylesheet.
- *
- *  Packaged by the userscript as @resource rtYouTubeCss and injected as a
- *  <style> tag. Keep this local file in sync with the @resource URL declared
- *  in RainTube.user.js, and bump the userscript @version when releasing CSS
- *  changes so script managers refresh the cached resource.
- */
+/* RainTube YouTube stylesheet. Bump RainTube.user.js @version when releasing CSS changes. */
 
 /* Foundation */
 :root {
@@ -34,61 +27,61 @@
 
 #rt_panel, #rt_panel *, #rt_stats_panel, #rt_stats_panel *, #rt_fab, #rt_stats_fab, #rt_toasts, #rt_toasts *, #rt_tip,
 #rt_settings_root, #rt_settings_root * {
-box-sizing: border-box;
--webkit-font-smoothing: antialiased;
-text-rendering: optimizeLegibility;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 /* Topbar button */
 #rt_fab, #rt_stats_fab {
-width: 40px; min-width: 40px; height: 40px;
-padding: 0; margin: 0 4px 0 0;
-border-radius: 50%;
-background: transparent;
-border: none;
-color: #fff;
-cursor: pointer;
-display: inline-flex; align-items: center; justify-content: center;
-box-shadow: none;
-transition: background-color .12s ease, transform .08s ease, color .12s ease;
+    width: 40px; min-width: 40px; height: 40px;
+    padding: 0; margin: 0 4px 0 0;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: none;
+    transition: background-color .12s ease, transform .08s ease, color .12s ease;
 }
 #rt_fab .rt-fab-icon, #rt_stats_fab .rt-fab-icon {
-flex: 0 0 auto;
-display: inline-flex; align-items: center; justify-content: center;
-color: currentColor;
-transition: transform .08s ease;
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: currentColor;
+    transition: transform .08s ease;
 }
 #rt_fab .rt-fab-icon .rt-logo-svg, #rt_stats_fab .rt-fab-icon .rt-icon {
-display: block;
-filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.42));
+    display: block;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.42));
 }
 #rt_fab.rt-topbar, #rt_stats_fab.rt-topbar {
-position: relative; flex: 0 0 40px;
-z-index: 1;
+    position: relative; flex: 0 0 40px;
+    z-index: 1;
 }
 #rt_fab.rt-watch-action, #rt_stats_fab.rt-watch-action {
-position: relative; flex: 0 0 36px;
-width: 36px; min-width: 36px; height: 36px;
-margin: 0 4px 0 0;
-background: rgba(255, 255, 255, 0.08);
-z-index: 1;
+    position: relative; flex: 0 0 36px;
+    width: 36px; min-width: 36px; height: 36px;
+    margin: 0 4px 0 0;
+    background: rgba(255, 255, 255, 0.08);
+    z-index: 1;
 }
 #rt_fab.rt-floating, #rt_stats_fab.rt-floating {
-position: fixed; top: 10px; right: 96px;
-background: rgba(15, 15, 18, 0.32);
-backdrop-filter: blur(12px) saturate(140%);
--webkit-backdrop-filter: blur(12px) saturate(140%);
-z-index: 2147483646;
+    position: fixed; top: 10px; right: 96px;
+    background: rgba(15, 15, 18, 0.32);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    z-index: 2147483646;
 }
 #rt_fab:hover,
 #rt_fab.active,
 #rt_stats_fab:hover,
 #rt_stats_fab.active {
-background-color: rgba(255, 255, 255, 0.10);
+    background-color: rgba(255, 255, 255, 0.10);
 }
 #rt_fab:active, #rt_stats_fab:active {
-transform: scale(.96);
-background-color: rgba(255, 255, 255, 0.16);
+    transform: scale(.96);
+    background-color: rgba(255, 255, 255, 0.16);
 }
 #rt_fab:focus-visible, #rt_stats_fab:focus-visible { outline: 2px solid #3ea6ff; outline-offset: 2px; }
 #rt_stats_fab.rt-floating { right: 142px; }
@@ -153,20 +146,20 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #container.ytd-masthead {
     z-index: 2;
 }
 #rt_topbar_rain {
-position: absolute;
-inset: 0;
-z-index: 1;
-width: 100%;
-height: 100%;
-pointer-events: none;
-opacity: .86;
-mix-blend-mode: screen;
--webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: .86;
+    mix-blend-mode: screen;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
 }
 ytd-masthead.rt-topbar-theme-host.rt-rain-off #rt_topbar_rain,
 #rt_topbar_rain[hidden] {
-display: none !important;
+    display: none !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(a, button, yt-icon, yt-icon-shape, #logo-icon, #country-code) {
     color: rgba(244, 248, 251, 0.92) !important;
@@ -205,9 +198,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
     position: relative;
     isolation: isolate;
 }
-/* Keep YouTube's native SVG in the layout for exact sizing/click target,
- *  but draw one monochrome replacement above it. Recoloring the live SVG
- *  piecemeal is brittle because the badge and wordmark share one graphic. */
+/* Keep YouTube's native SVG for sizing/click target; draw a monochrome replacement above it. */
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon {
     position: relative;
     z-index: 0;
@@ -371,28 +362,28 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 /* Floating panel shells */
 #rt_panel,
 #rt_stats_panel {
-position: fixed;
-top: 0; left: 0;
-background: var(--rt-panel-bg);
-backdrop-filter: blur(28px) saturate(170%);
--webkit-backdrop-filter: blur(28px) saturate(170%);
-border: 1px solid var(--rt-stroke);
-border-radius: 20px;
-box-shadow: var(--rt-shadow);
-color: var(--rt-text);
-display: flex; flex-direction: column;
-font-family: var(--rt-font-ui);
-isolation: isolate;
+    position: fixed;
+    top: 0; left: 0;
+    background: var(--rt-panel-bg);
+    backdrop-filter: blur(28px) saturate(170%);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    border: 1px solid var(--rt-stroke);
+    border-radius: 20px;
+    box-shadow: var(--rt-shadow);
+    color: var(--rt-text);
+    display: flex; flex-direction: column;
+    font-family: var(--rt-font-ui);
+    isolation: isolate;
 }
 #rt_panel {
-width: 360px; max-width: 94vw;
-z-index: 2147483647;
-overflow: hidden;
-opacity: 0; pointer-events: none;
-transform: translate3d(0, 0, 0) scale(.97);
-transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
-will-change: transform, opacity;
-max-height: min(92vh, 760px);
+    width: 360px; max-width: 94vw;
+    z-index: 2147483647;
+    overflow: hidden;
+    opacity: 0; pointer-events: none;
+    transform: translate3d(0, 0, 0) scale(.97);
+    transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
+    will-change: transform, opacity;
+    max-height: min(92vh, 760px);
 }
 #rt_panel.show { opacity: 1; pointer-events: auto; }
 #rt_panel.rt-drag { transition: none !important; }
@@ -408,12 +399,9 @@ max-height: min(92vh, 760px);
     cursor: default; user-select: none; flex: 0 0 auto;
     overflow: hidden;
 }
-/* Header children sit above the rain layer. */
 .rt-hdr-l, .rt-hdr-r { position: relative; z-index: 1; }
 
 /* Header rain */
-/* Header-only canvas rain with depth: faint background drops pass behind
- *  the header while a few glassy beads drift over the surface. */
 .rt-rain-canvas {
     position: absolute;
     inset: 0;
@@ -427,9 +415,8 @@ max-height: min(92vh, 760px);
     -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
     mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
 }
-/* Rain disabled — hide the canvas entirely. The frame loop also bails. */
 #rt_panel.rt-rain-off .rt-rain-canvas {
-display: none;
+    display: none;
 }
 .rt-mark::after,
 .rt-hdr-btn::after {
@@ -517,8 +504,6 @@ display: none;
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.16);
 }
-/* Main panel close: same visual language as the settings gear (tinted
- *  border/background on hover, inner-glyph animation), but red. */
 .rt-close {
     font-size: 14px; font-weight: 800;
     color: var(--rt-text-mute);
@@ -537,7 +522,6 @@ display: none;
     border-color: rgba(var(--rt-control-blue-rgb), 0.42);
     background: rgba(var(--rt-control-blue-rgb), 0.08);
 }
-/* Animate only the inner glyph, not the whole button. */
 .rt-hdr-gear-icon,
 .rt-close-glyph {
     position: relative;
@@ -549,11 +533,9 @@ display: none;
 .rt-hdr-settings:hover .rt-hdr-gear-icon {
     transform: rotate(60deg);
 }
-/* Close X bumps up in size on hover, mirroring the gear's spin. */
 .rt-close:hover .rt-close-glyph {
     transform: scale(1.20);
 }
-
 
 .rt-body {
     padding: 14px 16px 6px;
@@ -659,10 +641,8 @@ display: none;
 }
 
 /* Statistics */
-/* Statistics cards are shown either in the draggable collapsed GUI or
- *  above YouTube's recommendations column. */
 #rt_stats_panel {
-    width: min(var(--rt-stats-panel-width, 420px), calc(100vw - 20px));
+    width: min(var(--rt-stats-panel-width, 454px), calc(100vw - 20px));
     opacity: 0;
     pointer-events: none;
     z-index: 2147483646;
@@ -794,9 +774,6 @@ display: none;
     display: flex; align-items: baseline; gap: 8px;
     min-width: 0;
 }
-/* Range picker: the eyebrow is now an interactive control that switches the
- *  displayed time range. Keeps the eyebrow's small uppercase amber look but
- *  adds a caret and hover/focus affordances. */
 .rt-stats-range {
     position: relative;
     display: inline-flex;
@@ -858,8 +835,6 @@ display: none;
     padding: 4px !important;
     border-radius: 12px !important;
     border: 1px solid rgba(255, 200, 100, 0.28) !important;
-    /* Portaled onto document.body (see setStatsRangeMenuOpen) for the same
-     *      backdrop-filter reason as the channel menu. */
     background:
     radial-gradient(120% 140% at 0% 0%, rgba(255, 200, 100, 0.11), transparent 64%),
     rgb(24, 20, 16) !important;
@@ -919,25 +894,19 @@ display: none;
     gap: 4px;
     padding: 9px 10px 10px;
     border-radius: 10px;
-    /* Glass language matching feature tiles: glow emanates from the icon's
-     *      position at top-left, wash falls down and to the right across the tile,
-     *      white refraction highlight at the top-left, base translucent veil.
-     *      Accent color comes from the per-tile --rt-stat-accent variable. */
     background:
     radial-gradient(70% 90% at 15% 25%, rgba(var(--rt-stat-accent, 255, 200, 100), 0.14), transparent 62%),
     linear-gradient(135deg, rgba(var(--rt-stat-accent, 255, 200, 100), 0.045),
                     rgba(var(--rt-stat-accent, 255, 200, 100), 0.015) 50%, transparent 80%),
-                    radial-gradient(100% 100% at 0% 0%, rgba(255, 255, 255, 0.030), transparent 62%),
-                    rgba(255, 255, 255, 0.025);
-                    border: 1px solid rgba(255, 255, 255, 0.075);
-                    box-shadow:
-                    0 6px 14px rgba(0, 0, 0, 0.10),
-                    0 0 22px rgba(var(--rt-stat-accent, 255, 200, 100), 0.046);
-                    min-width: 0;
+    radial-gradient(100% 100% at 0% 0%, rgba(255, 255, 255, 0.030), transparent 62%),
+    rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.10),
+    0 0 22px rgba(var(--rt-stat-accent, 255, 200, 100), 0.046);
+    min-width: 0;
 }
 .rt-stat-tile-channel {
-    /* Favorite tile keeps the horizontal layout: [avatar | copy | picker].
-     *      Glow origin shifts back to the icon's actual position (left-center). */
     grid-column: 1 / -1;
     flex-direction: row;
     align-items: center;
@@ -947,8 +916,8 @@ display: none;
     radial-gradient(75% 130% at 15% 50%, rgba(var(--rt-stat-accent, 255, 200, 100), 0.13), transparent 60%),
     linear-gradient(105deg, rgba(var(--rt-stat-accent, 255, 200, 100), 0.045),
                     rgba(var(--rt-stat-accent, 255, 200, 100), 0.015) 50%, transparent 78%),
-                    radial-gradient(100% 100% at 0% 0%, rgba(255, 255, 255, 0.030), transparent 62%),
-                    rgba(255, 255, 255, 0.025);
+    radial-gradient(100% 100% at 0% 0%, rgba(255, 255, 255, 0.030), transparent 62%),
+    rgba(255, 255, 255, 0.025);
 }
 .rt-stat-ico {
     width: 18px; height: 18px;
@@ -957,6 +926,11 @@ display: none;
     color: rgba(var(--rt-stat-accent, 255, 200, 100), 0.92);
 }
 .rt-stat-ico .rt-icon { width: 16px; height: 16px; }
+.rt-stat-head {
+    display: flex; align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+}
 .rt-stat-name {
     flex: 0 1 auto;
     font-size: 9.5px; font-weight: 600;
@@ -970,8 +944,8 @@ display: none;
     line-height: 1.2;
     min-width: 0;
     white-space: normal;
-    word-spacing: 100vw; /* each word on its own line in narrow stacked tiles */
-    overflow-wrap: break-word;
+    word-break: normal;
+    overflow-wrap: normal;
 }
 .rt-stat-tile-val {
     font-size: 16px; font-weight: 800;
@@ -982,9 +956,6 @@ display: none;
     max-width: 100%;
     margin-top: 2px;
 }
-/* Favorite tile uses the standard .rt-stat-tile flex row directly:
- *  [avatar] [copy] [picker]. The copy holds the eyebrow head (with inline
- *  watch-time pill) and the big channel name below it. */
 .rt-stat-channel-avatar {
     position: relative;
     width: 38px; height: 38px;
@@ -1089,10 +1060,6 @@ display: none;
     padding: 4px !important;
     border-radius: 12px !important;
     border: 1px solid rgba(255, 200, 100, 0.28) !important;
-    /* Portaled onto document.body (see setFavoriteChannelMenuOpen) so it sits
-     *      outside #rt_panel's backdrop-filter subtree — a backdrop-filter ancestor
-     *      was clipping the menu's background fill where it overhung the card,
-     *      making the bottom rows look transparent. On the body it paints solidly. */
     background:
     radial-gradient(120% 140% at 0% 0%, rgba(255, 200, 100, 0.11), transparent 64%),
     rgb(24, 20, 16) !important;
@@ -1379,18 +1346,18 @@ display: none;
     radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-alpha)), transparent 58%),
     linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-alpha)),
                     rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-tail-alpha)) 52%, transparent 82%),
-                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.035), transparent 62%),
-                    rgba(255, 255, 255, 0.024);
-                    border: 1px solid var(--rt-stroke);
-                    border-radius: 11px;
-                    padding: 7px 7px 21px;
-                    min-height: 62px;
-                    display: flex; flex-direction: column; gap: 4px;
-                    min-width: 0;
-                    box-shadow:
-                    0 8px 18px rgba(0, 0, 0, .08),
-                    0 0 16px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-alpha));
-                    transition: border-color .2s, background .2s, box-shadow .2s, transform .14s ease;
+    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.035), transparent 62%),
+    rgba(255, 255, 255, 0.024);
+    border: 1px solid var(--rt-stroke);
+    border-radius: 11px;
+    padding: 7px 7px 21px;
+    min-height: 62px;
+    display: flex; flex-direction: column; gap: 4px;
+    min-width: 0;
+    box-shadow:
+    0 8px 18px rgba(0, 0, 0, .08),
+    0 0 16px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-alpha));
+    transition: border-color .2s, background .2s, box-shadow .2s, transform .14s ease;
 }
 .rt-tc-shorts {
     --rt-tc-ico-rgb: 255, 84, 84;
@@ -1481,30 +1448,30 @@ display: none;
     radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-hover-alpha)), transparent 58%),
     linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-hover-alpha)),
                     rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-hover-tail-alpha)) 52%, transparent 82%),
-                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.052), transparent 62%),
-                    rgba(255, 255, 255, 0.036);
-                    box-shadow:
-                    0 10px 22px rgba(0, 0, 0, .12),
-                    0 0 18px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-hover-alpha));
+    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.052), transparent 62%),
+    rgba(255, 255, 255, 0.036);
+    box-shadow:
+    0 10px 22px rgba(0, 0, 0, .12),
+    0 0 18px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-hover-alpha));
 }
 .rt-tc.on {
     background:
     radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-on-alpha)), transparent 58%),
     linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-alpha)),
                     rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-tail-alpha)) 52%, transparent 82%),
-                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.050), transparent 62%),
-                    rgba(255, 255, 255, 0.032);
-                    box-shadow:
-                    0 10px 22px rgba(0, 0, 0, .12),
-                    0 0 20px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-on-alpha));
+    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.050), transparent 62%),
+    rgba(255, 255, 255, 0.032);
+    box-shadow:
+    0 10px 22px rgba(0, 0, 0, .12),
+    0 0 20px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-on-alpha));
 }
 .rt-tc.on:hover {
     background:
     radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-on-hover-alpha)), transparent 58%),
     linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-hover-alpha)),
                     rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-hover-tail-alpha)) 52%, transparent 82%),
-                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.058), transparent 62%),
-                    rgba(255, 255, 255, 0.040);
+    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.058), transparent 62%),
+    rgba(255, 255, 255, 0.040);
 }
 .rt-tc-top {
     display: flex; align-items: center; justify-content: space-between; gap: 7px;
@@ -1534,8 +1501,6 @@ display: none;
     color: var(--rt-text);
     box-shadow: 0 5px 12px rgba(0, 0, 0, .22);
 }
-/* Toggle-card icons. Each feature gets a tinted background tile and a
- *  themed glow, so the three cards read as distinct at a glance. */
 .rt-tc-ico {
     width: 26px; height: 26px; flex: 0 0 26px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -1552,7 +1517,6 @@ display: none;
     width: 16px; height: 16px;
     display: block;
 }
-/* Active feature icons use per-card variables for their colored glow. */
 .rt-tc.on .rt-tc-ico {
     background:
     radial-gradient(85% 85% at 25% 20%, rgba(var(--rt-tc-ico-rgb), var(--rt-tc-ico-spot-alpha)), transparent 62%),
@@ -1565,9 +1529,6 @@ display: none;
     gap: 1px; min-width: 0; padding-right: 16px;
 }
 .rt-tc-chart .rt-tc-bot {
-    /* The fourth card has the longest label. Free the label row from the
-     *      bottom-corner help-button reserve so “Statistics” can render fully
-     *      without shrinking the whole feature-card system. */
     padding-right: 0;
 }
 .rt-tc-name {
@@ -1682,7 +1643,6 @@ display: none;
     --rt-set-glow-rgb: 255, 80, 80;
     --rt-set-glow-alpha: 0.075;
 }
-/* Stitched seam, same treatment as the main panel. */
 .rt-set::before {
     content: '';
     position: absolute;
@@ -1783,11 +1743,7 @@ display: none;
     border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-
-/* ── Shared setting-control typography ──────────────────────────────────
- *  Every setting row uses .rt-control-row so labels are no longer sized by
- *  control type. Sliders, selects, checkboxes, and action rows all share the
- *  same label sizing; the individual control CSS only handles layout/shape. */
+/* ── Shared setting-control typography ────────────────────────────────── */
 .rt-control-row {
     font-family: var(--rt-control-font-family);
     font-size: var(--rt-control-label-size);
@@ -1859,10 +1815,6 @@ display: none;
 }
 
 /* ── Sliders ─────────────────────────────────────────────────────────── */
-/* ── Compact inline slider ─────────────────────────────────────────────
- *  Layout:  [ label + chip ........... ━━━●━━━ ]
- *  The slider takes the right ~55% of the row; label/chip share the left.
- *  Drops the awkward full-width feel that the stacked column had. */
 .rt-slider-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(150px, 1.2fr);
@@ -1932,10 +1884,7 @@ display: none;
     border-color: rgba(var(--rt-control-blue-rgb), 0.50);
 }
 
-/* ── Visible track elements (positioned overlays driven by JS) ───────
- *  These are absolutely positioned inside .rt-slider-track-wrap and have
- *  pointer-events: none so all interaction passes through to the native
- *  input that sits on top of them. The input itself is transparent. */
+/* Native input handles interaction; custom track/thumb handle visuals. */
 .rt-slider-track,
 .rt-slider-fill,
 .rt-slider-thumb-custom {
@@ -1950,9 +1899,6 @@ display: none;
     background: rgba(255, 255, 255, 0.10);
     border: 1px solid rgba(255, 255, 255, 0.06);
 }
-/* Fill ends at the thumb's center (matching the native input's behavior).
- *  Math: thumb_center = pct% − pf * thumb_w/2 = pct% − pf * 8px, then
- *  fill_width = thumb_center + thumb_w/2 = pct% − pf * 8px + 8px. */
 .rt-slider-fill {
     left: 0;
     top: 50%; transform: translateY(-50%);
@@ -1962,9 +1908,6 @@ display: none;
     background: linear-gradient(90deg, var(--rt-control-blue), var(--rt-control-cyan));
     box-shadow: 0 0 12px rgba(var(--rt-control-blue-rgb), 0.22);
 }
-/* Inset-thumb positioning: thumb_left = pct% − pf * thumb_w = pct% − pf * 16px.
- *  At pct=0, thumb's left edge is at 0; at pct=100, thumb's right edge
- *  is at 100%. The thumb never hangs off the track ends. */
 .rt-slider-thumb-custom {
     top: 50%;
     left: calc(var(--rt-p, 50%) - var(--rt-pf, 0.5) * 16px);
@@ -1986,11 +1929,7 @@ display: none;
     box-shadow: 0 6px 18px rgba(0,0,0,0.55), 0 0 0 6px rgba(var(--rt-control-blue-rgb), 0.34);
 }
 
-/* ── Native input: invisible interaction layer on top ─────────────────
- *  The native input is overlaid on the visible track wrap, made fully
- *  transparent, but stays interactive — clicks, drags, keyboard, focus
- *  all flow through it. The thumb is sized to roughly match the visible
- *  custom thumb so the click target stays right. */
+/* Native input: invisible interaction layer on top. */
 .rt-slider-input {
     -webkit-appearance: none; appearance: none;
     position: absolute;
@@ -2003,7 +1942,6 @@ display: none;
 }
 .rt-slider-input:focus { outline: none; }
 
-/* Webkit invisible thumb + track */
 .rt-slider-input::-webkit-slider-runnable-track {
     height: 22px;
     background: transparent;
@@ -2018,7 +1956,6 @@ display: none;
 }
 .rt-slider-input:active::-webkit-slider-thumb { cursor: grabbing; }
 
-/* Firefox invisible thumb + track + progress */
 .rt-slider-input::-moz-range-track {
     height: 22px;
     background: transparent;
@@ -2035,7 +1972,6 @@ display: none;
 }
 .rt-slider-input:active::-moz-range-thumb { cursor: grabbing; }
 
-/* Narrow modal: collapse back to stacked layout if the row gets too tight. */
 @media (max-width: 500px) {
     .rt-slider-row {
         grid-template-columns: 1fr;
@@ -2167,7 +2103,6 @@ display: none;
 .rt-field-label {
     color: var(--rt-text-mute);
 }
-/* Match select-label inset to slider labels so mixed control rows align visually. */
 .rt-field > .rt-field-label-wrap,
 .rt-field > .rt-field-label {
     flex: 1 1 auto;
@@ -2259,25 +2194,25 @@ display: none;
     background:
     radial-gradient(85% 120% at 12% 0%,
                     rgba(255, 255, 255, .075), transparent 62%),
-                    linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)),
-                    rgba(0, 0, 0, 0.24);
-                    color: var(--rt-text);
-                    font-family: var(--rt-font-ui);
-                    font-size: var(--rt-control-label-size); font-weight: 800;
-                    padding: 7px 32px 7px 11px; outline: none;
-                    box-shadow:
-                    0 1px 0 rgba(255,255,255,.055) inset,
-                    0 8px 18px rgba(0,0,0,.16);
-                    transition: border-color .18s, background .18s, box-shadow .18s,
-                    color .18s;
+    linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)),
+    rgba(0, 0, 0, 0.24);
+    color: var(--rt-text);
+    font-family: var(--rt-font-ui);
+    font-size: var(--rt-control-label-size); font-weight: 800;
+    padding: 7px 32px 7px 11px; outline: none;
+    box-shadow:
+    0 1px 0 rgba(255,255,255,.055) inset,
+    0 8px 18px rgba(0,0,0,.16);
+    transition: border-color .18s, background .18s, box-shadow .18s,
+    color .18s;
 }
 .rt-select:hover {
     border-color: rgba(var(--rt-select-glow-rgb), 0.32);
     background:
     radial-gradient(85% 120% at 12% 0%,
                     rgba(255, 255, 255, .105), transparent 62%),
-                    linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.035)),
-                    rgba(0, 0, 0, 0.24);
+    linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.035)),
+    rgba(0, 0, 0, 0.24);
 }
 .rt-select:focus {
     border-color: rgba(var(--rt-select-glow-rgb), 0.66);
@@ -2334,25 +2269,24 @@ display: none;
 
 /* Toasts */
 #rt_toasts {
-position: fixed;
-top: var(--rt-toast-top, auto);
-bottom: var(--rt-toast-bottom, 120px);
-right: var(--rt-toast-right, 24px);
-left: var(--rt-toast-left, auto);
-display: flex; flex-direction: column-reverse; gap: 8px;
-align-items: flex-end;
-z-index: 2147483646; pointer-events: none;
-max-width: min(380px, calc(100vw - 48px));
-transition: top .18s ease, right .18s ease, bottom .18s ease, left .18s ease;
+    position: fixed;
+    top: var(--rt-toast-top, auto);
+    bottom: var(--rt-toast-bottom, 120px);
+    right: var(--rt-toast-right, 24px);
+    left: var(--rt-toast-left, auto);
+    display: flex; flex-direction: column-reverse; gap: 8px;
+    align-items: flex-end;
+    z-index: 2147483646; pointer-events: none;
+    max-width: min(380px, calc(100vw - 48px));
+    transition: top .18s ease, right .18s ease, bottom .18s ease, left .18s ease;
 }
 #rt_toasts.rt-toast-video-anchored {
-max-width: min(380px, calc(100vw - 24px));
+    max-width: min(380px, calc(100vw - 24px));
 }
 #rt_toasts.rt-toast-top { flex-direction: column; }
 #rt_toasts.rt-toast-bottom { flex-direction: column-reverse; }
 #rt_toasts.rt-toast-left { align-items: flex-start; }
 #rt_toasts.rt-toast-right { align-items: flex-end; }
-/* Adjust for fullscreen-as-different-ancestor so we stay on top */
 :fullscreen #rt_toasts, :-webkit-full-screen #rt_toasts {
     z-index: 2147483646;
 }
@@ -2370,26 +2304,26 @@ max-width: min(380px, calc(100vw - 24px));
     background:
     radial-gradient(120px 92px at 0% 0%,
                     rgba(var(--rt-toast-rgb), .13), transparent 68%),
-                    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)),
-                    rgba(18, 18, 22, 0.95);
-                    backdrop-filter: blur(18px) saturate(170%);
-                    -webkit-backdrop-filter: blur(18px) saturate(170%);
-                    border: 1px solid rgba(var(--rt-toast-rgb), var(--rt-toast-border-alpha));
-                    border-radius: 14px;
-                    padding: 12px 38px 14px 12px;
-                    color: var(--rt-text);
-                    font-family: var(--rt-font-ui);
-                    box-shadow:
-                    0 16px 36px rgba(0, 0, 0, 0.55),
-                    0 0 22px rgba(var(--rt-toast-rgb), var(--rt-toast-glow-alpha)),
-                    0 1px 0 rgba(255,255,255,0.04) inset;
-                    opacity: 0;
-                    transform: translateY(12px) scale(.96);
-                    transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
-                    overflow: hidden;
-                    width: fit-content;
-                    max-width: 100%;
-                    min-width: 250px;
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)),
+    rgba(18, 18, 22, 0.95);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid rgba(var(--rt-toast-rgb), var(--rt-toast-border-alpha));
+    border-radius: 14px;
+    padding: 12px 38px 14px 12px;
+    color: var(--rt-text);
+    font-family: var(--rt-font-ui);
+    box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.55),
+    0 0 22px rgba(var(--rt-toast-rgb), var(--rt-toast-glow-alpha)),
+    0 1px 0 rgba(255,255,255,0.04) inset;
+    opacity: 0;
+    transform: translateY(12px) scale(.96);
+    transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
+    overflow: hidden;
+    width: fit-content;
+    max-width: 100%;
+    min-width: 250px;
 }
 .rt-toast.show {
     opacity: 1; transform: translateY(0) scale(1);
@@ -2471,7 +2405,6 @@ max-width: min(380px, calc(100vw - 24px));
     color: var(--rt-text);
 }
 
-/* Bottom dismiss-countdown bar */
 .rt-toast-bar {
     position: absolute; left: 0; bottom: 0;
     height: 2px; width: 100%;
@@ -2481,7 +2414,6 @@ max-width: min(380px, calc(100vw - 24px));
     border-radius: 0 0 14px 14px;
 }
 
-/* Variant accents drive the icon tile, border glow, and progress bar. */
 .rt-v-shorts { --rt-toast-rgb: 255, 80, 80; --rt-toast-border-alpha: .48; --rt-toast-glow-alpha: .14; }
 .rt-v-shorts .rt-toast-bar { background: linear-gradient(90deg, #ff5050, #a01623); }
 .rt-v-stats { --rt-toast-rgb: 244, 162, 97; --rt-toast-border-alpha: .50; --rt-toast-glow-alpha: .13; }
@@ -2495,29 +2427,28 @@ max-width: min(380px, calc(100vw - 24px));
 .rt-v-off { --rt-toast-rgb: 255, 255, 255; --rt-toast-border-alpha: .12; --rt-toast-glow-alpha: .05; }
 .rt-v-off .rt-toast-bar { background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.15)); }
 
-/* On smaller viewports, keep corner placement but clamp the toast width. */
 @media (max-width: 640px) {
     #rt_toasts:not(.rt-toast-video-anchored) {
-    max-width: min(360px, calc(100vw - 24px));
+        max-width: min(360px, calc(100vw - 24px));
     }
     #rt_toasts.rt-toast-video-anchored {
-    max-width: min(360px, calc(100vw - 24px));
+        max-width: min(360px, calc(100vw - 24px));
     }
     .rt-toast { min-width: min(250px, 100%); }
 }
 
 /* Settings modal */
 #rt_settings_root {
-position: fixed; inset: 0;
-z-index: 2147483647;
-pointer-events: none;
-opacity: 0;
-transition: opacity .22s ease;
-font-family: var(--rt-font-ui);
+    position: fixed; inset: 0;
+    z-index: 2147483647;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .22s ease;
+    font-family: var(--rt-font-ui);
 }
 #rt_settings_root.show {
-pointer-events: auto;
-opacity: 1;
+    pointer-events: auto;
+    opacity: 1;
 }
 
 .rt-settings-backdrop {
@@ -2551,8 +2482,8 @@ opacity: 1;
     will-change: transform, opacity;
 }
 #rt_settings_root.show .rt-settings-modal {
-opacity: 1;
-transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .rt-settings-hdr {
@@ -2581,7 +2512,6 @@ transform: translate(-50%, -50%) scale(1);
     inset 0 0 0 1px rgba(255,255,255,0.05);
     color: #fff;
 }
-/* Subtle, slow spin on idle — only the glyph rotates, not the tile. */
 .rt-settings-icon-glyph {
     display: inline-block;
     line-height: 1;
@@ -2629,7 +2559,6 @@ transform: translate(-50%, -50%) scale(1);
     padding: 16px 18px;
     display: flex; flex-direction: column; gap: 12px;
     overflow-y: auto; flex: 1 1 auto; min-height: 0;
-    /* Stop wheel/touch scroll chain bleed into the underlying page. */
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
@@ -2709,47 +2638,47 @@ transform: translate(-50%, -50%) scale(1);
 
 /* Tooltip and responsive rules */
 #rt_tip {
-position: fixed; max-width: 220px;
-padding: 8px 11px; border-radius: 10px;
-background: rgba(18, 18, 20, 0.96);
-border: 1px solid rgba(255, 255, 255, 0.12);
-box-shadow: 0 12px 26px rgba(0, 0, 0, .34);
-color: var(--rt-text);
-font-family: var(--rt-font-ui);
-font-size: 10.5px; font-weight: 700; line-height: 1.35;
-text-align: left;
-opacity: 0; transform: none; pointer-events: none;
-transition: opacity .16s ease;
-z-index: 2147483647;
+    position: fixed; max-width: 220px;
+    padding: 8px 11px; border-radius: 10px;
+    background: rgba(18, 18, 20, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, .34);
+    color: var(--rt-text);
+    font-family: var(--rt-font-ui);
+    font-size: 10.5px; font-weight: 700; line-height: 1.35;
+    text-align: left;
+    opacity: 0; transform: none; pointer-events: none;
+    transition: opacity .16s ease;
+    z-index: 2147483647;
 }
 #rt_tip.rt-tip-rich {
-transform: translateY(4px);
-transition: opacity .16s ease, transform .16s ease;
+    transform: translateY(4px);
+    transition: opacity .16s ease, transform .16s ease;
 }
 #rt_tip.rt-tip-native {
-max-width: none;
-min-height: 32px;
-padding: 8px 9px;
-border-radius: 4px;
-background: rgba(97, 97, 97, 0.96);
-border: none;
-box-shadow: none;
-color: #fff;
-font-family: var(--rt-font-ui);
-font-size: 12px; font-weight: 400; line-height: 16px;
-text-align: center;
-white-space: nowrap;
-transform: none;
-transition: opacity .075s cubic-bezier(.4, 0, 1, 1);
+    max-width: none;
+    min-height: 32px;
+    padding: 8px 9px;
+    border-radius: 4px;
+    background: rgba(97, 97, 97, 0.96);
+    border: none;
+    box-shadow: none;
+    color: #fff;
+    font-family: var(--rt-font-ui);
+    font-size: 12px; font-weight: 400; line-height: 16px;
+    text-align: center;
+    white-space: nowrap;
+    transform: none;
+    transition: opacity .075s cubic-bezier(.4, 0, 1, 1);
 }
 #rt_tip.show { opacity: 1; }
 #rt_tip.rt-tip-rich.show { transform: translateY(0); }
 #rt_tip.rt-tip-native.show {
-transform: none;
-animation: rt-tip-native-fade-in 150ms cubic-bezier(0, 0, .2, 1) both;
+    transform: none;
+    animation: rt-tip-native-fade-in 150ms cubic-bezier(0, 0, .2, 1) both;
 }
 #rt_tip.rt-tip-native.rt-tip-hiding {
-animation: rt-tip-native-fade-out 100ms cubic-bezier(.4, 0, 1, 1) both;
+    animation: rt-tip-native-fade-out 100ms cubic-bezier(.4, 0, 1, 1) both;
 }
 @keyframes rt-tip-native-fade-in {
     from { opacity: 0; }
@@ -2766,7 +2695,7 @@ animation: rt-tip-native-fade-out 100ms cubic-bezier(.4, 0, 1, 1) both;
 #rt_settings_root,
 #rt_toasts,
 #rt_tip {
-font-family: var(--rt-font-ui);
+    font-family: var(--rt-font-ui);
 }
 
 .rt-hdr-title,
@@ -2810,19 +2739,7 @@ font-family: var(--rt-font-ui);
 }
 
 /* OLED pure-black theme */
-/* Activated by body.rt-oled, scoped to YouTube's dark theme so light mode
- *  is untouched. We redefine the page-level YouTube design tokens that
- *  carry dark-gray backgrounds; everything that reads var(--yt-spec-*)
- *  picks the new values automatically.
- *
- *  !important is used because YouTube re-declares the same variables at
- *  html[dark] and on raised-component shadow roots; without it, our
- *  body-scoped definition loses to whichever YouTube rule was declared
- *  later. The rules are gated to body.rt-oled, so they only ever fire
- *  when the user has explicitly opted in.
- *
- *  Raised surfaces (cards, dropdowns, menus) stay one step above pure
- *  black so they remain visible against the page background. */
+/* Scoped to YouTube dark mode; raised surfaces stay one step above black. */
 html[dark] body.rt-oled {
     --yt-spec-base-background: #000 !important;
     --yt-spec-raised-background: #0a0a0a !important;
@@ -2842,11 +2759,6 @@ html[dark] body.rt-oled {
     background: #000 !important;
 }
 
-/* Safety net for app-shell elements that hard-code their background
- *  instead of reading a token. Limited to dark mode + the OLED class so
- *  nothing leaks into the default theme. We only target the chrome
- *  (the app shell and the topbar) — page-level wrappers inherit from
- *  body.rt-oled via the normal cascade. */
 html[dark] body.rt-oled ytd-app,
 html[dark] body.rt-oled #content.ytd-app,
 html[dark] body.rt-oled #page-manager.ytd-app,
@@ -2855,13 +2767,7 @@ html[dark] body.rt-oled #masthead-container {
     background-color: #000 !important;
 }
 
-/* Disable YouTube's cinematic ambient mode when OLED is on. The
- *  "glow" is a pair of canvases inside #cinematics-container that paint
- *  a blurred render of the video onto the area surrounding the player —
- *  producing a coloured haze that fundamentally conflicts with what
- *  OLED wants (uniform pure black). The video player is a sibling of
- *  the cinematics container, not a child, so hiding it doesn't touch
- *  playback. */
+/* Disable the blurred ambient canvases around the player. */
 html[dark] body.rt-oled #cinematics-container.ytd-watch-flexy,
 html[dark] body.rt-oled #cinematics.ytd-watch-flexy {
     display: none !important;
