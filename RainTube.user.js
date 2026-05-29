@@ -2,7 +2,7 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.170
+// @version            1.20.215
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
 // @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
@@ -13,6 +13,7 @@
 // @match              https://*.cnvmp3.com/*
 // @exclude            https://www.youtube.com/live_chat*
 // @exclude            https://studio.youtube.com/*
+// @noframes
 
 // GM v4 APIs.
 // @grant              GM.getValue
@@ -35,15 +36,15 @@
 // @resource           rtFontMonoLatin https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono:vf@5.2.8/latin-wght-normal.woff2
 
 // RainTube's YouTube/UI stylesheet is packaged as @resource. Script
-// managers refresh resources when the userscript itself updates, so CSS
-// changes should bump @version to force a clean resource download. Keep the
-// local RainTube.youtube.css file in sync with this URL.
-// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css
+// managers refresh resources when the userscript itself updates, so any
+// time CSS changes, bump @version AND mirror it in the rt= query below.
+// The userscript manager keys resource cache off the URL string; a
+// matching @version makes it impossible to forget the cache-bust.
+// Keep the local RainTube.youtube.css file in sync with this URL.
+// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.215
 
 // Core support APIs.
 // @connect            raw.githubusercontent.com
-// @connect            kavin.rocks
-// @connect            invidious.io
 // @connect            api.invidious.io
 
 // Common Piped public-instance root domains. Metadata permissions only;
@@ -68,7 +69,7 @@
 // Wildcard for instances we discover at runtime that aren't predictable here.
 // @connect            *
 
-// @run-at             document-idle
+// @run-at             document-start
 // @compatible         chrome   Tampermonkey 4+
 // @compatible         firefox  Greasemonkey 4.11+ / Tampermonkey / Violentmonkey
 // @compatible         edge     Tampermonkey 4+
@@ -77,22 +78,22 @@
 'use strict';
 
 /*
-   RainTube V5.20.170
-
-   Structure:
-     - YouTube pages get the RainTube panel, Shorts blocking, quality
-       targeting, and private Piped/Invidious downloads.
-     - CnvMP3 pages only run the lightweight fallback autofill path.
-     - State is persisted through GM.setValue, reset through GM.deleteValue, and validated defensively on load.
-     - Network, probes, and blob downloads use strict GM4 GM.xmlHttpRequest.
-*/
+ * RainTube V1.20.215
+ *
+ * Structure:
+ *  - YouTube pages get the RainTube panel, Shorts blocking, quality
+ *    targeting, and private Piped/Invidious downloads.
+ *  - CnvMP3 pages only run the lightweight fallback autofill path.
+ *  - State is persisted through GM.setValue, reset through GM.deleteValue, and validated defensively on load.
+ *  - Network, probes, and blob downloads use strict GM4 GM.xmlHttpRequest.
+ */
 
 const HOST = location.hostname.toLowerCase();
 const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '5.20.170',
+    version: '1.20.215',
     instances: {
         // Piped's docs moved the public instance list to this markdown source;
         // parse it dynamically so we track the same list the project publishes.
@@ -363,7 +364,7 @@ const RAIN_FPS_DEFAULT = 60;
 // from the same shape so the two stay in sync automatically.
 const DEFAULT_SETTINGS = Object.freeze({
     shortsBlockerEnabled: true,
-    shortsOnVisit: 'hide',
+    shortsOnVisit: 'redirect',
     shortsHideSidebar: true,
     shortsHideHome: true,
     shortsHideSearch: true,
@@ -388,7 +389,7 @@ const DEFAULT_SETTINGS = Object.freeze({
 });
 
 function readShortsOnVisit(value) {
-    return SHORTS_ON_VISIT_ORDER.includes(value) ? value : 'hide';
+    return SHORTS_ON_VISIT_ORDER.includes(value) ? value : 'redirect';
 }
 
 function readPrivateProvider(value) {
@@ -404,7 +405,7 @@ function readPrivateDownloadTimeoutMs(value) {
     if (!Number.isFinite(raw)) return CFG.api.downloadTimeout;
     const stepped = Math.round(raw / PRIVATE_DOWNLOAD_TIMEOUT_STEP_MS) * PRIVATE_DOWNLOAD_TIMEOUT_STEP_MS;
     return Math.max(PRIVATE_DOWNLOAD_TIMEOUT_MIN_MS,
-        Math.min(PRIVATE_DOWNLOAD_TIMEOUT_MAX_MS, stepped));
+                    Math.min(PRIVATE_DOWNLOAD_TIMEOUT_MAX_MS, stepped));
 }
 
 function formatPrivateDownloadTimeoutSeconds(value) {
@@ -422,12 +423,6 @@ const STATS_RANGE_LABEL = Object.freeze({
     yearly: 'This year',
     alltime: 'All time',
 });
-const STATS_RANGE_HEADER = Object.freeze({
-    daily: 'Today',
-    monthly: 'This month',
-    yearly: 'This year',
-    alltime: 'All time',
-});
 
 const STATS_DISPLAY_ORDER = ['panel', 'inline'];
 const STATS_DISPLAY_LABEL = Object.freeze({
@@ -439,10 +434,10 @@ const STATS_METRICS_ORDER = [
     // Favorite channel is intentionally first in rendered cards; it is the
     // most personal rollup and should sit above the rest whenever enabled.
     'favoriteChannel', 'watchTime', 'videosWatched', 'shortsOpened',
-    'shortsBlocked',
+'shortsBlocked',
 ];
 const STATS_METRIC_INFO = Object.freeze({
-    watchTime: { label: 'Overall watch time', icon: 'clock' },
+    watchTime: { label: 'Watch time', icon: 'clock' },
     videosWatched: { label: 'Videos opened', icon: 'play' },
     shortsOpened: { label: 'Shorts opened', icon: 'shortsOpen' },
     shortsBlocked: { label: 'Shorts blocked', icon: 'shorts' },
@@ -460,20 +455,8 @@ function readStatsRange(value) {
     return STATS_RANGE_ORDER.includes(value) ? value : 'daily';
 }
 
-function readStatsEnabled(value) {
-    return typeof value === 'boolean' ? value : true;
-}
-
 function readStatsDisplay(value) {
     return STATS_DISPLAY_ORDER.includes(value) ? value : 'panel';
-}
-
-function statsDisplayHasPanel(value) {
-    return value === 'panel';
-}
-
-function statsDisplayHasInline(value) {
-    return value === 'inline';
 }
 
 function getShortsVideoId(url = location.href) {
@@ -742,18 +725,6 @@ function mk(tag, cls, text, attrs) {
     return el;
 }
 
-function injectUserStyle(css) {
-    const style = document.createElement('style');
-    style.textContent = css;
-    (document.head || document.documentElement).appendChild(style);
-    return style;
-}
-
-// RainTube.youtube.css is packaged as rtYouTubeCss and injected as a <style>
-// tag. Bump @version whenever that resource changes so script managers refresh
-// their cached copy.
-const RT_YOUTUBE_CSS_RESOURCE = 'rtYouTubeCss';
-
 async function readTextResource(resourceName) {
     const url = await GM.getResourceUrl(resourceName);
     const r = await gmRequest({
@@ -782,8 +753,6 @@ const RT_FONT_RESOURCES = Object.freeze([
     { resource: 'rtFontMonoLatin', family: 'RainTube Mono', weight: '100 800' },
 ]);
 
-let rtStyleInjected = false;
-
 function quoteCssString(value) {
     return String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
@@ -807,24 +776,25 @@ async function buildRainTubeFontCss() {
     );
 
     return RT_FONT_RESOURCES.map((font, i) => `@font-face {
-    font-family: '${quoteCssString(font.family)}';
-    font-style: normal;
-    font-weight: ${font.weight};
-    src: url('${quoteCssString(urls[i])}') format('woff2-variations');
-    unicode-range: ${RT_FONT_LATIN_RANGE};
-}`).join('\n\n');
+        font-family: '${quoteCssString(font.family)}';
+        font-style: normal;
+        font-weight: ${font.weight};
+        src: url('${quoteCssString(urls[i])}') format('woff2-variations');
+        unicode-range: ${RT_FONT_LATIN_RANGE};
+    }`).join('\n\n');
 }
 
 async function injectRainTubeStyles() {
-    if (!IS_YOUTUBE || rtStyleInjected) return;
-    rtStyleInjected = true;
+    if (!IS_YOUTUBE) return;
 
     const [fontCss, youtubeCss] = await Promise.all([
         buildRainTubeFontCss(),
-        readTextResource(RT_YOUTUBE_CSS_RESOURCE),
+        readTextResource('rtYouTubeCss'),
     ]);
 
-    injectUserStyle([fontCss, youtubeCss].filter(Boolean).join('\n\n'));
+    const style = document.createElement('style');
+    style.textContent = [fontCss, youtubeCss].filter(Boolean).join('\n\n');
+    (document.head || document.documentElement).appendChild(style);
 }
 
 /* ── Video metadata ──────────────────────────────────────────────────────── */
@@ -845,20 +815,20 @@ function getVideoId(url = location.href) {
 
 const TITLE_SEL = [
     'ytd-watch-metadata h1 yt-formatted-string',
-    '#title h1 yt-formatted-string',
-    'h2 span.yt-core-attributed-string[role="text"]',
-    '.title.ytd-video-primary-info-renderer',
+'#title h1 yt-formatted-string',
+'h2 span.yt-core-attributed-string[role="text"]',
+'.title.ytd-video-primary-info-renderer',
 ];
 
 const AUTHOR_SEL = [
     'ytd-watch-metadata #owner ytd-channel-name #text a',
-    'ytd-watch-metadata #owner ytd-channel-name yt-formatted-string',
-    '#owner ytd-channel-name #text a',
-    '#owner #channel-name #text a',
-    'ytd-video-owner-renderer ytd-channel-name a',
-    'ytd-reel-video-renderer[is-active] h2 a',
-    'ytd-reel-video-renderer[is-active] #channel-name',
-    'meta[itemprop="author"][content]',
+'ytd-watch-metadata #owner ytd-channel-name yt-formatted-string',
+'#owner ytd-channel-name #text a',
+'#owner #channel-name #text a',
+'ytd-video-owner-renderer ytd-channel-name a',
+'ytd-reel-video-renderer[is-active] h2 a',
+'ytd-reel-video-renderer[is-active] #channel-name',
+'meta[itemprop="author"][content]',
 ];
 
 function getVideoTitle() {
@@ -1085,6 +1055,14 @@ function setKnownQuality(choice, videoId = getVideoId()) {
     } : null;
 }
 
+// Forget every per-video quality memo at once. Called whenever the context
+// the memos describe is no longer valid (video changed, target setting
+// changed, quality targeting toggled). The pair always travels together.
+function clearQualityMemos() {
+    setKnownQuality(null);
+    S._lastQualityTargetKey = null;
+}
+
 function pickQualityMenuOption(options, targetLevel, { includeSuperResolution = false } = {}) {
     const targetHeight = qualityHeight(targetLevel);
     const eligible = options.filter(opt => {
@@ -1188,8 +1166,8 @@ async function applyBestQualityFromMenu({ silent = false } = {}) {
     } else if (!['settings-menu-already-open', 'quality-no-longer-current'].includes(result?.reason)) {
         console.debug('[RainTube] Quality targeting skipped:', {
             videoId: S.videoId || getVideoId() || null,
-            target,
-            result,
+                      target,
+                      result,
         });
     }
     return result;
@@ -1281,8 +1259,8 @@ function resolveMediaUrl(instance, url) {
     try {
         const raw = String(url).trim();
         const href = raw.startsWith('//')
-            ? `https:${raw}`
-            : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
+        ? `https:${raw}`
+        : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
         const parsed = new URL(href);
         return parsed.protocol === 'https:' ? parsed.href : null;
     } catch {
@@ -1535,14 +1513,14 @@ function gmRequest({ method = 'GET', url, headers = {}, responseType = 'text', t
                         ok: status >= 200 && status < 300,
                         status,
                         responseHeaders: String(r.responseHeaders || ''),
-                        response: r.response ?? null,
-                        responseText: r.responseText || '',
-                        finalUrl: r.finalUrl || url,
+                           response: r.response ?? null,
+                           responseText: r.responseText || '',
+                           finalUrl: r.finalUrl || url,
                     });
                 },
                 onerror: fail('network'),
-                ontimeout: fail('timeout'),
-                onabort: fail('abort'),
+                       ontimeout: fail('timeout'),
+                       onabort: fail('abort'),
             };
 
             if (typeof onprogress === 'function') details.onprogress = onprogress;
@@ -1621,7 +1599,7 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
         const raw = parseJsonMaybe(r.response || r.responseText);
         const data = raw ? provider.normalizeData(raw, instance) : null;
         const message = raw?.message || raw?.error || raw?.reason
-            || data?.message || data?.error || data?.reason || null;
+        || data?.message || data?.error || data?.reason || null;
 
         if (r.ok && hasUsableStreams(data, mode)) {
             return {
@@ -1641,7 +1619,7 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
 
         if (killHost) {
             markEndpointDead(provider.id, instance,
-                hardKill ? CFG.api.hardFailureTtlMs : CFG.api.failureTtlMs);
+                             hardKill ? CFG.api.hardFailureTtlMs : CFG.api.failureTtlMs);
         }
 
         return {
@@ -1649,8 +1627,8 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
             instance,
             status: r.status,
             reason: data ? 'no-streams' : (r.reason || 'bad-response'),
-            message,
-            killedHost: killHost,
+                               message,
+                               killedHost: killHost,
         };
     });
 
@@ -1868,7 +1846,9 @@ async function downloadUrlWithProgress(url, filename, btn, sourceLabel) {
                     : `${formatBytes(loaded)} · ${formatSpeed(lastRate)}`;
                 setBtnProgress(btn, pct, label);
 
-                if (S.privateCancelRequested) setProgress(pct, 'Stopping after current request…', label, 'active');
+                if (S.privateCancelRequested) {
+                    setProgress(pct, 'Stopping after current request…', label, 'active');
+                }
             },
         });
 
@@ -1895,7 +1875,7 @@ async function downloadUrlWithProgress(url, filename, btn, sourceLabel) {
 
         triggerBlobDownload(blob, filename);
         setProgress(100, 'Download complete',
-            `${sourceLabel} · ${formatSpeed(bestRate || lastRate)}`, 'done');
+                    `${sourceLabel} · ${formatSpeed(bestRate || lastRate)}`, 'done');
         resetProgress(2400);
         return { ok: true, reason: 'done', bestRate };
     } catch (err) {
@@ -1919,20 +1899,20 @@ function openConverterTab(videoId, format) {
 /* ── CnvMP3 autofill (rewritten) ────────────────────────────────────────── */
 
 /*
-   The CnvMP3 page has three dropdowns: Quality (video resolution), Bitrate
-   (audio kbps), and "MP3 / MP4" (format). The autofill path only needs the
-   visible YouTube URL field plus the format dropdown.
-
-   The robust approach:
-     1. Find every visible dropdown-icon.svg image on the page.
-     2. Walk upward to the most plausible clickable wrapper, preferring real
-        buttons, role=button, tabindex, aria-expanded, onclick, or cursor:pointer.
-     3. Identify the format dropdown from nearby heading text rather than from
-        option text, so the MP3 option and the "MP3 / MP4" label do not collide.
-     4. Click the wrapper, then click the requested MP3/MP4 option when it is
-        visible. Both directions are explicit because CnvMP3 may remember the
-        user's previous selection.
-*/
+ * The CnvMP3 page has three dropdowns: Quality (video resolution), Bitrate
+ * (audio kbps), and "MP3 / MP4" (format). The autofill path only needs the
+ * visible YouTube URL field plus the format dropdown.
+ *
+ * The robust approach:
+ *  1. Find every visible dropdown-icon.svg image on the page.
+ *  2. Walk upward to the most plausible clickable wrapper, preferring real
+ *     buttons, role=button, tabindex, aria-expanded, onclick, or cursor:pointer.
+ *  3. Identify the format dropdown from nearby heading text rather than from
+ *     option text, so the MP3 option and the "MP3 / MP4" label do not collide.
+ *  4. Click the wrapper, then click the requested MP3/MP4 option when it is
+ *     visible. Both directions are explicit because CnvMP3 may remember the
+ *     user's previous selection.
+ */
 
 function getFallbackPayloadFromUrl() {
     const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
@@ -1948,7 +1928,7 @@ function isValidYouTubeUrlForFallback(value) {
         const u = new URL(s);
         const host = u.hostname.toLowerCase();
         return host === 'youtu.be' || host.endsWith('.youtu.be')
-            || host === 'youtube.com' || host.endsWith('.youtube.com');
+        || host === 'youtube.com' || host.endsWith('.youtube.com');
     } catch { return false; }
 }
 
@@ -1988,11 +1968,11 @@ function findCnvMp3UrlField() {
         if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return false;
         const type = String(el.getAttribute('type') || '').toLowerCase();
         return isVisible(el) && !el.disabled && !el.readOnly
-            && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file', 'password'].includes(type);
+        && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file', 'password'].includes(type);
     });
 
     const hintFor = el => [el.placeholder, el.name, el.id, el.className,
-        el.getAttribute?.('aria-label')].filter(Boolean).join(' ').toLowerCase();
+    el.getAttribute?.('aria-label')].filter(Boolean).join(' ').toLowerCase();
 
     // Prefer one whose placeholder/name/ARIA label mentions YouTube.
     const ytField = candidates.find(el => hintFor(el).includes('youtube'));
@@ -2025,11 +2005,11 @@ function findClickWrapperForIcon(iconImg) {
         const style = getComputedStyle(node);
         const role = String(node.getAttribute?.('role') || '').toLowerCase();
         const clickable = node.tagName === 'BUTTON'
-            || role === 'button'
-            || node.onclick
-            || node.tabIndex >= 0
-            || node.hasAttribute?.('aria-expanded')
-            || style.cursor === 'pointer';
+        || role === 'button'
+        || node.onclick
+        || node.tabIndex >= 0
+        || node.hasAttribute?.('aria-expanded')
+        || style.cursor === 'pointer';
 
         if (clickable) return node;
     }
@@ -2229,15 +2209,15 @@ async function runCnvMp3Autofill() {
         if (field.value !== payload.url) setNativeValue(field, payload.url);
     }, 300);
 
-    if (payload.format === 'mp3' || payload.format === 'mp4') {
-        // Wait briefly for the dropdown icons to be in the DOM, then set the
-        // explicit format. This matters in both directions because CnvMP3 can
-        // remember a previous MP4/MP3 selection between visits.
-        await waitForElement(findFormatDropdownTrigger, 200, 50);
-        await trySetCnvMp3Format(payload.format);
-    }
+        if (payload.format === 'mp3' || payload.format === 'mp4') {
+            // Wait briefly for the dropdown icons to be in the DOM, then set the
+            // explicit format. This matters in both directions because CnvMP3 can
+            // remember a previous MP4/MP3 selection between visits.
+            await waitForElement(findFormatDropdownTrigger, 200, 50);
+            await trySetCnvMp3Format(payload.format);
+        }
 
-    try { field.focus(); field.select?.(); } catch {}
+        try { field.focus(); field.select?.(); } catch {}
 }
 
 /* ── Piped instance discovery (docs markdown source) ───────────────────── */
@@ -2535,7 +2515,7 @@ class PrivateDownloadJob {
         const suffix = batch.length > 3 ? ` +${batch.length - 3}` : '';
         const mirrorLabel = batch.length === 1 ? 'mirror' : 'mirrors';
         setBtnBusy(this.btn,
-            `${provider.label}: checking ${batch.length} ${mirrorLabel} · ${hostsLabel}${suffix}…`);
+                   `${provider.label}: checking ${batch.length} ${mirrorLabel} · ${hostsLabel}${suffix}…`);
 
         const batchResult = await raceStreamsRequest(this.videoId, batch, this.mode, provider);
         if (batchResult.cancelled || this.isCancelled()) return 'cancelled';
@@ -2677,13 +2657,13 @@ async function downloadViaPublicApisOrFallback(videoId, mode, btn) {
 /* ── Toasts (redesigned) ────────────────────────────────────────────────── */
 
 /*
-   Each toast is a stack item. We support multiple visible toasts (e.g. quality
-   change + download warning within a second of each other), they stack from bottom up,
-   each carries its own dismiss progress bar, and optional action button.
-
-   The container re-parents into document.fullscreenElement when fullscreen
-   so toasts stay visible above the YouTube player chrome.
-*/
+ * Each toast is a stack item. We support multiple visible toasts (e.g. quality
+ * change + download warning within a second of each other), they stack from bottom up,
+ * each carries its own dismiss progress bar, and optional action button.
+ *
+ * The container re-parents into document.fullscreenElement when fullscreen
+ * so toasts stay visible above the YouTube player chrome.
+ */
 
 const TOAST_VIEWPORT_MARGIN = 12;
 const TOAST_VIDEO_SIDE_INSET = 16;
@@ -2713,8 +2693,8 @@ function getToastAnchorRect() {
         if (!el?.isConnected || typeof el.getBoundingClientRect !== 'function') continue;
         const rect = el.getBoundingClientRect();
         const visible = rect.width >= 120 && rect.height >= 80
-            && rect.right > 0 && rect.bottom > 0
-            && rect.left < window.innerWidth && rect.top < window.innerHeight;
+        && rect.right > 0 && rect.bottom > 0
+        && rect.left < window.innerWidth && rect.top < window.innerHeight;
         if (visible) return rect;
     }
     return null;
@@ -2731,10 +2711,14 @@ function syncToastPosition(container = document.getElementById('rt_toasts')) {
     const rect = getToastAnchorRect();
     const estimatedWidth = Math.min(380, Math.max(250, window.innerWidth - TOAST_VIEWPORT_MARGIN * 2));
     const estimatedHeight = 88;
-    const maxHorizontal = Math.max(TOAST_VIEWPORT_MARGIN,
-        window.innerWidth - TOAST_VIEWPORT_MARGIN - estimatedWidth);
-    const maxVertical = Math.max(TOAST_VIEWPORT_MARGIN,
-        window.innerHeight - TOAST_VIEWPORT_MARGIN - estimatedHeight);
+    const maxHorizontal = Math.max(
+        TOAST_VIEWPORT_MARGIN,
+        window.innerWidth - TOAST_VIEWPORT_MARGIN - estimatedWidth
+    );
+    const maxVertical = Math.max(
+        TOAST_VIEWPORT_MARGIN,
+        window.innerHeight - TOAST_VIEWPORT_MARGIN - estimatedHeight
+    );
     const [vertical, horizontal] = placement.split('-');
     const isTop = vertical === 'top';
     const isLeft = horizontal === 'left';
@@ -2852,7 +2836,7 @@ function toast(message, variant = 'default', opts = {}) {
 
     // Close button (always present)
     const close = mk('button', 'rt-toast-close', '×',
-        { type: 'button', 'aria-label': 'Dismiss' });
+                     { type: 'button', 'aria-label': 'Dismiss' });
     close.addEventListener('click', dismiss);
     el.appendChild(close);
 
@@ -3003,12 +2987,12 @@ function initTooltips(root = document) {
 /* ── UI assembly ────────────────────────────────────────────────────────── */
 
 /*
-   Custom 24×24 marks. Each uses currentColor so parent classes can tint it.
-   The feature icons stay geometric and small-screen friendly:
-     - shorts: a vertical-phone "shorts" frame with a diagonal slash.
-     - quality: a four-point sparkle.
-     - private: a shield with a protected download arrow.
-*/
+ * Custom 24×24 marks. Each uses currentColor so parent classes can tint it.
+ * The feature icons stay geometric and small-screen friendly:
+ *  - shorts: a vertical-phone "shorts" frame with a diagonal slash.
+ *  - quality: a four-point sparkle.
+ *  - private: a shield with a protected download arrow.
+ */
 function makeSvgIcon(pathData, opts = {}) {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
@@ -3084,26 +3068,26 @@ const RT_ICONS = Object.freeze({
     shorts: () => makeSvgIcon([
         // Portrait frame rounded at the corners
         { d: 'M8 3.2 H16 A1.6 1.6 0 0 1 17.6 4.8 V19.2 A1.6 1.6 0 0 1 16 20.8 H8 A1.6 1.6 0 0 1 6.4 19.2 V4.8 A1.6 1.6 0 0 1 8 3.2 Z',
-          strokeWidth: 1.7 },
-        // Play triangle centered in the frame
-        { d: 'M10.6 9 L14.4 12 L10.6 15 Z',
-          fill: 'currentColor', stroke: 'none' },
-        // Diagonal slash from upper-right to lower-left (the "blocked" mark)
-        { d: 'M19.5 4.5 L4.5 19.5',
-          strokeWidth: 2.2 },
+            strokeWidth: 1.7 },
+            // Play triangle centered in the frame
+            { d: 'M10.6 9 L14.4 12 L10.6 15 Z',
+                fill: 'currentColor', stroke: 'none' },
+                // Diagonal slash from upper-right to lower-left (the "blocked" mark)
+                { d: 'M19.5 4.5 L4.5 19.5',
+                    strokeWidth: 2.2 },
     ]),
 
     // Portrait Shorts player with a play triangle and no blocking slash. Used
     // for "Shorts opened" so it does not visually collide with Shorts blocked.
     shortsOpen: () => makeSvgIcon([
         { d: 'M8 3.2 H16 A1.6 1.6 0 0 1 17.6 4.8 V19.2 A1.6 1.6 0 0 1 16 20.8 H8 A1.6 1.6 0 0 1 6.4 19.2 V4.8 A1.6 1.6 0 0 1 8 3.2 Z',
-          strokeWidth: 1.7 },
-        { d: 'M10.5 8.7 L14.8 12 L10.5 15.3 Z',
-          fill: 'currentColor', stroke: 'none' },
-        { d: 'M9.5 5.8 H14.5',
-          strokeWidth: 1.4 },
-        { d: 'M10 18.2 H14',
-          strokeWidth: 1.4 },
+            strokeWidth: 1.7 },
+            { d: 'M10.5 8.7 L14.8 12 L10.5 15.3 Z',
+                fill: 'currentColor', stroke: 'none' },
+                { d: 'M9.5 5.8 H14.5',
+                    strokeWidth: 1.4 },
+                    { d: 'M10 18.2 H14',
+                        strokeWidth: 1.4 },
     ]),
 
     // Circle with one half filled — a standard "theme / appearance" glyph
@@ -3113,10 +3097,10 @@ const RT_ICONS = Object.freeze({
     customize: () => makeSvgIcon([
         // Outer circle outline
         { d: 'M12 3.5 A8.5 8.5 0 1 1 11.99 3.5 Z',
-          strokeWidth: 1.8 },
-        // Right half-disc, filled
-        { d: 'M12 3.5 A8.5 8.5 0 0 1 12 20.5 Z',
-          fill: 'currentColor', stroke: 'none' },
+            strokeWidth: 1.8 },
+            // Right half-disc, filled
+            { d: 'M12 3.5 A8.5 8.5 0 0 1 12 20.5 Z',
+                fill: 'currentColor', stroke: 'none' },
     ]),
 
     // Asymmetric four-point sparkle: tall vertical points, short horizontal
@@ -3124,40 +3108,40 @@ const RT_ICONS = Object.freeze({
     quality: () => makeSvgIcon([
         // Main four-point sparkle (diamond with concave sides via two paths)
         { d: 'M12 2.5 L13.6 10.4 L21.5 12 L13.6 13.6 L12 21.5 L10.4 13.6 L2.5 12 L10.4 10.4 Z',
-          fill: 'currentColor', stroke: 'none' },
-        // Small accent sparkle in the upper right corner
-        { d: 'M18.5 4.5 L19 6.7 L21.2 7.2 L19 7.7 L18.5 9.9 L18 7.7 L15.8 7.2 L18 6.7 Z',
-          fill: 'currentColor', stroke: 'none' },
+            fill: 'currentColor', stroke: 'none' },
+            // Small accent sparkle in the upper right corner
+            { d: 'M18.5 4.5 L19 6.7 L21.2 7.2 L19 7.7 L18.5 9.9 L18 7.7 L15.8 7.2 L18 6.7 Z',
+                fill: 'currentColor', stroke: 'none' },
     ]),
 
     // Shield outline with downward arrow inside — privacy + download.
     private: () => makeSvgIcon([
         // Shield outline
         { d: 'M12 3.2 L19.5 5.8 V12.4 C19.5 16.2 16.4 19.5 12 20.8 C7.6 19.5 4.5 16.2 4.5 12.4 V5.8 Z',
-          strokeWidth: 1.7 },
-        // Downward arrow shaft + V chevron
-        { d: 'M12 7.5 V14.5 M8.5 11.5 L12 15 L15.5 11.5',
-          strokeWidth: 2 },
+            strokeWidth: 1.7 },
+            // Downward arrow shaft + V chevron
+            { d: 'M12 7.5 V14.5 M8.5 11.5 L12 15 L15.5 11.5',
+                strokeWidth: 2 },
     ]),
 
     // Rounded screen with a large play cut. More legible in the compact
     // download tile than the previous film-frame/sprocket mark.
     video: () => makeSvgIcon([
         { d: 'M4.8 6.6 H19.2 C20.2 6.6 21 7.4 21 8.4 V15.6 C21 16.6 20.2 17.4 19.2 17.4 H4.8 C3.8 17.4 3 16.6 3 15.6 V8.4 C3 7.4 3.8 6.6 4.8 6.6 Z',
-          strokeWidth: 1.9 },
-        { d: 'M10.2 9.2 L15.4 12 L10.2 14.8 Z',
-          fill: 'currentColor', stroke: 'none' },
+            strokeWidth: 1.9 },
+            { d: 'M10.2 9.2 L15.4 12 L10.2 14.8 Z',
+                fill: 'currentColor', stroke: 'none' },
     ]),
 
     // Speaker body plus two strong waves. Reads faster than the older
     // concentric-arc source-dot mark at button size.
     audio: () => makeSvgIcon([
         { d: 'M4 9.7 H7.2 L11.3 6.6 V17.4 L7.2 14.3 H4 Z',
-          fill: 'currentColor', stroke: 'none' },
-        { d: 'M14.2 9.2 C15.1 10 15.6 10.9 15.6 12 C15.6 13.1 15.1 14 14.2 14.8',
-          strokeWidth: 2 },
-        { d: 'M16.8 6.8 C18.4 8.2 19.4 10 19.4 12 C19.4 14 18.4 15.8 16.8 17.2',
-          strokeWidth: 2 },
+            fill: 'currentColor', stroke: 'none' },
+            { d: 'M14.2 9.2 C15.1 10 15.6 10.9 15.6 12 C15.6 13.1 15.1 14 14.2 14.8',
+                strokeWidth: 2 },
+                { d: 'M16.8 6.8 C18.4 8.2 19.4 10 19.4 12 C19.4 14 18.4 15.8 16.8 17.2',
+                    strokeWidth: 2 },
     ]),
 
     // Three horizontal sliders at different positions, each with a small
@@ -3168,18 +3152,18 @@ const RT_ICONS = Object.freeze({
         { d: 'M4 7.5 H20 M4 12 H20 M4 16.5 H20', strokeWidth: 1.6 },
         // Knobs (filled circles at varying positions)
         { d: 'M14 7.5 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
-          fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
-        { d: 'M8 12 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
-          fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
-        { d: 'M16 16.5 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
-          fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
-        // White dot in the center of each knob for the "tuning point"
-        { d: 'M14 7.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
-          fill: '#0d0d10', stroke: 'none' },
-        { d: 'M8 12 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
-          fill: '#0d0d10', stroke: 'none' },
-        { d: 'M16 16.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
-          fill: '#0d0d10', stroke: 'none' },
+            fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
+            { d: 'M8 12 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
+                fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
+                { d: 'M16 16.5 m-2.2 0 a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0',
+                    fill: 'currentColor', stroke: 'currentColor', strokeWidth: 0 },
+                    // White dot in the center of each knob for the "tuning point"
+                    { d: 'M14 7.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
+                        fill: '#0d0d10', stroke: 'none' },
+                        { d: 'M8 12 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
+                            fill: '#0d0d10', stroke: 'none' },
+                            { d: 'M16 16.5 m-0.55 0 a0.55 0.55 0 1 0 1.1 0 a0.55 0.55 0 1 0 -1.1 0',
+                                fill: '#0d0d10', stroke: 'none' },
     ]),
 
     // Clock face for watch-time statistics.
@@ -3225,7 +3209,7 @@ const RT_ICONS = Object.freeze({
         { d: 'M12 3.6 L21 19.2 H3 Z', strokeWidth: 1.8 },
         { d: 'M12 9.2 V13.2', strokeWidth: 2.1 },
         { d: 'M12 16.7 m-1 0 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0',
-          fill: 'currentColor', stroke: 'none' },
+            fill: 'currentColor', stroke: 'none' },
     ]),
 });
 
@@ -3252,6 +3236,7 @@ const StatsTracker = (() => {
         loaded: false,
         enabled: true,
         range: 'daily',
+        defaultRange: 'daily',
         display: 'panel',
         metrics: { ...STATS_METRICS_DEFAULTS },
         buckets: {},
@@ -3268,21 +3253,41 @@ const StatsTracker = (() => {
     let currentOpenKey = null;
     let attachRaf = 0;
     let inlineMountRaf = 0;
-    let pendingOpen = null;
     const attachedVideos = new WeakSet();
     let inlineRetryTimers = [];
     let favoriteChannelIndex = 0;
+    const STATS_UI_SELECTOR = [
+        '#rt_inline_stats',
+        '#rt_stats_panel',
+        '#rt_panel',
+        '#rt_settings_root',
+        '#rt_toasts',
+        '#rt_tip',
+        '.rt-stat-channel-menu',
+        '.rt-stats-range-menu',
+    ].join(',');
+    const STATS_UI_ROOT_SELECTOR = [
+        '#rt_inline_stats',
+        '.rt-inline-stats',
+        '#rt_stats_panel',
+        '#rt_panel',
+        '#rt_settings_root',
+        '#rt_toasts',
+        '#rt_tip',
+        '.rt-stat-channel-menu',
+        '.rt-stats-range-menu',
+    ].join(',');
 
     function clearInlineRetryTimers() {
         for (const timer of inlineRetryTimers) clearTimeout(timer);
         inlineRetryTimers = [];
     }
 
-    const getRange = () => state.range;
+    const getRange = () => state.defaultRange;
     const getDisplay = () => state.display;
     const getEnabled = () => !!state.enabled;
-    const isPanelEnabled = () => getEnabled() && statsDisplayHasPanel(state.display);
-    const isInlineEnabled = () => getEnabled() && statsDisplayHasInline(state.display);
+    const isPanelEnabled = () => getEnabled() && state.display === 'panel';
+    const isInlineEnabled = () => getEnabled() && state.display === 'inline';
     const getMetrics = () => ({ ...state.metrics });
 
     function setMetric(key, value) {
@@ -3362,7 +3367,7 @@ const StatsTracker = (() => {
         for (const sel of selectors) {
             const img = document.querySelector(sel);
             const src = img?.currentSrc || img?.src || img?.getAttribute?.('src')
-                || img?.getAttribute?.('data-thumb') || '';
+            || img?.getAttribute?.('data-thumb') || '';
             const clean = sanitizeStatsAvatarUrl(src);
             if (clean) return clean;
         }
@@ -3388,11 +3393,6 @@ const StatsTracker = (() => {
 
     function recordOpen(open = currentOpenFromRoute()) {
         if (!open?.id || !getEnabled()) return;
-        if (!state.loaded) {
-            pendingOpen = open;
-            return;
-        }
-
         const bucket = ensureBucket();
         if (open.type === 'shorts') bucket.shortsOpened += 1;
         else bucket.videosWatched += 1;
@@ -3507,10 +3507,10 @@ const StatsTracker = (() => {
         const cleanRange = readStatsRange(range);
         const prefix = rangeKeyPrefix(cleanRange);
         const keys = cleanRange === 'alltime'
-            ? Object.keys(state.buckets)
-            : cleanRange === 'daily'
-                ? (state.buckets[prefix] ? [prefix] : [])
-                : Object.keys(state.buckets).filter(key => key.startsWith(prefix));
+        ? Object.keys(state.buckets)
+        : cleanRange === 'daily'
+        ? (state.buckets[prefix] ? [prefix] : [])
+        : Object.keys(state.buckets).filter(key => key.startsWith(prefix));
 
         let shortsOpened = 0;
         let shortsBlocked = 0;
@@ -3537,15 +3537,15 @@ const StatsTracker = (() => {
         }
 
         const topFavoriteChannels = Object.entries(channelSec)
-            .map(([name, sec]) => ({
-                name,
-                sec: Math.round(Number(sec) || 0),
-                avatar: channelAvatar[name] || '',
-            }))
-            .filter(channel => channel.name && channel.sec > 0)
-            .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
-            .slice(0, 5)
-            .map((channel, index) => ({ ...channel, rank: index + 1 }));
+        .map(([name, sec]) => ({
+            name,
+            sec: Math.round(Number(sec) || 0),
+                               avatar: channelAvatar[name] || '',
+        }))
+        .filter(channel => channel.name && channel.sec > 0)
+        .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
+        .slice(0, 5)
+        .map((channel, index) => ({ ...channel, rank: index + 1 }));
 
         const favorite = topFavoriteChannels[0] || null;
 
@@ -3563,7 +3563,7 @@ const StatsTracker = (() => {
 
     function isStatsUiNode(node) {
         if (!(node instanceof Element)) return false;
-        return !!node.closest?.('#rt_inline_stats, #rt_stats_panel, #rt_panel, #rt_settings_root, #rt_toasts, #rt_tip');
+        return !!node.closest?.(STATS_UI_SELECTOR);
     }
 
     function mutationTouchesOnlyRainTubeUi(record) {
@@ -3572,31 +3572,25 @@ const StatsTracker = (() => {
         return !!nodes.length && nodes.every(node => {
             if (node instanceof Element) {
                 return isStatsUiNode(node)
-                    || node.matches?.('#rt_inline_stats, .rt-inline-stats, #rt_stats_panel, #rt_panel, #rt_settings_root, #rt_toasts, #rt_tip');
+                    || node.matches?.(STATS_UI_ROOT_SELECTOR);
             }
             return true;
         });
     }
 
-    function stopStatsSelectPropagation(event) {
+    function stopStatsControlPropagation(event) {
         event.stopPropagation();
     }
 
-    function metricDisplayFor(key, totals) {
-        if (key === 'watchTime') {
-            return {
-                value: formatStatsDuration(totals.watchSec),
-                sub: totals.watchSec > 0 ? 'videos + Shorts' : 'nothing yet',
-            };
-        }
-        if (key === 'videosWatched') return { value: formatStatsCount(totals.videosWatched), sub: 'opened' };
-        if (key === 'shortsOpened') return { value: formatStatsCount(totals.shortsOpened), sub: 'opened' };
-        if (key === 'shortsBlocked') return { value: formatStatsCount(totals.shortsBlocked), sub: 'blocked' };
-        // Unreachable in practice: both call sites filter favoriteChannel out
-        // beforehand, and every other key in STATS_METRICS_ORDER is handled
-        // above. If a new metric is ever added without a branch, the empty
-        // result makes it visibly broken in the UI rather than silently zero.
-        return { value: '', sub: '' };
+    function metricDisplayValue(key, totals) {
+        if (key === 'watchTime') return formatStatsDuration(totals.watchSec);
+        if (key === 'videosWatched') return formatStatsCount(totals.videosWatched);
+        if (key === 'shortsOpened') return formatStatsCount(totals.shortsOpened);
+        if (key === 'shortsBlocked') return formatStatsCount(totals.shortsBlocked);
+        // Unreachable in practice: callers filter favoriteChannel out beforehand,
+        // and every other key in STATS_METRICS_ORDER is handled above. The empty
+        // string makes a missing branch visibly broken rather than silently zero.
+        return '';
     }
 
     function makeFavoriteChannelTrophy(rank) {
@@ -3613,73 +3607,259 @@ const StatsTracker = (() => {
             ? totals.topFavoriteChannels.slice(0, 5) : [];
     }
 
-    function favoriteChannelSignature(topChannels) {
-        // The select options only expose rank + channel name. Watched seconds
-        // update frequently while a video plays, so keep them out of the
-        // signature to avoid needless option-list rebuilds.
-        return topChannels.map(channel => [
-            channel.rank, channel.name,
-        ].join('\u001f')).join('\u001e');
+    // Move a portaled menu back to its home node and hide it. Returning it to
+    // the home keeps home-relative lookups working for the build/sync code.
+    function hidePortaledMenu(menu, homeProp) {
+        if (!menu) return;
+        menu.hidden = true;
+        menu.style.display = 'none';
+        const home = menu[homeProp];
+        if (home && menu.parentNode !== home) home.appendChild(menu);
     }
 
-    function stopAndRefreshFavoriteSelect(event) {
-        event.stopPropagation();
-        scheduleRender();
+    function closePortaledMenus(buttonSelector, menuSelector, hideMenu) {
+        for (const button of document.querySelectorAll(`${buttonSelector}[aria-expanded="true"]`)) {
+            button.setAttribute('aria-expanded', 'false');
+        }
+        // Menus may be portaled onto document.body while open, so search the
+        // whole document rather than a tile/card-scoped root.
+        for (const menu of document.querySelectorAll(menuSelector)) hideMenu(menu);
     }
 
-    function bindFavoriteChannelSelect(select, tile, topChannels) {
-        for (const type of ['pointerdown', 'mousedown', 'click', 'keydown', 'keyup']) select[`on${type}`] = stopStatsSelectPropagation;
-        select.onchange = event => {
-            event.stopPropagation();
-            favoriteChannelIndex = Math.max(0, Math.min(
-                parseInt(select.value, 10) || 0, Math.max(0, topChannels.length - 1)));
-            renderFavoriteChannel(tile, topChannels, favoriteChannelIndex);
-        };
-        // Native select popups can temporarily hide their open state from JS.
-        // We keep the node stable during interaction, then do one normal stats
-        // refresh after focus leaves so option changes that were deferred while
-        // the popup was open are applied without a timer-based lock.
-        select.onblur = stopAndRefreshFavoriteSelect;
+    function focusSiblingMenuItem(menu, item, itemSelector, direction) {
+        const items = Array.from(menu.querySelectorAll(itemSelector));
+        const current = items.indexOf(item);
+        if (current < 0 || !items.length) return;
+        items[(current + direction + items.length) % items.length].focus?.();
     }
 
-    function syncFavoriteChannelSelect(tile, topChannels, selectedIndex) {
-        const head = tile.querySelector('.rt-stat-head');
-        if (!head) return;
-        let select = head.querySelector('.rt-stat-channel-select');
-        if (topChannels.length <= 1) {
-            select?.remove();
+    function positionPortaledMenu(menu, button, { align = 'left' } = {}) {
+        const btnRect = button.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth;
+        const menuHeight = menu.offsetHeight;
+        const margin = 8;
+        let left = align === 'right' ? btnRect.right - menuWidth : btnRect.left;
+        left = Math.max(margin, Math.min(left, window.innerWidth - menuWidth - margin));
+        let top = btnRect.bottom + 4;
+        if (top + menuHeight > window.innerHeight - margin) {
+            const above = btnRect.top - 4 - menuHeight;
+            top = above >= margin ? above : Math.max(margin, window.innerHeight - menuHeight - margin);
+        }
+        menu.style.left = `${Math.round(left)}px`;
+        menu.style.top = `${Math.round(top)}px`;
+    }
+
+    function hideFavoriteChannelMenu(menu) {
+        hidePortaledMenu(menu, '_rtHomeTile');
+    }
+
+    function closeFavoriteChannelMenus() {
+        closePortaledMenus('.rt-stat-channel-picker', '.rt-stat-channel-menu', hideFavoriteChannelMenu);
+    }
+
+    function hideStatsRangeMenu(menu) {
+        hidePortaledMenu(menu, '_rtHomeWrap');
+    }
+
+    function closeStatsRangeMenus() {
+        closePortaledMenus('.rt-stats-range-picker', '.rt-stats-range-menu', hideStatsRangeMenu);
+    }
+
+    function setStatsRangeMenuOpen(wrap, open, { focusSelected = false } = {}) {
+        const button = wrap.querySelector('.rt-stats-range-picker');
+        const menu = wrap._rtRangeMenu || wrap.querySelector('.rt-stats-range-menu');
+        if (!button || !menu) return;
+        if (open) closeStatsRangeMenus();
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        if (!open) {
+            hideStatsRangeMenu(menu);
             return;
         }
 
-        if (!select) {
-            select = mk('select', 'rt-stat-channel-select', null, { 'aria-label': 'Choose favorite channel' });
-            head.appendChild(select);
+        // Portal to document.body so the menu escapes #rt_panel's
+        // backdrop-filter subtree (which would otherwise clip its fill where
+        // it overhangs). Positioned with fixed coords from the picker rect.
+        menu._rtHomeWrap = wrap;
+        if (menu.parentNode !== document.body) document.body.appendChild(menu);
+        menu.hidden = false;
+        menu.style.display = '';
+
+        // Left-align to the range eyebrow.
+        positionPortaledMenu(menu, button, { align: 'left' });
+
+        if (focusSelected) {
+            (menu.querySelector('.rt-stats-range-item[aria-checked="true"]')
+                || menu.querySelector('.rt-stats-range-item'))?.focus?.();
+        }
+    }
+
+    function setFavoriteChannelMenuOpen(tile, open, { focusSelected = false } = {}) {
+        const button = tile.querySelector('.rt-stat-channel-picker');
+        const menu = tile._rtChannelMenu || tile.querySelector('.rt-stat-channel-menu');
+        if (!button || !menu) return;
+        if (open) closeFavoriteChannelMenus();
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        if (!open) {
+            hideFavoriteChannelMenu(menu);
+            return;
         }
 
-        const signature = favoriteChannelSignature(topChannels);
-        const active = document.activeElement === select;
-        if (!active && select.dataset.rtOptionsSignature !== signature) {
-            select.replaceChildren();
-            topChannels.forEach(channel => {
-                const prefix = channel.rank === 1 ? '🏆 '
-                    : channel.rank === 2 ? '🥈 '
-                        : channel.rank === 3 ? '🥉 ' : '';
-                select.appendChild(mk('option', null,
-                    `${prefix}#${channel.rank} ${channel.name}`, { value: String(channel.rank - 1) }));
-            });
-            select.dataset.rtOptionsSignature = signature;
+        // Portal the menu onto document.body so it escapes #rt_panel's
+        // backdrop-filter subtree. A backdrop-filter ancestor clips the
+        // background fill of its descendants; with the menu reparented to the
+        // body it no longer has that ancestor, so its fill paints solidly even
+        // where the menu overhangs the stats card. Positioned with fixed
+        // coords derived from the picker's viewport rect.
+        menu._rtHomeTile = tile;
+        if (menu.parentNode !== document.body) document.body.appendChild(menu);
+        menu.hidden = false;
+        menu.style.display = '';
+
+        // Measure after it's visible (it sizes to content, < the max-width cap).
+        // Right-align to the rank picker.
+        positionPortaledMenu(menu, button, { align: 'right' });
+
+        if (focusSelected) {
+            (menu.querySelector('.rt-stat-channel-menu-item[aria-checked="true"]')
+                || menu.querySelector('.rt-stat-channel-menu-item'))?.focus?.();
         }
-        select.value = String(selectedIndex);
-        bindFavoriteChannelSelect(select, tile, topChannels);
+    }
+
+    function bindFavoriteChannelPicker(button, tile) {
+        button.onpointerdown = stopStatsControlPropagation;
+        button.onclick = event => {
+            event.stopPropagation();
+            setFavoriteChannelMenuOpen(tile, button.getAttribute('aria-expanded') !== 'true');
+        };
+        button.onkeydown = event => {
+            if (event.key === 'Escape') {
+                event.stopPropagation();
+                setFavoriteChannelMenuOpen(tile, false);
+                return;
+            }
+            if (!['Enter', ' ', 'ArrowDown'].includes(event.key)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setFavoriteChannelMenuOpen(tile, true, { focusSelected: true });
+        };
+    }
+
+    function syncFavoriteChannelPicker(tile, topChannels, selectedIndex) {
+        // Picker mounts directly into the tile and rides at the right edge
+        // of the flex row — alongside avatar and copy.
+        let button = tile.querySelector('.rt-stat-channel-picker');
+        // The menu may be portaled to document.body while open, so prefer the
+        // stored reference over a tile-scoped query.
+        let menu = tile._rtChannelMenu || tile.querySelector('.rt-stat-channel-menu');
+        const wasOpen = button?.getAttribute('aria-expanded') === 'true';
+
+        if (topChannels.length <= 1) {
+            button?.remove();
+            menu?.remove();
+            tile._rtChannelMenu = null;
+            return;
+        }
+
+        if (!button) {
+            button = mk('span', 'rt-stat-channel-picker', null, {
+                role: 'button',
+                tabindex: '0',
+                'aria-haspopup': 'menu',
+                'aria-expanded': 'false',
+                'aria-label': 'Choose favorite channel rank',
+            });
+            tile.appendChild(button);
+        }
+        if (!button.querySelector('.rt-stat-channel-picker-label')) {
+            button.className = 'rt-stat-channel-picker';
+            button.replaceChildren(
+                mk('span', 'rt-stat-channel-picker-label'),
+                mk('span', 'rt-stat-channel-picker-caret', null, { 'aria-hidden': 'true' }));
+        }
+        if (!menu) {
+            menu = mk('div', 'rt-stat-channel-menu', null, { role: 'menu' });
+            menu.hidden = true;
+            menu.style.display = 'none';
+            tile.appendChild(menu);
+        }
+        // Cross-link tile and menu: the menu is portaled to document.body while
+        // open (to escape the panel's backdrop-filter), so tile-relative
+        // queries can't always find it.
+        tile._rtChannelMenu = menu;
+        menu._rtHomeTile = tile;
+
+        const selected = topChannels[selectedIndex] || topChannels[0];
+        const label = button.querySelector('.rt-stat-channel-picker-label');
+        if (label) label.textContent = selected ? `#${selected.rank}` : '—';
+        button.title = selected?.name || '';
+        button.setAttribute('aria-haspopup', 'menu');
+        button.setAttribute('aria-expanded', wasOpen ? 'true' : 'false');
+        button.setAttribute('aria-label', 'Choose favorite channel rank');
+        bindFavoriteChannelPicker(button, tile);
+
+        menu.replaceChildren();
+        const chooseChannel = index => {
+            favoriteChannelIndex = index;
+            setFavoriteChannelMenuOpen(tile, false);
+            syncFavoriteChannelPicker(tile, topChannels, favoriteChannelIndex);
+            renderFavoriteChannel(tile, topChannels, favoriteChannelIndex);
+        };
+
+        topChannels.forEach((channel, index) => {
+            const item = mk('button', 'rt-stat-channel-menu-item', null, {
+                type: 'button',
+                role: 'menuitemradio',
+                tabindex: '-1',
+                'aria-checked': index === selectedIndex ? 'true' : 'false',
+            });
+            item.appendChild(mk('span', 'rt-stat-channel-menu-rank', `#${channel.rank}`));
+            item.appendChild(mk('span', 'rt-stat-channel-menu-name', channel.name));
+            item.appendChild(mk('span', 'rt-stat-channel-menu-time', formatStatsDuration(channel.sec)));
+            item.onpointerdown = stopStatsControlPropagation;
+            item.onclick = event => {
+                event.stopPropagation();
+                chooseChannel(index);
+            };
+            item.onkeydown = event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setFavoriteChannelMenuOpen(tile, false);
+                    button.focus?.();
+                    return;
+                }
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    focusSiblingMenuItem(
+                        menu,
+                        item,
+                        '.rt-stat-channel-menu-item',
+                        event.key === 'ArrowDown' ? 1 : -1
+                    );
+                    return;
+                }
+                if (!['Enter', ' '].includes(event.key)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                chooseChannel(index);
+            };
+            menu.appendChild(item);
+        });
+        setFavoriteChannelMenuOpen(tile, wasOpen);
     }
 
     function renderFavoriteChannel(tile, topChannels, index) {
         const channel = topChannels[index] || null;
         const avatar = tile.querySelector('.rt-stat-channel-avatar');
-        const channelRow = tile.querySelector('.rt-stat-channel-row');
-        const channelSub = tile.querySelector('.rt-stat-tile-sub');
-        if (!avatar || !channelRow || !channelSub) return;
+        const nameEl = tile.querySelector('.rt-stat-channel-name');
+        const headSub = tile.querySelector('.rt-stat-channel-sub');
+        if (!avatar || !nameEl || !headSub) return;
 
+        // Trophy lives inside the avatar wrapper as a corner badge. Clear any
+        // previous img/icon AND any previous trophy before repopulating.
         avatar.replaceChildren();
         if (channel?.avatar) {
             const img = mk('img', null, null, { src: channel.avatar, alt: '' });
@@ -3688,14 +3868,12 @@ const StatsTracker = (() => {
         } else {
             avatar.appendChild(RT_ICONS.star());
         }
-
-        channelRow.replaceChildren();
         const trophy = channel ? makeFavoriteChannelTrophy(channel.rank) : null;
-        if (trophy) channelRow.appendChild(trophy);
-        channelRow.appendChild(mk('strong', 'rt-stat-tile-val rt-stat-channel-name', channel?.name || '—'));
-        if (channel?.sec > 0) channelRow.appendChild(mk('span', 'rt-stat-channel-time', `${formatStatsDuration(channel.sec)} watched`));
-        channelSub.textContent = channel?.sec
-            ? `#${channel.rank} by watch time` : 'no data yet';
+        if (trophy) avatar.appendChild(trophy);
+
+        nameEl.textContent = channel?.name || '—';
+        headSub.textContent = channel?.sec
+            ? `· ${formatStatsDuration(channel.sec)} watched` : '';
     }
 
     function syncFavoriteChannelTile(tile, totals) {
@@ -3704,7 +3882,7 @@ const StatsTracker = (() => {
             Number.isFinite(favoriteChannelIndex) ? favoriteChannelIndex : 0,
             Math.max(0, topChannels.length - 1)));
         favoriteChannelIndex = selectedIndex;
-        syncFavoriteChannelSelect(tile, topChannels, selectedIndex);
+        syncFavoriteChannelPicker(tile, topChannels, selectedIndex);
         renderFavoriteChannel(tile, topChannels, selectedIndex);
     }
 
@@ -3713,35 +3891,40 @@ const StatsTracker = (() => {
         const tile = mk('div', `rt-stat-tile rt-stat-tile-${key}`);
         tile.dataset.metricKey = key;
 
-        const head = mk('div', 'rt-stat-head');
-        const ico = mk('span', 'rt-stat-ico');
-        const iconFn = RT_ICONS[info.icon];
-        if (typeof iconFn === 'function') ico.appendChild(iconFn());
-        head.appendChild(ico);
-        head.appendChild(mk('span', 'rt-stat-name', info.label));
-        tile.appendChild(head);
-
         if (key === 'favoriteChannel') {
-            const channelMain = mk('div', 'rt-stat-channel-main');
             const avatar = mk('span', 'rt-stat-channel-avatar');
-            channelMain.appendChild(avatar);
+            tile.appendChild(avatar);
 
             const channelCopy = mk('div', 'rt-stat-channel-copy');
-            const channelRow = mk('div', 'rt-stat-channel-row');
-            const channelSub = mk('span', 'rt-stat-tile-sub');
-            channelCopy.appendChild(channelRow);
-            channelCopy.appendChild(channelSub);
-            channelMain.appendChild(channelCopy);
+            const head = mk('div', 'rt-stat-head');
+            const ico = mk('span', 'rt-stat-ico');
+            const iconFn = RT_ICONS[info.icon];
+            if (typeof iconFn === 'function') ico.appendChild(iconFn());
+            head.appendChild(ico);
+            head.appendChild(mk('span', 'rt-stat-name', info.label));
+            // Inline watch-time pill so the channel's read-out lives on the
+            // eyebrow row instead of taking its own line below the name.
+            head.appendChild(mk('span', 'rt-stat-channel-sub'));
+            channelCopy.appendChild(head);
+            channelCopy.appendChild(mk('strong', 'rt-stat-tile-val rt-stat-channel-name', '—'));
+            tile.appendChild(channelCopy);
+            // Picker (rank pill) is appended in-place by syncFavoriteChannelPicker
+            // when there are 2+ channels to choose from.
 
             tile.classList.add('rt-stat-tile-channel');
-            tile.appendChild(channelMain);
             syncFavoriteChannelTile(tile, totals);
             return tile;
         }
 
-        const { value, sub } = metricDisplayFor(key, totals);
-        tile.appendChild(mk('strong', 'rt-stat-tile-val', value));
-        tile.appendChild(mk('span', 'rt-stat-tile-sub', sub));
+        // Stacked column layout: icon on top, two-line label below,
+        // value at the bottom. Glow emanates from the icon's position
+        // at the top-left of each tile.
+        const ico = mk('span', 'rt-stat-ico');
+        const iconFn = RT_ICONS[info.icon];
+        if (typeof iconFn === 'function') ico.appendChild(iconFn());
+        tile.appendChild(ico);
+        tile.appendChild(mk('span', 'rt-stat-name', info.label));
+        tile.appendChild(mk('strong', 'rt-stat-tile-val', metricDisplayValue(key, totals)));
         return tile;
     }
 
@@ -3752,22 +3935,27 @@ const StatsTracker = (() => {
             return true;
         }
         const valueEl = tile.querySelector('.rt-stat-tile-val');
-        const subEl = tile.querySelector('.rt-stat-tile-sub');
-        if (!valueEl || !subEl) return false;
-        const { value, sub } = metricDisplayFor(key, totals);
-        valueEl.textContent = value;
-        subEl.textContent = sub;
+        if (!valueEl) return false;
+        valueEl.textContent = metricDisplayValue(key, totals);
         return true;
     }
 
     function patchStatsCard(card) {
         if (!card || !state.loaded || !getEnabled()) return false;
         const range = readStatsRange(state.range);
-        const eyebrow = card.querySelector('.rt-stats-card-eyebrow');
+        const rangeLabel = card.querySelector('.rt-stats-range-label');
         const title = card.querySelector('.rt-stats-card-title');
-        if (!eyebrow || !title) return false;
-        eyebrow.textContent = STATS_RANGE_HEADER[range] || 'Statistics';
+        if (!rangeLabel || !title) return false;
+        rangeLabel.textContent = STATS_RANGE_LABEL[range] || 'Statistics';
         title.textContent = 'Your YouTube';
+        // Keep the picker's active-item marker in sync with the range.
+        const rangeWrap = card.querySelector('.rt-stats-range');
+        const rangeMenu = rangeWrap?._rtRangeMenu || rangeWrap?.querySelector('.rt-stats-range-menu');
+        if (rangeMenu) {
+            for (const item of rangeMenu.querySelectorAll('.rt-stats-range-item')) {
+                item.setAttribute('aria-checked', item.dataset.range === range ? 'true' : 'false');
+            }
+        }
 
         const enabled = STATS_METRICS_ORDER.filter(key => state.metrics[key] !== false);
         if (!enabled.length) return false;
@@ -3788,17 +3976,111 @@ const StatsTracker = (() => {
         return true;
     }
 
-    function buildStatsCardHead(eyebrow, title) {
+    function buildStatsCardHead(range, title) {
         const head = mk('div', 'rt-stats-card-head');
         const logo = mk('span', 'rt-stats-card-logo');
         logo.appendChild(RT_ICONS.chart());
         head.appendChild(logo);
 
         const text = mk('div', 'rt-stats-card-heading');
-        text.appendChild(mk('span', 'rt-stats-card-eyebrow', eyebrow));
         text.appendChild(mk('span', 'rt-stats-card-title', title));
+        text.appendChild(buildStatsRangePicker(range));
         head.appendChild(text);
         return head;
+    }
+
+    // The range eyebrow doubles as a picker: it shows the active range and,
+    // when clicked, opens a menu to switch the displayed range. This is a
+    // transient view change only — it does NOT persist. The saved default
+    // (set in settings) is what loads on every visit; switching here resets
+    // to that default on the next load.
+    function buildStatsRangePicker(activeRange) {
+        const clean = readStatsRange(activeRange);
+        const wrap = mk('span', 'rt-stats-range');
+
+        const button = mk('span', 'rt-stats-range-picker', null, {
+            role: 'button',
+            tabindex: '0',
+            'aria-haspopup': 'menu',
+            'aria-expanded': 'false',
+            'aria-label': 'Choose statistics time range',
+        });
+        button.appendChild(mk('span', 'rt-stats-range-label', STATS_RANGE_LABEL[clean] || 'Statistics'));
+        button.appendChild(mk('span', 'rt-stats-range-caret', null, { 'aria-hidden': 'true' }));
+        wrap.appendChild(button);
+
+        const menu = mk('div', 'rt-stats-range-menu', null, { role: 'menu' });
+        menu.hidden = true;
+        menu.style.display = 'none';
+        for (const value of STATS_RANGE_ORDER) {
+            const item = mk('button', 'rt-stats-range-item', STATS_RANGE_LABEL[value], {
+                type: 'button',
+                role: 'menuitemradio',
+                tabindex: '-1',
+                'aria-checked': value === clean ? 'true' : 'false',
+            });
+            item.dataset.range = value;
+            item.onpointerdown = stopStatsControlPropagation;
+            item.onclick = event => {
+                event.stopPropagation();
+                chooseStatsRange(value);
+            };
+            item.onkeydown = event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setStatsRangeMenuOpen(wrap, false);
+                    button.focus?.();
+                    return;
+                }
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    focusSiblingMenuItem(
+                        menu,
+                        item,
+                        '.rt-stats-range-item',
+                        event.key === 'ArrowDown' ? 1 : -1
+                    );
+                    return;
+                }
+                if (!['Enter', ' '].includes(event.key)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                chooseStatsRange(value);
+            };
+            menu.appendChild(item);
+        }
+        wrap.appendChild(menu);
+        wrap._rtRangeMenu = menu;
+        menu._rtHomeWrap = wrap;
+        bindStatsRangePicker(button, wrap);
+        return wrap;
+    }
+
+    function bindStatsRangePicker(button, wrap) {
+        button.onpointerdown = stopStatsControlPropagation;
+        button.onclick = event => {
+            event.stopPropagation();
+            setStatsRangeMenuOpen(wrap, button.getAttribute('aria-expanded') !== 'true');
+        };
+        button.onkeydown = event => {
+            if (event.key === 'Escape') {
+                event.stopPropagation();
+                setStatsRangeMenuOpen(wrap, false);
+                return;
+            }
+            if (!['Enter', ' ', 'ArrowDown'].includes(event.key)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setStatsRangeMenuOpen(wrap, true, { focusSelected: true });
+        };
+    }
+
+    function chooseStatsRange(value) {
+        closeStatsRangeMenus();
+        // Transient view change only — does not alter the saved default.
+        setActiveRange(value);
     }
 
     function buildStatsCard() {
@@ -3807,7 +4089,7 @@ const StatsTracker = (() => {
         const range = readStatsRange(state.range);
 
         const card = mk('div', 'rt-stats-card');
-        card.appendChild(buildStatsCardHead(STATS_RANGE_HEADER[range] || 'Statistics', 'Your YouTube'));
+        card.appendChild(buildStatsCardHead(range, 'Your YouTube'));
 
         const enabled = STATS_METRICS_ORDER.filter(key => state.metrics[key] !== false);
         if (!enabled.length) {
@@ -3824,7 +4106,7 @@ const StatsTracker = (() => {
 
     function buildStatsLoadingCard() {
         const card = mk('div', 'rt-stats-card');
-        card.appendChild(buildStatsCardHead('Statistics', 'Your YouTube'));
+        card.appendChild(buildStatsCardHead(readStatsRange(state.range), 'Your YouTube'));
         card.appendChild(mk('div', 'rt-stats-empty', 'Loading local statistics…'));
         return card;
     }
@@ -3858,8 +4140,27 @@ const StatsTracker = (() => {
 
     function findInlineHost() {
         return document.querySelector('ytd-watch-flexy #secondary #secondary-inner')
-            || document.querySelector('ytd-watch-flexy #secondary')
-            || document.querySelector('#secondary');
+        || document.querySelector('ytd-watch-flexy #secondary')
+        || document.querySelector('#secondary');
+    }
+
+    function syncStatsPanelWidth() {
+        const panel = document.getElementById('rt_stats_panel');
+        if (!panel) return;
+
+        const inline = document.querySelector('#rt_inline_stats');
+        const source = inline && !inline.closest?.('#rt_stats_panel')
+            ? inline
+            : findInlineHost();
+        const sourceWidth = source?.getBoundingClientRect?.().width || 0;
+        // Match the same column the always-visible card uses. If YouTube's
+        // generic #secondary fallback points at an oversized page container,
+        // ignore it instead of turning the collapsed panel into a sheet.
+        const targetWidth = sourceWidth >= 320 && sourceWidth <= 760
+            ? Math.round(sourceWidth)
+            : 420;
+
+        panel.style.setProperty('--rt-stats-panel-width', `${targetWidth}px`);
     }
 
     function removeInlineCards(except = null) {
@@ -3944,7 +4245,7 @@ const StatsTracker = (() => {
 
     function syncSettingsControls() {
         const range = document.getElementById('rt_stats_range_select');
-        if (range) range.value = state.range;
+        if (range) range.value = state.defaultRange;
         const display = document.getElementById('rt_stats_display_select');
         if (display) display.value = state.display;
         for (const key of STATS_METRICS_ORDER) {
@@ -3961,8 +4262,9 @@ const StatsTracker = (() => {
             StatsStore.getJson(CFG.storage.statsMetrics, null),
             StatsStore.getJson(CFG.storage.statsBuckets, null),
         ]);
-        state.enabled = readStatsEnabled(enabled);
-        state.range = readStatsRange(range);
+        state.enabled = typeof enabled === 'boolean' ? enabled : true;
+        state.defaultRange = readStatsRange(range);
+        state.range = state.defaultRange;
         state.display = readStatsDisplay(display);
         state.metrics = sanitizeStatsMetrics(metrics);
         state.buckets = sanitizeStatsBuckets(buckets);
@@ -3971,15 +4273,8 @@ const StatsTracker = (() => {
         syncSettingsControls();
         applyVisibility();
 
-        // If navigation fired before async stats loading completed, count the
-        // captured route now. Otherwise run the normal navigation handler so
-        // the current page is counted once without per-day ID caches.
-        if (pendingOpen) {
-            recordOpen(pendingOpen);
-            pendingOpen = null;
-        } else {
-            onNavigate();
-        }
+        // Record the current route now that state is loaded.
+        onNavigate();
         scheduleAttachVideo(true);
     }
 
@@ -4003,13 +4298,13 @@ const StatsTracker = (() => {
             clearTimeout(persistTimer);
             persistTimer = 0;
         }
-        pendingOpen = null;
         await deleteStoredValue(CFG.storage.statsBuckets);
         scheduleRender();
     }
 
     function resetSettings() {
         state.enabled = true;
+        state.defaultRange = 'daily';
         state.range = 'daily';
         state.display = 'panel';
         state.metrics = { ...STATS_METRICS_DEFAULTS };
@@ -4031,6 +4326,15 @@ const StatsTracker = (() => {
                 scheduleRender();
             }
         }, { passive: true });
+        document.addEventListener('pointerdown', event => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (!target?.closest?.('.rt-stat-channel-picker, .rt-stat-channel-menu')) {
+                closeFavoriteChannelMenus();
+            }
+            if (!target?.closest?.('.rt-stats-range-picker, .rt-stats-range-menu')) {
+                closeStatsRangeMenus();
+            }
+        }, { passive: true });
         window.addEventListener('pagehide', () => { void flush(); }, { passive: true });
         window.addEventListener('beforeunload', () => { void flush(); }, { passive: true });
 
@@ -4049,7 +4353,6 @@ const StatsTracker = (() => {
     async function setEnabled(value) {
         const enabled = !!value;
         if (!enabled) {
-            pendingOpen = null;
             // Flush the final partial watch tick before flipping the master
             // switch off; tickWatchTime intentionally ignores disabled stats.
             stopWatch();
@@ -4063,11 +4366,26 @@ const StatsTracker = (() => {
         uiSync();
     }
 
-    async function setRange(value) {
-        state.range = readStatsRange(value);
-        await StatsStore.setValue(CFG.storage.statsRange, state.range);
+    // The persisted default range — applied on every page load. Only the
+    // settings "Default time range" control writes this.
+    async function setDefaultRange(value) {
+        state.defaultRange = readStatsRange(value);
+        state.range = state.defaultRange;
+        await StatsStore.setValue(CFG.storage.statsRange, state.defaultRange);
+        renderInlineCard();
+        renderStatsPanelSlot();
+        syncSettingsControls();
         applyVisibility();
         uiSync();
+    }
+
+    // The active/displayed range — transient. The in-card range picker uses
+    // this so switching ranges is a quick view change that does NOT become the
+    // saved default; on the next load the stored default is shown again.
+    function setActiveRange(value) {
+        state.range = readStatsRange(value);
+        renderInlineCard();
+        renderStatsPanelSlot();
     }
 
     async function setDisplay(value) {
@@ -4084,11 +4402,13 @@ const StatsTracker = (() => {
         recordOpen,
         renderStatsPanelSlot,
         renderInlineCard,
+        syncStatsPanelWidth,
         applyVisibility,
         clearAll,
         resetSettings,
         setEnabled,
-        setRange,
+        setDefaultRange,
+        setActiveRange,
         setDisplay,
         setMetric,
         getRange,
@@ -4179,8 +4499,8 @@ function buildFieldLabel(text, helpText, labelClass = 'rt-field-label') {
     help.addEventListener('keydown', event => {
         if (event.key === ' ' || event.key === 'Enter') stopLabelActivation(event);
     });
-    wrap.appendChild(help);
-    return wrap;
+        wrap.appendChild(help);
+        return wrap;
 }
 
 function buildCheckboxField({ inputId, text, checked, wide = false, helpText, onChange }) {
@@ -4541,14 +4861,14 @@ function createSettingsSections() {
             controls: [
                 {
                     type: 'select',
-                    labelText: 'Time range',
-                    helpText: 'Choose the time period shown in your stats. Turning Statistics off pauses tracking.',
+                    labelText: 'Default time range',
+                    helpText: 'The time period shown when stats first load each visit. Switch it temporarily anytime from the range picker on the stats card — that view resets to this default on reload. Turning Statistics off pauses tracking.',
                     selectId: 'rt_stats_range_select',
                     options: STATS_RANGE_ORDER.map(value => ({
                         value, label: STATS_RANGE_LABEL[value],
                     })),
                     value: StatsTracker.getRange(),
-                    onChange: value => { void StatsTracker.setRange(value); },
+                    onChange: value => { void StatsTracker.setDefaultRange(value); },
                 },
                 {
                     type: 'select',
@@ -4590,8 +4910,7 @@ function createSettingsSections() {
                         S.qualityMax = value;
                         save(CFG.storage.qualityMax, S.qualityMax);
                         clearQualitySchedule();
-                        setKnownQuality(null);
-                        S._lastQualityTargetKey = null;
+                        clearQualityMemos();
                         if (S.qualityEnabled) scheduleQualityApply();
                     },
                 },
@@ -4606,8 +4925,7 @@ function createSettingsSections() {
                         S.qualitySuperResolutionEnabled = !!checked;
                         save(CFG.storage.qualitySuperResolution, S.qualitySuperResolutionEnabled);
                         clearQualitySchedule();
-                        setKnownQuality(null);
-                        S._lastQualityTargetKey = null;
+                        clearQualityMemos();
                         if (S.qualityEnabled) scheduleQualityApply();
                     },
                 },
@@ -4810,7 +5128,7 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
     const slider = mk('input', 'rt-slider-input', null, {
         id: sliderId, type: 'range',
         min: String(min), max: String(max), step: String(step),
-        value: String(value),
+                      value: String(value),
     });
     sliderWrap.appendChild(slider);
 
@@ -4857,42 +5175,42 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
         if (!rafHandle) rafHandle = requestAnimationFrame(tick);
     };
 
-    // ── Chip pulse on value-text change ────────────────────────────────
-    let lastChipText = chip.textContent;
-    const pulseChip = () => {
-        chip.classList.remove('rt-chip-pulse');
-        void chip.offsetWidth;
-        chip.classList.add('rt-chip-pulse');
-    };
+        // ── Chip pulse on value-text change ────────────────────────────────
+        let lastChipText = chip.textContent;
+        const pulseChip = () => {
+            chip.classList.remove('rt-chip-pulse');
+            void chip.offsetWidth;
+            chip.classList.add('rt-chip-pulse');
+        };
 
-    // ── Wire input events ──────────────────────────────────────────────
-    slider.addEventListener('input', e => {
-        const v = parseFloat(e.currentTarget.value);
-        const next = valueRender(v);
-        if (next !== lastChipText) {
-            chip.textContent = next;
-            lastChipText = next;
-            pulseChip();
-        }
-        setTarget(toPct(v));
-    });
-    slider.addEventListener('change', e => {
-        onChange?.(parseFloat(e.currentTarget.value), chip);
-    });
+        // ── Wire input events ──────────────────────────────────────────────
+        slider.addEventListener('input', e => {
+            const v = parseFloat(e.currentTarget.value);
+            const next = valueRender(v);
+            if (next !== lastChipText) {
+                chip.textContent = next;
+                lastChipText = next;
+                pulseChip();
+            }
+            setTarget(toPct(v));
+        });
+        slider.addEventListener('change', e => {
+            onChange?.(parseFloat(e.currentTarget.value), chip);
+        });
 
-    // ── Grabbing state for thumb styling ───────────────────────────────
-    const onDown = () => {
-        row.classList.add('rt-slider-grabbing');
-    };
-    const onUp = () => {
-        row.classList.remove('rt-slider-grabbing');
-    };
-    slider.addEventListener('pointerdown', onDown, { passive: true });
-    slider.addEventListener('pointerup', onUp, { passive: true });
-    slider.addEventListener('pointercancel', onUp, { passive: true });
-    slider.addEventListener('blur', onUp);
+        // ── Grabbing state for thumb styling ───────────────────────────────
+        const onDown = () => {
+            row.classList.add('rt-slider-grabbing');
+        };
+        const onUp = () => {
+            row.classList.remove('rt-slider-grabbing');
+        };
+        slider.addEventListener('pointerdown', onDown, { passive: true });
+        slider.addEventListener('pointerup', onUp, { passive: true });
+        slider.addEventListener('pointercancel', onUp, { passive: true });
+        slider.addEventListener('blur', onUp);
 
-    return row;
+        return row;
 }
 
 function buildSelectField({ labelText, helpText, selectId, options, value, onChange }) {
@@ -5015,9 +5333,9 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 Math.max(DROP_MIN_COUNT, state.width / DROP_DENSITY_WIDTH),
             ));
             const targetDrops = quantityScale <= 0 ? 0
-                : Math.max(1, Math.round(baseDrops * quantityScale));
+            : Math.max(1, Math.round(baseDrops * quantityScale));
             const targetBeads = quantityScale <= 0 ? 0
-                : Math.max(1, Math.round(surfaceBeadCount * quantityScale));
+            : Math.max(1, Math.round(surfaceBeadCount * quantityScale));
 
             particles.ensureCount(state.drops, targetDrops);
             particles.ensureCount(state.beads, targetBeads);
@@ -5031,14 +5349,14 @@ function initHeaderRain(canvas, panel, opts = {}) {
             drop.depth = depth;
             drop.background = depth < BACKGROUND_DROP_DEPTH;
             drop.canHitSurface = depth > UI_IMPACT_TOP_DEPTH
-                && Math.random() < UI_IMPACT_CHANCE;
+            && Math.random() < UI_IMPACT_CHANCE;
             drop.x = random(-state.width * 0.15, state.width * 1.15);
             drop.y = initial
-                ? random(-state.height * 0.1, state.height * 1.1)
-                : random(-state.height * 0.75, -8);
+            ? random(-state.height * 0.1, state.height * 1.1)
+            : random(-state.height * 0.75, -8);
             drop.vy = random(118, 248) * (0.54 + depth * 0.68) *
-                RAIN_SPEED_SCALE *
-                (drop.background ? BACKGROUND_DROP_SPEED_SCALE : 1);
+            RAIN_SPEED_SCALE *
+            (drop.background ? BACKGROUND_DROP_SPEED_SCALE : 1);
             drop.vx = state.wind * (0.22 + depth * 0.48) + random(-9, 9);
             drop.len = random(5.5, 14) * (0.76 + depth * 0.72) * RAIN_SIZE_SCALE;
             drop.alpha = random(0.078, 0.25) * (0.8 + depth * 0.88);
@@ -5054,7 +5372,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
         resetBead(bead, initial = false) {
             bead.x = random(state.width * 0.08, state.width * 0.92);
             bead.y = initial ? random(state.height * 0.12, state.height * 0.78)
-                : random(-10, state.height * 0.25);
+            : random(-10, state.height * 0.25);
             bead.r = random(1.35, 3.15) * RAIN_SIZE_SCALE;
             bead.vx = state.wind * random(0.06, 0.18) + random(-0.7, 0.7);
             bead.vy = random(2.4, 8.5) * RAIN_SPEED_SCALE;
@@ -5090,8 +5408,8 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
         escaped(drop) {
             return drop.y - drop.len > state.height + 18
-                || drop.x < -state.width * 0.25
-                || drop.x > state.width * 1.25;
+            || drop.x < -state.width * 0.25
+            || drop.x > state.width * 1.25;
         },
 
         updateBead(bead, dt) {
@@ -5168,21 +5486,21 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             const canvasRect = canvas.getBoundingClientRect();
             state.targets = Array.from(panel.querySelectorAll(targetSelector))
-                .map(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (rect.width < 1 || rect.height < 1) return null;
-                    const kind = targetKind(el);
-                    return {
-                        el,
-                        kind,
-                        x: rect.left - canvasRect.left,
-                        y: rect.top - canvasRect.top,
-                        w: rect.width,
-                        h: rect.height,
-                        pad: kind === 'logo' ? 5 : 4,
-                    };
-                })
-                .filter(Boolean);
+            .map(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.width < 1 || rect.height < 1) return null;
+                const kind = targetKind(el);
+                return {
+                    el,
+                    kind,
+                    x: rect.left - canvasRect.left,
+                    y: rect.top - canvasRect.top,
+                    w: rect.width,
+                    h: rect.height,
+                    pad: kind === 'logo' ? 5 : 4,
+                };
+            })
+            .filter(Boolean);
             state.targetRefreshTs = now;
             return state.targets;
         },
@@ -5195,10 +5513,14 @@ function initHeaderRain(canvas, panel, opts = {}) {
             if (ts - lastHit < UI_IMPACT_COOLDOWN) return false;
 
             state.targetHits.set(target.el, ts);
-            target.el.style.setProperty('--rt-rain-hit-x',
-                `${clamp(((x - target.x) / target.w) * 100, 8, 92).toFixed(1)}%`);
-            target.el.style.setProperty('--rt-rain-hit-y',
-                `${clamp(((y - target.y) / target.h) * 100, 8, 92).toFixed(1)}%`);
+            target.el.style.setProperty(
+                '--rt-rain-hit-x',
+                `${clamp(((x - target.x) / target.w) * 100, 8, 92).toFixed(1)}%`
+            );
+            target.el.style.setProperty(
+                '--rt-rain-hit-y',
+                `${clamp(((y - target.y) / target.h) * 100, 8, 92).toFixed(1)}%`
+            );
             target.el.classList.remove('rt-rain-hit');
             void target.el.offsetWidth;
             target.el.classList.add('rt-rain-hit');
@@ -5207,7 +5529,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 if (state.targetHits.get(target.el) === ts) target.el.classList.remove('rt-rain-hit');
             }, 380);
 
-            return true;
+                return true;
         },
 
         maybeHit(drop, prevX, prevY, ts, targets) {
@@ -5215,15 +5537,15 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             for (const target of targets) {
                 const topHit = prevY <= target.y + 1
-                    && drop.y >= target.y - target.pad
-                    && drop.x >= target.x - target.pad
-                    && drop.x <= target.x + target.w + target.pad;
+                && drop.y >= target.y - target.pad
+                && drop.x >= target.x - target.pad
+                && drop.x <= target.x + target.w + target.pad;
                 const insideTarget = drop.x >= target.x - target.pad
-                    && drop.x <= target.x + target.w + target.pad
-                    && drop.y >= target.y - target.pad
-                    && drop.y <= target.y + target.h + target.pad;
+                && drop.x <= target.x + target.w + target.pad
+                && drop.y >= target.y - target.pad
+                && drop.y <= target.y + target.h + target.pad;
                 const visibleHit = topHit
-                    || (insideTarget && drop.depth > UI_IMPACT_INSIDE_DEPTH);
+                || (insideTarget && drop.depth > UI_IMPACT_INSIDE_DEPTH);
 
                 if (!visibleHit) continue;
 
@@ -5242,8 +5564,8 @@ function initHeaderRain(canvas, panel, opts = {}) {
     const lightning = {
         schedule(ts, immediate = false) {
             state.nextLightningTs = ts + (immediate
-                ? random(LIGHTNING_FIRST_MIN_DELAY, LIGHTNING_FIRST_MAX_DELAY)
-                : random(LIGHTNING_MIN_DELAY, LIGHTNING_MAX_DELAY));
+            ? random(LIGHTNING_FIRST_MIN_DELAY, LIGHTNING_FIRST_MAX_DELAY)
+            : random(LIGHTNING_MIN_DELAY, LIGHTNING_MAX_DELAY));
         },
 
         maybeStrike(ts) {
@@ -5274,23 +5596,23 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 x += random(-18, 18) + drift * 0.18;
                 points.push({
                     x: clamp(x, state.width * 0.08, state.width * 0.92),
-                    y: topY + (bottomY - topY) * pct + yJitter,
+                            y: topY + (bottomY - topY) * pct + yJitter,
                 });
             }
 
             const branches = points.slice(1, -1)
-                .filter(() => Math.random() < 0.42)
-                .map(point => {
-                    const side = Math.random() < 0.5 ? -1 : 1;
-                    const len = random(14, 34);
-                    return [
-                        point,
-                        {
-                            x: clamp(point.x + side * len, 4, state.width - 4),
-                            y: clamp(point.y + random(6, 22), 2, state.height - 2),
-                        },
-                    ];
-                });
+            .filter(() => Math.random() < 0.42)
+            .map(point => {
+                const side = Math.random() < 0.5 ? -1 : 1;
+                const len = random(14, 34);
+                return [
+                    point,
+                    {
+                        x: clamp(point.x + side * len, 4, state.width - 4),
+                 y: clamp(point.y + random(6, 22), 2, state.height - 2),
+                    },
+                ];
+            });
 
             return {
                 born: ts,
@@ -5312,7 +5634,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 const glow = ctx.createLinearGradient(0, 0, state.width, state.height);
                 glow.addColorStop(0, 'rgba(0, 168, 230, 0.045)');
                 glow.addColorStop(0.45, 'rgba(94, 184, 224, 0.015)');
-                glow.addColorStop(1, 'rgba(176, 138, 242, 0.035)');
+                glow.addColorStop(1, 'rgba(40, 212, 168, 0.024)');
                 state.ambientFill = glow;
             }
             ctx.fillStyle = state.ambientFill;
@@ -5376,7 +5698,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
                 ctx.fillStyle = `rgba(195, 235, 255, ${drop.alpha * 0.95})`;
                 ctx.beginPath();
                 ctx.ellipse(drop.x, drop.y, drop.width * 0.75,
-                    Math.max(0.8, drop.width * 1.7), 0, 0, Math.PI * 2);
+                            Math.max(0.8, drop.width * 1.7), 0, 0, Math.PI * 2);
                 ctx.fill();
                 return;
             }
@@ -5418,7 +5740,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
             ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.82})`;
             ctx.beginPath();
             ctx.arc(bead.x - bead.r * 0.22, bead.y - bead.r * 0.28,
-                Math.max(0.45, bead.r * 0.22), 0, Math.PI * 2);
+                    Math.max(0.45, bead.r * 0.22), 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         },
@@ -5473,7 +5795,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             if (state.resizePending) layout.resize();
             const dt = state.lastTs ? Math.min(0.05, (ts - state.lastTs) / 1000)
-                : Math.min(0.05, interval / 1000);
+            : Math.min(0.05, interval / 1000);
             state.lastTs = ts;
 
             render.clear();
@@ -5603,7 +5925,7 @@ function buildPanel() {
     statsHdrLeft.appendChild(statsHdrText);
     const statsHdrRight = mk('div', 'rt-hdr-r');
     const statsCloseBtn = mk('button', 'rt-hdr-btn rt-close rt-stats-menu-close', null,
-        { id: 'rt_stats_close', type: 'button', 'aria-label': 'Close statistics' });
+                             { id: 'rt_stats_close', type: 'button', 'aria-label': 'Close statistics' });
     statsCloseBtn.appendChild(mk('span', 'rt-close-glyph', '×'));
     statsHdrRight.appendChild(statsCloseBtn);
     statsHdr.appendChild(statsHdrLeft);
@@ -5637,7 +5959,7 @@ function buildPanel() {
     settingsBtn.appendChild(mk('span', 'rt-hdr-gear-icon', '⚙'));
     hdrRight.appendChild(settingsBtn);
     const closeBtn = mk('button', 'rt-hdr-btn rt-close', null,
-        { id: 'rt_close', type: 'button', 'aria-label': 'Close RainTube' });
+                        { id: 'rt_close', type: 'button', 'aria-label': 'Close RainTube' });
     closeBtn.appendChild(mk('span', 'rt-close-glyph', '×'));
     hdrRight.appendChild(closeBtn);
     hdr.appendChild(left);
@@ -5689,24 +6011,18 @@ function buildPanel() {
     body.appendChild(mk('h2', 'rt-section', 'Features'));
 
     const toggles = mk('div', 'rt-toggles');
-    toggles.appendChild(buildToggleCard('shorts', 'rt_sw_shorts', 'Shorts',
-        'rt_sw_shorts_st',
-        'Hides Shorts across YouTube.'));
-    toggles.appendChild(buildToggleCard('quality', 'rt_sw_q', 'Quality',
-        'rt_sw_q_st',
-        'Sets playback to your target quality (or closest available).'));
-    toggles.appendChild(buildToggleCard('private', 'rt_sw_private', 'Private',
-        'rt_sw_private_st',
-        'Downloads through privacy-friendly mirrors.'));
-    toggles.appendChild(buildToggleCard('chart', 'rt_sw_stats', 'Statistics',
-        'rt_sw_stats_st',
-        'Tracks local watch summaries.'));
+    [
+        ['shorts', 'rt_sw_shorts', 'Shorts', 'rt_sw_shorts_st', 'Hides Shorts across YouTube.'],
+        ['quality', 'rt_sw_q', 'Quality', 'rt_sw_q_st', 'Sets playback to your target quality (or closest available).'],
+        ['private', 'rt_sw_private', 'Private', 'rt_sw_private_st', 'Downloads through privacy-friendly mirrors.'],
+        ['chart', 'rt_sw_stats', 'Statistics', 'rt_sw_stats_st', 'Tracks local watch summaries.'],
+    ].forEach(args => toggles.appendChild(buildToggleCard(...args)));
     body.appendChild(toggles);
 
     const note = mk('div', 'rt-note');
     note.appendChild(mk('span', 'rt-note-ico', '🛡'));
     note.appendChild(mk('span', null,
-        'RainTube keeps YouTube cleaner, adds privacy-minded downloads, and gives the interface a little atmosphere. Your preferences stay local.'));
+                        'RainTube keeps YouTube cleaner, adds privacy-minded downloads, and gives the interface a little atmosphere. Your preferences stay local.'));
     body.appendChild(note);
 
     panel.appendChild(body);
@@ -6001,8 +6317,8 @@ function initDrag(panel, fab, opts = {}) {
         // Pixel-snapped 2D translation avoids the fuzzy text/rules that can
         // appear when a translucent card is composited at fractional pixels.
         panel.style.transform = opts.snapToDevicePixels
-            ? `translate(${ox}px, ${oy}px)`
-            : `translate3d(${ox}px,${oy}px,0)`;
+        ? `translate(${ox}px, ${oy}px)`
+        : `translate3d(${ox}px,${oy}px,0)`;
         panel.__rtRainMoved?.();
     };
 
@@ -6037,8 +6353,8 @@ function initDrag(panel, fab, opts = {}) {
         if (e.target instanceof Element
             && e.target.closest('button, input, select, textarea, a, [role="button"], [data-no-drag]')) {
             return;
-        }
-        dragging = true; userMoved = true; pid = e.pointerId;
+            }
+            dragging = true; userMoved = true; pid = e.pointerId;
         ix = e.clientX - ox; iy = e.clientY - oy;
         panel.classList.add('rt-drag');
         try { handle.setPointerCapture(pid); } catch {}
@@ -6093,7 +6409,7 @@ function buildSettingsModal() {
     const root = mk('div', null, null, { id: 'rt_settings_root', 'aria-hidden': 'true' });
 
     const backdrop = mk('div', 'rt-settings-backdrop', null,
-        { id: 'rt_settings_backdrop' });
+                        { id: 'rt_settings_backdrop' });
     root.appendChild(backdrop);
 
     const modal = mk('div', 'rt-settings-modal', null, {
@@ -6110,7 +6426,7 @@ function buildSettingsModal() {
     const titleWrap = mk('div', 'rt-settings-title-wrap');
     titleWrap.appendChild(mk('span', 'rt-settings-eyebrow', 'RainTube'));
     titleWrap.appendChild(mk('h2', 'rt-settings-title', 'Settings',
-        { id: 'rt_settings_title' }));
+                             { id: 'rt_settings_title' }));
     hdrL.appendChild(titleWrap);
     hdr.appendChild(hdrL);
     const settingsCloseBtn = mk('button', 'rt-settings-close', null, {
@@ -6129,7 +6445,7 @@ function buildSettingsModal() {
     const foot = mk('footer', 'rt-settings-foot');
     foot.appendChild(mk('span', 'rt-settings-foot-ver', `RainTube · ${CFG.version}`));
     const done = mk('button', 'rt-settings-done', 'Done',
-        { id: 'rt_settings_done', type: 'button' });
+                    { id: 'rt_settings_done', type: 'button' });
     foot.appendChild(done);
     modal.appendChild(foot);
 
@@ -6204,6 +6520,7 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         if (statsOpen) {
             // Render before positioning: the collapsed stats GUI uses the
             // same card renderer as the always-visible recommendations card.
+            StatsTracker.syncStatsPanelWidth();
             StatsTracker.renderStatsPanelSlot();
             statsPanel?.__rtPositionNearButton?.(false);
         } else {
@@ -6294,26 +6611,24 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         ShortsBlocker.apply();
         uiSync();
         toast(S.shortsBlockerEnabled ? 'Shorts hidden' : 'Shorts shown',
-              S.shortsBlockerEnabled ? 'shorts' : 'off',
-              { icon: 'shorts', label: 'Shorts' });
+            S.shortsBlockerEnabled ? 'shorts' : 'off',
+            { icon: 'shorts', label: 'Shorts' });
     });
 
     on('rt_sw_q', 'click', () => {
         S.qualityEnabled = !S.qualityEnabled;
         save(CFG.storage.quality, S.qualityEnabled);
         if (S.qualityEnabled) {
-            setKnownQuality(null);
-            S._lastQualityTargetKey = null;
+            clearQualityMemos();
             scheduleQualityApply();
         } else {
             clearQualitySchedule();
-            setKnownQuality(null);
-            S._lastQualityTargetKey = null;
+            clearQualityMemos();
         }
         uiSync();
         toast(S.qualityEnabled ? 'Quality targeting on' : 'Quality targeting off',
-              S.qualityEnabled ? 'quality' : 'off',
-              { icon: 'quality', label: 'Quality' });
+            S.qualityEnabled ? 'quality' : 'off',
+            { icon: 'quality', label: 'Quality' });
     });
 
     on('rt_sw_private', 'click', () => {
@@ -6321,8 +6636,8 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         save(CFG.storage.privateDownloads, S.privateDownloadsEnabled);
         uiSync();
         toast(S.privateDownloadsEnabled ? 'Private downloads on' : 'Private downloads off',
-              S.privateDownloadsEnabled ? 'dl' : 'off',
-              { icon: 'private', label: 'Download' });
+            S.privateDownloadsEnabled ? 'dl' : 'off',
+            { icon: 'private', label: 'Download' });
     });
 
     on('rt_sw_stats', 'click', async () => {
@@ -6331,8 +6646,8 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
             await StatsTracker.setEnabled(!enabled);
             uiSync();
             toast(enabled ? 'Statistics tracking paused' : 'Statistics tracking on',
-                  enabled ? 'off' : 'stats',
-                  { icon: 'chart', label: 'Statistics' });
+                enabled ? 'off' : 'stats',
+                { icon: 'chart', label: 'Statistics' });
         } catch (err) {
             console.warn('[RainTube] Statistics toggle failed:', err);
             toast('Statistics toggle failed', 'warn');
@@ -6405,10 +6720,21 @@ const ShortsBlocker = (() => {
             stateKey: 'shortsHideSearch',
             bodyClass: 'rt-shorts-hide-search',
             selectors: [
-                // Search results page: the reel shelf and individual
-                // search-result rows that link to a short.
+                // Reel shelf (legacy) and the newer shorts-lockup view-model
+                // that YouTube has rolled out to search over 2025/26.
                 'ytd-search ytd-reel-shelf-renderer',
+                'ytd-search ytd-shorts-lockup-view-model',
+                'ytd-search ytd-shorts-shelf-renderer',
+                // Shelf wrappers that hold a row of shorts lockups.
+                'ytd-search ytd-shelf-renderer:has(ytd-shorts-lockup-view-model)',
+                'ytd-search ytd-shelf-renderer:has(ytd-reel-item-renderer)',
+                'ytd-search grid-shelf-view-model:has(a[href*="/shorts/"])',
+                // Search-result rows that link to a short. Some shorts
+                // surface in search as ytd-video-renderer with the SHORTS
+                // overlay rather than a /shorts/ href, so catch both.
                 'ytd-search ytd-video-renderer:has(a[href*="/shorts/"])',
+                'ytd-search ytd-video-renderer:has(ytd-thumbnail-overlay-time-status-renderer[overlay-style="SHORTS"])',
+                'ytd-search ytd-reel-video-renderer',
             ],
         },
         {
@@ -6498,10 +6824,10 @@ const ShortsBlocker = (() => {
 
     function onNavigate() {
         if (!S.shortsBlockerEnabled) return;
-        const m = /^\/shorts\/([^/?#]+)/.exec(location.pathname);
-        if (!m) return;
+        const shortsId = getShortsVideoId();
+        if (!shortsId) return;
         if (S.shortsOnVisit === 'redirect') {
-            const watchUrl = `${location.origin}/watch?v=${encodeURIComponent(m[1])}`;
+            const watchUrl = `${location.origin}/watch?v=${encodeURIComponent(shortsId)}`;
             location.replace(watchUrl);
         } else {
             location.replace(`${location.origin}/`);
@@ -6532,8 +6858,6 @@ const ShortsBlocker = (() => {
             });
         }
 
-        // Handle direct /shorts/ visits.
-        onNavigate();
     }
 
     return Object.freeze({ install, apply, onNavigate });
@@ -6606,7 +6930,7 @@ const TopbarTheme = (() => {
             el = null;
         }
         if (!el) {
-            el = mk('canvas', 'rt-rain-canvas rt-topbar-rain-canvas', null, {
+            el = mk('canvas', 'rt-rain-canvas', null, {
                 id: CANVAS_ID,
                 'aria-hidden': 'true',
             });
@@ -6811,8 +7135,7 @@ function onNavigate() {
         S._video = null;
 
         if (vid !== S.videoId) {
-            setKnownQuality(null);
-            S._lastQualityTargetKey = null;
+            clearQualityMemos();
         }
         S.videoId = vid;
 
@@ -6834,42 +7157,16 @@ function onNavigate() {
 
 /* ── Boot ───────────────────────────────────────────────────────────────── */
 
-function removeExistingRainTubeUi() {
-    // Claim the visible UI from a clean slate on boot; persisted settings and
-    // statistics remain untouched.
-    const selectors = [
-        '#rt_panel',
-        '#rt_fab',
-        '#rt_stats_fab',
-        '#rt_stats_panel',
-        '#rt_settings_root',
-        '#rt_toasts',
-        '#rt_tip',
-        '#rt_topbar_rain',
-        '.rt-inline-stats',
-    ];
-    for (const sel of selectors) {
-        for (const node of document.querySelectorAll(sel)) node.remove();
-    }
-    document.body?.classList.remove('rt-topbar-theme');
-    for (const node of document.querySelectorAll('.rt-topbar-theme-host')) node.classList.remove('rt-topbar-theme-host', 'rt-rain-off');
-}
-
 function boot() {
-    removeExistingRainTubeUi();
-
     const { panel, fab, statsFab, statsPanel } = buildPanel();
     S._fab = fab;
     S._statsFab = statsFab;
     mountRainTubeButtons(statsFab, fab);
     initDrag(panel, fab);
-    initDrag(statsPanel, statsFab, { handleSelector: '#rt_stats_drag', fallbackH: 380, snapToDevicePixels: true });
+    initDrag(statsPanel, statsFab, { handleSelector: '#rt_stats_drag', fallbackW: 420, fallbackH: 380, snapToDevicePixels: true });
     bindEvents(panel, fab, statsFab, statsPanel);
 
     StatsTracker.install();
-    // Capture a direct /shorts/<id> route before ShortsBlocker.install() can
-    // immediately rewrite it to /watch or home on first load.
-    StatsTracker.onNavigate();
     ShortsBlocker.install();
     OledTheme.install();
     TopbarTheme.install();
@@ -6887,6 +7184,66 @@ function boot() {
 
 /* ── Entry ──────────────────────────────────────────────────────────────── */
 
+// Fast path: if this is a direct /shorts/ visit, fire the redirect now
+// instead of waiting for the full async boot to complete. Otherwise the
+// 5s+ delay between loading a short and being redirected lets the Shorts
+// player start playing. Reads only the two relevant settings.
+async function shortcutShortsVisit() {
+    if (!IS_YOUTUBE) return false;
+    const shortsId = getShortsVideoId();
+    if (!shortsId) return false;
+    try {
+        // Read everything we need in parallel: blocker settings + the
+        // stats-enabled flag + the buckets blob (so we can record the open
+        // before the redirect, preserving the pre-fast-path behavior).
+        const [enabled, rawOnVisit, statsEnabled, rawBuckets] = await Promise.all([
+            readStoredValue(CFG.storage.shortsBlocker, DEFAULT_SETTINGS.shortsBlockerEnabled),
+            readStoredValue(CFG.storage.shortsOnVisit, DEFAULT_SETTINGS.shortsOnVisit),
+            readStoredValue(CFG.storage.statsEnabled, true),
+            readStoredValue(CFG.storage.statsBuckets, null),
+        ]);
+        if (!enabled) return false;
+
+        // Record the shorts open. Best-effort: if anything goes wrong with
+        // the stats write, we still redirect.
+        if (statsEnabled) {
+            try {
+                const buckets = sanitizeStatsBuckets(rawBuckets);
+                const key = statsDateKey();
+                const bucket = buckets[key] || (buckets[key] = {
+                    shortsOpened: 0, shortsBlocked: 0, watchSec: 0,
+                    videosWatched: 0, channelSec: {}, channelAvatar: {},
+                });
+                bucket.shortsOpened = (Number(bucket.shortsOpened) || 0) + 1;
+                await StatsStore.setJson(CFG.storage.statsBuckets, buckets);
+            } catch (err) {
+                console.warn('[RainTube] Stats record on fast redirect failed:', err);
+            }
+        }
+
+        const onVisit = readShortsOnVisit(rawOnVisit);
+        const target = onVisit === 'redirect'
+            ? `${location.origin}/watch?v=${encodeURIComponent(shortsId)}`
+            : `${location.origin}/`;
+        location.replace(target);
+        return true;
+    } catch (err) {
+        console.warn('[RainTube] Shorts fast redirect failed:', err);
+        return false;
+    }
+}
+
+// Resolve once document.body exists. At @run-at document-start the body
+// element may not be built yet, but most of our async preamble (style
+// injection, storage reads) is body-independent and can proceed in parallel.
+function waitForDocumentBody() {
+    if (document.body) return Promise.resolve();
+    return new Promise(resolve => {
+        if (document.readyState !== 'loading' && document.body) return resolve();
+        document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
+    });
+}
+
 async function startRainTube() {
     if (IS_CNVMP3) {
         runCnvMp3Autofill();
@@ -6895,9 +7252,21 @@ async function startRainTube() {
 
     if (!IS_YOUTUBE) return;
 
-    await injectRainTubeStyles();
-    await cleanupDeprecatedStorageKeys();
-    S = await loadRuntimeState();
+    // Try the fast redirect before anything else. If it navigates, the rest
+    // of boot is moot for this page load (location.replace ends execution).
+    // Runs immediately at document-start — no DOM dependency.
+    if (await shortcutShortsVisit()) return;
+
+    // The async preamble doesn't touch document.body (style injection uses
+    // document.head || document.documentElement), so it can run in parallel
+    // with DOMContentLoaded.
+    const [, , state] = await Promise.all([
+        injectRainTubeStyles(),
+        cleanupDeprecatedStorageKeys(),
+        loadRuntimeState(),
+        waitForDocumentBody(),
+    ]);
+    S = state;
     boot();
 }
 
