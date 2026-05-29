@@ -1,11 +1,11 @@
 /*
-   RainTube YouTube stylesheet.
-
-   Packaged by the userscript as @resource rtYouTubeCss and injected as a
-   <style> tag. Keep this local file in sync with the @resource URL declared
-   in RainTube.user.js, and bump the userscript @version when releasing CSS
-   changes so script managers refresh the cached resource.
-*/
+ *  RainTube YouTube stylesheet.
+ *
+ *  Packaged by the userscript as @resource rtYouTubeCss and injected as a
+ *  <style> tag. Keep this local file in sync with the @resource URL declared
+ *  in RainTube.user.js, and bump the userscript @version when releasing CSS
+ *  changes so script managers refresh the cached resource.
+ */
 
 /* Foundation */
 :root {
@@ -34,61 +34,61 @@
 
 #rt_panel, #rt_panel *, #rt_stats_panel, #rt_stats_panel *, #rt_fab, #rt_stats_fab, #rt_toasts, #rt_toasts *, #rt_tip,
 #rt_settings_root, #rt_settings_root * {
-    box-sizing: border-box;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
+box-sizing: border-box;
+-webkit-font-smoothing: antialiased;
+text-rendering: optimizeLegibility;
 }
 
 /* Topbar button */
 #rt_fab, #rt_stats_fab {
-    width: 40px; min-width: 40px; height: 40px;
-    padding: 0; margin: 0 4px 0 0;
-    border-radius: 50%;
-    background: transparent;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-    box-shadow: none;
-    transition: background-color .12s ease, transform .08s ease, color .12s ease;
+width: 40px; min-width: 40px; height: 40px;
+padding: 0; margin: 0 4px 0 0;
+border-radius: 50%;
+background: transparent;
+border: none;
+color: #fff;
+cursor: pointer;
+display: inline-flex; align-items: center; justify-content: center;
+box-shadow: none;
+transition: background-color .12s ease, transform .08s ease, color .12s ease;
 }
 #rt_fab .rt-fab-icon, #rt_stats_fab .rt-fab-icon {
-    flex: 0 0 auto;
-    display: inline-flex; align-items: center; justify-content: center;
-    color: currentColor;
-    transition: transform .08s ease;
+flex: 0 0 auto;
+display: inline-flex; align-items: center; justify-content: center;
+color: currentColor;
+transition: transform .08s ease;
 }
 #rt_fab .rt-fab-icon .rt-logo-svg, #rt_stats_fab .rt-fab-icon .rt-icon {
-    display: block;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.42));
+display: block;
+filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.42));
 }
 #rt_fab.rt-topbar, #rt_stats_fab.rt-topbar {
-    position: relative; flex: 0 0 40px;
-    z-index: 1;
+position: relative; flex: 0 0 40px;
+z-index: 1;
 }
 #rt_fab.rt-watch-action, #rt_stats_fab.rt-watch-action {
-    position: relative; flex: 0 0 36px;
-    width: 36px; min-width: 36px; height: 36px;
-    margin: 0 4px 0 0;
-    background: rgba(255, 255, 255, 0.08);
-    z-index: 1;
+position: relative; flex: 0 0 36px;
+width: 36px; min-width: 36px; height: 36px;
+margin: 0 4px 0 0;
+background: rgba(255, 255, 255, 0.08);
+z-index: 1;
 }
 #rt_fab.rt-floating, #rt_stats_fab.rt-floating {
-    position: fixed; top: 10px; right: 96px;
-    background: rgba(15, 15, 18, 0.32);
-    backdrop-filter: blur(12px) saturate(140%);
-    -webkit-backdrop-filter: blur(12px) saturate(140%);
-    z-index: 2147483646;
+position: fixed; top: 10px; right: 96px;
+background: rgba(15, 15, 18, 0.32);
+backdrop-filter: blur(12px) saturate(140%);
+-webkit-backdrop-filter: blur(12px) saturate(140%);
+z-index: 2147483646;
 }
 #rt_fab:hover,
 #rt_fab.active,
 #rt_stats_fab:hover,
 #rt_stats_fab.active {
-    background-color: rgba(255, 255, 255, 0.10);
+background-color: rgba(255, 255, 255, 0.10);
 }
 #rt_fab:active, #rt_stats_fab:active {
-    transform: scale(.96);
-    background-color: rgba(255, 255, 255, 0.16);
+transform: scale(.96);
+background-color: rgba(255, 255, 255, 0.16);
 }
 #rt_fab:focus-visible, #rt_stats_fab:focus-visible { outline: 2px solid #3ea6ff; outline-offset: 2px; }
 #rt_stats_fab.rt-floating { right: 142px; }
@@ -115,14 +115,14 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host::before {
     z-index: 0;
     pointer-events: none;
     background:
-        radial-gradient(52% 160% at 12% 0%, rgba(var(--rt-control-blue-rgb), 0.20), transparent 66%),
-        radial-gradient(42% 150% at 100% 0%, rgba(var(--rt-control-blue-rgb), 0.105), transparent 70%),
-        radial-gradient(32% 130% at 72% 0%, rgba(40, 212, 168, 0.055), transparent 72%),
-        linear-gradient(180deg, rgba(9, 17, 26, 0.96), rgba(3, 6, 10, 0.94) 58%, rgba(2, 4, 7, 0.98));
+    radial-gradient(52% 160% at 12% 0%, rgba(var(--rt-control-blue-rgb), 0.20), transparent 66%),
+    radial-gradient(42% 150% at 100% 0%, rgba(var(--rt-control-blue-rgb), 0.105), transparent 70%),
+    radial-gradient(32% 130% at 72% 0%, rgba(40, 212, 168, 0.055), transparent 72%),
+    linear-gradient(180deg, rgba(9, 17, 26, 0.96), rgba(3, 6, 10, 0.94) 58%, rgba(2, 4, 7, 0.98));
     border-bottom: 1px solid rgba(110, 198, 236, 0.07);
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.045) inset,
-        0 -1px 0 rgba(var(--rt-control-blue-rgb), 0.045) inset;
+    0 1px 0 rgba(255, 255, 255, 0.045) inset,
+    0 -1px 0 rgba(var(--rt-control-blue-rgb), 0.045) inset;
     backdrop-filter: blur(18px) saturate(145%);
     -webkit-backdrop-filter: blur(18px) saturate(145%);
 }
@@ -142,10 +142,10 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host::after {
     z-index: 3;
     pointer-events: none;
     background:
-        radial-gradient(80% 120% at 50% 100%,
-            rgba(var(--rt-control-blue-rgb), 0.16),
-            rgba(var(--rt-control-blue-rgb), 0.065) 42%,
-            transparent 76%);
+    radial-gradient(80% 120% at 50% 100%,
+                    rgba(var(--rt-control-blue-rgb), 0.16),
+                    rgba(var(--rt-control-blue-rgb), 0.065) 42%,
+                    transparent 76%);
     opacity: .56;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #container.ytd-masthead {
@@ -153,20 +153,20 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #container.ytd-masthead {
     z-index: 2;
 }
 #rt_topbar_rain {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    opacity: .86;
-    mix-blend-mode: screen;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
-    mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
+position: absolute;
+inset: 0;
+z-index: 1;
+width: 100%;
+height: 100%;
+pointer-events: none;
+opacity: .86;
+mix-blend-mode: screen;
+-webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
+mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 84%, transparent 100%);
 }
 ytd-masthead.rt-topbar-theme-host.rt-rain-off #rt_topbar_rain,
 #rt_topbar_rain[hidden] {
-    display: none !important;
+display: none !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(a, button, yt-icon, yt-icon-shape, #logo-icon, #country-code) {
     color: rgba(244, 248, 251, 0.92) !important;
@@ -206,8 +206,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
     isolation: isolate;
 }
 /* Keep YouTube's native SVG in the layout for exact sizing/click target,
-   but draw one monochrome replacement above it. Recoloring the live SVG
-   piecemeal is brittle because the badge and wordmark share one graphic. */
+ *  but draw one monochrome replacement above it. Recoloring the live SVG
+ *  piecemeal is brittle because the badge and wordmark share one graphic. */
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer #logo-icon {
     position: relative;
     z-index: 0;
@@ -228,8 +228,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host ytd-topbar-logo-renderer 
     background-position: left center;
     background-size: 100% auto;
     filter:
-        drop-shadow(0 1px 1px rgba(0, 0, 0, 0.34))
-        drop-shadow(0 0 8px rgba(var(--rt-control-blue-rgb), 0.10));
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.34))
+    drop-shadow(0 0 8px rgba(var(--rt-control-blue-rgb), 0.10));
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(ytd-searchbox, yt-searchbox) {
     --ytd-searchbox-background: transparent !important;
@@ -246,10 +246,10 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(
     ytd-searchbox #container
 ) {
     background:
-        radial-gradient(95% 150% at 10% 0%, rgba(255,255,255,.135), transparent 64%),
-        radial-gradient(110% 160% at 100% 0%, rgba(var(--rt-control-blue-rgb), .12), transparent 70%),
-        linear-gradient(180deg, rgba(255,255,255,.070), rgba(255,255,255,.024)),
-        rgba(0, 0, 0, 0.48) !important;
+    radial-gradient(95% 150% at 10% 0%, rgba(255,255,255,.135), transparent 64%),
+    radial-gradient(110% 160% at 100% 0%, rgba(var(--rt-control-blue-rgb), .12), transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,.070), rgba(255,255,255,.024)),
+    rgba(0, 0, 0, 0.48) !important;
     border: none !important;
     border-color: transparent !important;
     border-left: none !important;
@@ -258,11 +258,11 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(
     outline: 0 !important;
     overflow: hidden;
     box-shadow:
-        0 8px 20px rgba(0, 0, 0, 0.34),
-        0 0 0 1px rgba(255, 255, 255, 0.055),
-        0 0 18px rgba(var(--rt-control-blue-rgb), 0.070),
-        inset 0 1px 0 rgba(255, 255, 255, 0.14),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.34) !important;
+    0 8px 20px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.055),
+    0 0 18px rgba(var(--rt-control-blue-rgb), 0.070),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.34) !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(
     #container.ytd-searchbox,
@@ -273,11 +273,11 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(
     border: none !important;
     border-color: transparent !important;
     box-shadow:
-        0 9px 22px rgba(0, 0, 0, 0.38),
-        0 0 0 1px rgba(var(--rt-control-blue-rgb), 0.18),
-        0 0 22px rgba(var(--rt-control-blue-rgb), 0.16),
-        inset 0 1px 0 rgba(255, 255, 255, 0.17),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.30) !important;
+    0 9px 22px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(var(--rt-control-blue-rgb), 0.18),
+    0 0 22px rgba(var(--rt-control-blue-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.17),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.30) !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(
     #search-form.ytd-searchbox,
@@ -318,17 +318,17 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .ytSearchboxComponentSear
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .ytSearchboxComponentSearchButtonDark,
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #voice-search-button {
     background:
-        radial-gradient(90% 120% at 20% 0%, rgba(255,255,255,.13), transparent 60%),
-        radial-gradient(110% 140% at 100% 100%, rgba(var(--rt-control-blue-rgb), .10), transparent 68%),
-        linear-gradient(180deg, rgba(255,255,255,.072), rgba(255,255,255,.026)),
-        rgba(255, 255, 255, 0.058) !important;
+    radial-gradient(90% 120% at 20% 0%, rgba(255,255,255,.13), transparent 60%),
+    radial-gradient(110% 140% at 100% 100%, rgba(var(--rt-control-blue-rgb), .10), transparent 68%),
+    linear-gradient(180deg, rgba(255,255,255,.072), rgba(255,255,255,.026)),
+    rgba(255, 255, 255, 0.058) !important;
     border: none !important;
     border-color: transparent !important;
     border-left: none !important;
     outline: 0 !important;
     box-shadow:
-        0 7px 18px rgba(0, 0, 0, 0.22),
-        inset 0 1px 0 rgba(255, 255, 255, 0.095) !important;
+    0 7px 18px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.095) !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #search-icon-legacy:hover,
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #search-icon-legacy.ytd-searchbox:hover,
@@ -336,10 +336,10 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .ytSearchboxComponentSear
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .ytSearchboxComponentSearchButtonDark:hover,
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host #voice-search-button:hover {
     background:
-        radial-gradient(90% 120% at 20% 0%, rgba(255,255,255,.18), transparent 60%),
-        radial-gradient(110% 140% at 100% 100%, rgba(var(--rt-control-blue-rgb), .15), transparent 68%),
-        linear-gradient(180deg, rgba(255,255,255,.096), rgba(255,255,255,.036)),
-        rgba(255, 255, 255, 0.072) !important;
+    radial-gradient(90% 120% at 20% 0%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(110% 140% at 100% 100%, rgba(var(--rt-control-blue-rgb), .15), transparent 68%),
+    linear-gradient(180deg, rgba(255,255,255,.096), rgba(255,255,255,.036)),
+    rgba(255, 255, 255, 0.072) !important;
     border: none !important;
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(#guide-button, ytd-topbar-logo-renderer, #search-icon-legacy, .ytSearchboxComponentSearchButton, #voice-search-button, #buttons button, #end button, #avatar-btn, #rt_fab, #rt_stats_fab)::after {
@@ -356,12 +356,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(#guide-button, ytd-to
     z-index: 0;
     transform: scale(.24);
     background:
-        radial-gradient(circle,
-            rgba(255,255,255,.62) 0 7%,
-            rgba(215,245,255,.34) 8% 18%,
-            rgba(var(--rt-control-blue-rgb), .24) 28%,
-            rgba(var(--rt-control-blue-rgb), .09) 50%,
-            transparent 72%);
+    radial-gradient(circle,
+                    rgba(255,255,255,.62) 0 7%,
+                    rgba(215,245,255,.34) 8% 18%,
+                    rgba(var(--rt-control-blue-rgb), .24) 28%,
+                    rgba(var(--rt-control-blue-rgb), .09) 50%,
+                    transparent 72%);
     box-shadow: 0 0 12px rgba(var(--rt-control-blue-rgb), .20);
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
@@ -371,28 +371,28 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 /* Floating panel shells */
 #rt_panel,
 #rt_stats_panel {
-    position: fixed;
-    top: 0; left: 0;
-    background: var(--rt-panel-bg);
-    backdrop-filter: blur(28px) saturate(170%);
-    -webkit-backdrop-filter: blur(28px) saturate(170%);
-    border: 1px solid var(--rt-stroke);
-    border-radius: 20px;
-    box-shadow: var(--rt-shadow);
-    color: var(--rt-text);
-    display: flex; flex-direction: column;
-    font-family: var(--rt-font-ui);
-    isolation: isolate;
+position: fixed;
+top: 0; left: 0;
+background: var(--rt-panel-bg);
+backdrop-filter: blur(28px) saturate(170%);
+-webkit-backdrop-filter: blur(28px) saturate(170%);
+border: 1px solid var(--rt-stroke);
+border-radius: 20px;
+box-shadow: var(--rt-shadow);
+color: var(--rt-text);
+display: flex; flex-direction: column;
+font-family: var(--rt-font-ui);
+isolation: isolate;
 }
 #rt_panel {
-    width: 360px; max-width: 94vw;
-    z-index: 2147483647;
-    overflow: hidden;
-    opacity: 0; pointer-events: none;
-    transform: translate3d(0, 0, 0) scale(.97);
-    transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
-    will-change: transform, opacity;
-    max-height: min(92vh, 760px);
+width: 360px; max-width: 94vw;
+z-index: 2147483647;
+overflow: hidden;
+opacity: 0; pointer-events: none;
+transform: translate3d(0, 0, 0) scale(.97);
+transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
+will-change: transform, opacity;
+max-height: min(92vh, 760px);
 }
 #rt_panel.show { opacity: 1; pointer-events: auto; }
 #rt_panel.rt-drag { transition: none !important; }
@@ -402,8 +402,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 16px 13px;
     background:
-        radial-gradient(120% 180% at 0% 0%, rgba(var(--rt-control-blue-deep-rgb), 0.18), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
+    radial-gradient(120% 180% at 0% 0%, rgba(var(--rt-control-blue-deep-rgb), 0.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0));
     border-bottom: 1px solid var(--rt-stroke);
     cursor: default; user-select: none; flex: 0 0 auto;
     overflow: hidden;
@@ -413,7 +413,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 /* Header rain */
 /* Header-only canvas rain with depth: faint background drops pass behind
-   the header while a few glassy beads drift over the surface. */
+ *  the header while a few glassy beads drift over the surface. */
 .rt-rain-canvas {
     position: absolute;
     inset: 0;
@@ -429,7 +429,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 /* Rain disabled — hide the canvas entirely. The frame loop also bails. */
 #rt_panel.rt-rain-off .rt-rain-canvas {
-    display: none;
+display: none;
 }
 .rt-mark::after,
 .rt-hdr-btn::after {
@@ -446,12 +446,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     z-index: 0;
     transform: scale(.28);
     background:
-        radial-gradient(circle,
-            rgba(255,255,255,.70) 0 6%,
-            rgba(215,245,255,.38) 7% 18%,
-            rgba(var(--rt-control-blue-rgb), .26) 25%,
-            rgba(var(--rt-control-blue-rgb), .10) 48%,
-            transparent 70%);
+    radial-gradient(circle,
+                    rgba(255,255,255,.70) 0 6%,
+                    rgba(215,245,255,.38) 7% 18%,
+                    rgba(var(--rt-control-blue-rgb), .26) 25%,
+                    rgba(var(--rt-control-blue-rgb), .10) 48%,
+                    transparent 70%);
     box-shadow: 0 0 10px rgba(var(--rt-control-blue-rgb), .20);
 }
 .rt-mark.rt-rain-hit::after,
@@ -472,12 +472,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 11px;
     display: inline-flex; align-items: center; justify-content: center;
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255,255,255,.13), transparent 62%),
-        rgba(255, 255, 255, 0.045);
+    radial-gradient(80% 80% at 25% 20%, rgba(255,255,255,.13), transparent 62%),
+    rgba(255, 255, 255, 0.045);
     box-shadow:
-        0 4px 16px rgba(var(--rt-control-blue-deep-rgb), 0.38),
-        inset 0 1px 0 rgba(255,255,255,0.16),
-        inset 0 0 0 1px rgba(255,255,255,0.05);
+    0 4px 16px rgba(var(--rt-control-blue-deep-rgb), 0.38),
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 0 0 1px rgba(255,255,255,0.05);
     color: #fff;
     overflow: hidden;
     isolation: isolate;
@@ -518,7 +518,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-color: rgba(255, 255, 255, 0.16);
 }
 /* Main panel close: same visual language as the settings gear (tinted
-   border/background on hover, inner-glyph animation), but red. */
+ *  border/background on hover, inner-glyph animation), but red. */
 .rt-close {
     font-size: 14px; font-weight: 800;
     color: var(--rt-text-mute);
@@ -577,8 +577,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 .rt-card {
     background:
-        linear-gradient(180deg, rgba(255,255,255,.032), rgba(255,255,255,.016)),
-        rgba(7, 10, 16, 0.22);
+    linear-gradient(180deg, rgba(255,255,255,.032), rgba(255,255,255,.016)),
+    rgba(7, 10, 16, 0.22);
     border: 1px solid var(--rt-stroke);
     border-radius: 7px;
     display: flex; flex-direction: column;
@@ -629,7 +629,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     width: 1px;
     align-self: stretch;
     background: linear-gradient(to bottom,
-        rgba(255,255,255,0.02), var(--rt-stroke-2), rgba(255,255,255,0.02));
+                                rgba(255,255,255,0.02), var(--rt-stroke-2), rgba(255,255,255,0.02));
 }
 .rt-card-id-lbl {
     font-weight: 700; letter-spacing: 0; text-transform: uppercase;
@@ -660,9 +660,9 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 /* Statistics */
 /* Statistics cards are shown either in the draggable collapsed GUI or
-   above YouTube's recommendations column. */
+ *  above YouTube's recommendations column. */
 #rt_stats_panel {
-    width: min(392px, calc(100vw - 20px));
+    width: min(var(--rt-stats-panel-width, 420px), calc(100vw - 20px));
     opacity: 0;
     pointer-events: none;
     z-index: 2147483646;
@@ -709,7 +709,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 .rt-stats-menu-foot { flex: 0 0 auto; }
 #rt_stats_panel .rt-inline-stats { margin: 0; }
 #rt_stats_panel .rt-stats-card {
-    width: 360px;
+    width: 100%;
     max-width: 100%;
     box-sizing: border-box;
     cursor: auto;
@@ -719,8 +719,6 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 .rt-inline-stats {
     margin: 0 0 12px 0;
-    border-radius: 14px;
-    overflow: hidden;
     font-family: var(--rt-font-ui);
     color: var(--rt-text);
 }
@@ -742,16 +740,16 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     z-index: 0;
     border-radius: inherit;
     background:
-        radial-gradient(120% 115% at 0% 0%, rgba(var(--rt-control-blue-deep-rgb), 0.028), transparent 66%),
-        radial-gradient(130% 115% at 100% 100%, rgba(var(--rt-control-blue-rgb), 0.016), transparent 68%),
-        linear-gradient(180deg, rgba(255,255,255,.016), rgba(255,255,255,.006)),
-        rgba(6, 9, 14, 0.96);
+    radial-gradient(120% 115% at 0% 0%, rgba(var(--rt-control-blue-deep-rgb), 0.028), transparent 66%),
+    radial-gradient(130% 115% at 100% 100%, rgba(var(--rt-control-blue-rgb), 0.016), transparent 68%),
+    linear-gradient(180deg, rgba(255,255,255,.016), rgba(255,255,255,.006)),
+    rgba(6, 9, 14, 0.96);
     backdrop-filter: blur(16px) saturate(125%);
     -webkit-backdrop-filter: blur(16px) saturate(125%);
     border: 1px solid rgba(255, 255, 255, 0.075);
     box-shadow:
-        0 16px 42px rgba(0, 0, 0, 0.42),
-        inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    0 16px 42px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
     box-sizing: border-box;
     pointer-events: none;
     transform: translateZ(0);
@@ -770,38 +768,136 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     z-index: 2;
 }
 .rt-stats-card-head {
-    display: flex; align-items: center; gap: 9px;
+    display: flex; align-items: center; gap: 8px;
     padding-bottom: 8px;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--rt-stroke-2);
 }
 .rt-stats-card-logo {
-    width: 34px; height: 34px; flex: 0 0 34px;
+    width: 28px; height: 28px; flex: 0 0 28px;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 12px;
+    border-radius: 9px;
     color: #fff;
     border: 1px solid rgba(255, 200, 100, 0.38);
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255, 200, 100, 0.34), transparent 62%),
-        linear-gradient(135deg, rgba(255, 200, 100, 0.24), rgba(210, 145, 50, 0.10));
-    box-shadow: 0 6px 14px rgba(255, 200, 100, 0.16);
+    radial-gradient(80% 80% at 25% 20%, rgba(255, 200, 100, 0.34), transparent 62%),
+    linear-gradient(135deg, rgba(255, 200, 100, 0.24), rgba(210, 145, 50, 0.10));
+    box-shadow:
+    0 4px 10px rgba(255, 200, 100, 0.14),
+    0 0 18px rgba(255, 200, 100, 0.20);
 }
 .rt-stats-card-logo .rt-icon {
-    width: 18px; height: 18px;
+    width: 15px; height: 15px;
     display: block;
 }
 .rt-stats-card-heading {
-    display: flex; flex-direction: column; gap: 1px;
+    display: flex; align-items: baseline; gap: 8px;
     min-width: 0;
 }
-.rt-stats-card-eyebrow {
-    font-size: 9.5px; font-weight: 700;
+/* Range picker: the eyebrow is now an interactive control that switches the
+ *  displayed time range. Keeps the eyebrow's small uppercase amber look but
+ *  adds a caret and hover/focus affordances. */
+.rt-stats-range {
+    position: relative;
+    display: inline-flex;
+}
+.rt-stats-range-picker {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 5px;
+    height: 21px;
+    padding: 0 7px 0 8px;
+    margin-left: -1px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 200, 100, 0.24);
+    background:
+    radial-gradient(100% 140% at 10% 0%, rgba(255, 200, 100, 0.14), transparent 65%),
+    rgba(255, 200, 100, 0.055);
+    color: rgba(255, 224, 160, 0.92);
+    font-size: 9px; font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(255, 200, 100, 0.84);
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+    transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
+}
+.rt-stats-range-picker:hover,
+.rt-stats-range-picker[aria-expanded="true"] {
+    color: rgba(255, 230, 178, 0.96);
+    border-color: rgba(255, 200, 100, 0.34);
+    background:
+    radial-gradient(100% 140% at 10% 0%, rgba(255, 200, 100, 0.22), transparent 65%),
+    rgba(255, 200, 100, 0.085);
+}
+.rt-stats-range-picker:focus-visible {
+    border-color: rgba(255, 200, 100, 0.44);
+    box-shadow: 0 0 0 2px rgba(255, 200, 100, 0.13);
+}
+.rt-stats-range-label {
+    white-space: nowrap;
+    line-height: 1;
+}
+.rt-stats-range-caret {
+    width: 5px; height: 5px;
+    border-right: 1.5px solid rgba(255, 224, 160, 0.7);
+    border-bottom: 1.5px solid rgba(255, 224, 160, 0.7);
+    transform: translateY(-1px) rotate(45deg);
+    transition: transform .16s ease;
+}
+.rt-stats-range-picker[aria-expanded="true"] .rt-stats-range-caret {
+    transform: translateY(1px) rotate(225deg);
+}
+.rt-stats-range-menu {
+    position: fixed !important;
+    margin: 0 !important;
+    z-index: 2147483647 !important;
+    width: max-content !important;
+    min-width: 132px !important;
+    max-width: 200px !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 200, 100, 0.28) !important;
+    /* Portaled onto document.body (see setStatsRangeMenuOpen) for the same
+     *      backdrop-filter reason as the channel menu. */
+    background:
+    radial-gradient(120% 140% at 0% 0%, rgba(255, 200, 100, 0.11), transparent 64%),
+    rgb(24, 20, 16) !important;
+    box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 18px 38px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    font-family: var(--rt-font-ui) !important;
+}
+.rt-stats-range-menu[hidden] { display: none !important; }
+.rt-stats-range-item {
+    appearance: none; -webkit-appearance: none;
+    width: 100%;
+    min-height: 28px;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--rt-text);
+    font-family: var(--rt-font-ui);
+    font-size: 11px; font-weight: 650;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: none;
+    user-select: none;
+    display: block;
+}
+.rt-stats-range-item:hover,
+.rt-stats-range-item:focus-visible,
+.rt-stats-range-item[aria-checked="true"] {
+    background: rgba(255, 200, 100, 0.10);
+    outline: none;
+}
+.rt-stats-range-item[aria-checked="true"] {
+    color: rgba(255, 224, 160, 0.96);
 }
 .rt-stats-card-title {
-    font-size: 17px; font-weight: 700;
+    font-size: 16px; font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--rt-text);
 }
@@ -813,65 +909,92 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 .rt-stat-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 7px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
 }
 .rt-stat-tile {
     position: relative;
     display: flex; flex-direction: column;
+    align-items: stretch;
     gap: 4px;
-    padding: 8px 9px 9px;
+    padding: 9px 10px 10px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    min-width: 0;
+    /* Glass language matching feature tiles: glow emanates from the icon's
+     *      position at top-left, wash falls down and to the right across the tile,
+     *      white refraction highlight at the top-left, base translucent veil.
+     *      Accent color comes from the per-tile --rt-stat-accent variable. */
+    background:
+    radial-gradient(70% 90% at 15% 25%, rgba(var(--rt-stat-accent, 255, 200, 100), 0.14), transparent 62%),
+    linear-gradient(135deg, rgba(var(--rt-stat-accent, 255, 200, 100), 0.045),
+                    rgba(var(--rt-stat-accent, 255, 200, 100), 0.015) 50%, transparent 80%),
+                    radial-gradient(100% 100% at 0% 0%, rgba(255, 255, 255, 0.030), transparent 62%),
+                    rgba(255, 255, 255, 0.025);
+                    border: 1px solid rgba(255, 255, 255, 0.075);
+                    box-shadow:
+                    0 6px 14px rgba(0, 0, 0, 0.10),
+                    0 0 22px rgba(var(--rt-stat-accent, 255, 200, 100), 0.046);
+                    min-width: 0;
 }
-.rt-stat-tile-channel { grid-column: span 3; }
-.rt-stat-head {
-    display: flex; align-items: center; gap: 6px;
-    min-width: 0;
+.rt-stat-tile-channel {
+    /* Favorite tile keeps the horizontal layout: [avatar | copy | picker].
+     *      Glow origin shifts back to the icon's actual position (left-center). */
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background:
+    radial-gradient(75% 130% at 15% 50%, rgba(var(--rt-stat-accent, 255, 200, 100), 0.13), transparent 60%),
+    linear-gradient(105deg, rgba(var(--rt-stat-accent, 255, 200, 100), 0.045),
+                    rgba(var(--rt-stat-accent, 255, 200, 100), 0.015) 50%, transparent 78%),
+                    radial-gradient(100% 100% at 0% 0%, rgba(255, 255, 255, 0.030), transparent 62%),
+                    rgba(255, 255, 255, 0.025);
 }
 .rt-stat-ico {
-    width: 16px; height: 16px;
-    flex: 0 0 16px;
+    width: 18px; height: 18px;
+    flex: 0 0 18px;
     display: flex; align-items: center; justify-content: center;
     color: rgba(var(--rt-stat-accent, 255, 200, 100), 0.92);
 }
-.rt-stat-ico .rt-icon { width: 14px; height: 14px; }
+.rt-stat-ico .rt-icon { width: 16px; height: 16px; }
 .rt-stat-name {
+    flex: 0 1 auto;
     font-size: 9.5px; font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--rt-text-dim);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.rt-stat-tile:not(.rt-stat-tile-channel) .rt-stat-name {
+    font-size: 8.5px;
+    line-height: 1.2;
+    min-width: 0;
+    white-space: normal;
+    word-spacing: 100vw; /* each word on its own line in narrow stacked tiles */
+    overflow-wrap: break-word;
+}
 .rt-stat-tile-val {
-    font-size: 20px; font-weight: 800;
+    font-size: 16px; font-weight: 800;
     letter-spacing: -0.015em;
     line-height: 1.05;
     color: var(--rt-text);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 100%;
+    margin-top: 2px;
 }
-.rt-stat-tile-sub {
-    font-size: 9px; font-weight: 500;
-    color: var(--rt-text-mute);
-    letter-spacing: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.rt-stat-channel-main {
-    display: flex; align-items: center; gap: 10px;
-    min-width: 0;
-}
+/* Favorite tile uses the standard .rt-stat-tile flex row directly:
+ *  [avatar] [copy] [picker]. The copy holds the eyebrow head (with inline
+ *  watch-time pill) and the big channel name below it. */
 .rt-stat-channel-avatar {
-    width: 36px; height: 36px;
-    flex: 0 0 36px;
+    position: relative;
+    width: 38px; height: 38px;
+    flex: 0 0 38px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
-    overflow: hidden;
     color: rgba(255, 220, 150, 0.96);
     background:
-        radial-gradient(85% 85% at 28% 20%, rgba(255, 200, 100, 0.20), transparent 65%),
-        rgba(255, 255, 255, 0.045);
+    radial-gradient(85% 85% at 28% 20%, rgba(255, 200, 100, 0.20), transparent 65%),
+    rgba(255, 255, 255, 0.045);
     border: 1px solid rgba(255, 200, 100, 0.18);
     box-shadow: 0 5px 14px rgba(0, 0, 0, 0.24);
 }
@@ -879,96 +1002,191 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     width: 100%; height: 100%;
     display: block;
     object-fit: cover;
+    border-radius: inherit;
 }
 .rt-stat-channel-avatar .rt-icon { width: 16px; height: 16px; }
 .rt-stat-channel-copy {
     flex: 1 1 auto;
     min-width: 0;
     display: flex; flex-direction: column;
-    gap: 4px;
+    gap: 1px;
 }
-.rt-stat-channel-row {
-    display: flex; align-items: center; gap: 8px;
+.rt-stat-channel-copy > .rt-stat-head {
+    display: flex; align-items: center;
+    gap: 5px;
     min-width: 0;
 }
-.rt-stat-channel-select {
-    margin-left: auto;
-    max-width: 118px;
+.rt-stat-channel-sub {
+    font-size: 9px; font-weight: 500;
+    color: var(--rt-text-mute);
+    letter-spacing: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     min-width: 0;
-    height: 22px;
-    padding: 0 20px 0 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 200, 100, 0.18);
-    background: rgba(255, 200, 100, 0.055);
-    color: rgba(255, 230, 178, 0.96);
-    font-family: var(--rt-font-mono);
-    font-size: 9px;
-    font-weight: 700;
-    outline: none;
-    color-scheme: dark;
 }
-.rt-stat-channel-select:focus-visible {
-    border-color: rgba(255, 200, 100, 0.44);
-    box-shadow: 0 0 0 2px rgba(255, 200, 100, 0.13);
+.rt-stats-card .rt-stat-channel-picker {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+    width: fit-content !important;
+    min-width: 0 !important;
+    height: 21px !important;
+    flex: 0 0 auto !important;
+    padding: 0 7px 0 8px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255, 200, 100, 0.24) !important;
+    background:
+    radial-gradient(100% 140% at 10% 0%, rgba(255, 200, 100, 0.14), transparent 65%),
+    rgba(255, 200, 100, 0.055) !important;
+    color: rgba(255, 230, 178, 0.96) !important;
+    font-family: var(--rt-font-mono) !important;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    outline: none !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    box-shadow: none !important;
+    user-select: none !important;
+    transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
-.rt-stat-channel-select option {
-    background: #17110a;
-    color: #fff4dc;
+.rt-stats-card .rt-stat-channel-picker:hover,
+.rt-stats-card .rt-stat-channel-picker[aria-expanded="true"] {
+    border-color: rgba(255, 200, 100, 0.34) !important;
+    background:
+    radial-gradient(100% 140% at 10% 0%, rgba(255, 200, 100, 0.22), transparent 65%),
+    rgba(255, 200, 100, 0.085) !important;
 }
-.rt-stat-channel-select option:checked {
-    background: #3a2810;
-    color: #fff;
+.rt-stats-card .rt-stat-channel-picker:focus-visible {
+    border-color: rgba(255, 200, 100, 0.44) !important;
+    box-shadow: 0 0 0 2px rgba(255, 200, 100, 0.13) !important;
+}
+.rt-stats-card .rt-stat-channel-picker-label {
+    white-space: nowrap !important;
+    line-height: 1 !important;
+}
+.rt-stats-card .rt-stat-channel-picker-caret {
+    width: 6px !important;
+    height: 6px !important;
+    border-right: 1.5px solid rgba(255, 230, 178, 0.72) !important;
+    border-bottom: 1.5px solid rgba(255, 230, 178, 0.72) !important;
+    transform: translateY(-1px) rotate(45deg) !important;
+    transition: transform .16s ease;
+}
+.rt-stats-card .rt-stat-channel-picker[aria-expanded="true"] .rt-stat-channel-picker-caret {
+    transform: translateY(2px) rotate(225deg) !important;
+}
+.rt-stat-channel-menu {
+    position: fixed !important;
+    margin: 0 !important;
+    right: auto !important;
+    z-index: 2147483647 !important;
+    width: max-content !important;
+    min-width: 168px !important;
+    max-width: 248px !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 200, 100, 0.28) !important;
+    /* Portaled onto document.body (see setFavoriteChannelMenuOpen) so it sits
+     *      outside #rt_panel's backdrop-filter subtree — a backdrop-filter ancestor
+     *      was clipping the menu's background fill where it overhung the card,
+     *      making the bottom rows look transparent. On the body it paints solidly. */
+    background:
+    radial-gradient(120% 140% at 0% 0%, rgba(255, 200, 100, 0.11), transparent 64%),
+    rgb(24, 20, 16) !important;
+    box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 18px 38px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+    font-family: var(--rt-font-ui) !important;
+}
+.rt-stat-channel-menu[hidden] {
+    display: none !important;
+}
+.rt-stat-channel-menu-item {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    width: 100% !important;
+    min-height: 28px !important;
+    padding: 4px 6px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--rt-text) !important;
+    font-family: var(--rt-font-ui) !important;
+    cursor: pointer !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 7px !important;
+    text-align: left !important;
+    box-shadow: none !important;
+    user-select: none !important;
+}
+.rt-stat-channel-menu-item:hover,
+.rt-stat-channel-menu-item:focus-visible,
+.rt-stat-channel-menu-item[aria-checked="true"] {
+    background: rgba(255, 200, 100, 0.10) !important;
+    outline: none !important;
+}
+.rt-stat-channel-menu-rank,
+.rt-stat-channel-menu-time {
+    font-family: var(--rt-font-mono) !important;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    color: rgba(255, 224, 160, 0.94) !important;
+    white-space: nowrap !important;
+}
+.rt-stat-channel-menu-name {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    font-weight: 750 !important;
 }
 .rt-stat-channel-rank {
-    width: 22px; height: 22px;
-    flex: 0 0 22px;
+    position: absolute;
+    bottom: -3px; right: -3px;
+    width: 18px; height: 18px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    background: rgba(6, 9, 14, 0.96);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    z-index: 1;
 }
-.rt-stat-channel-rank .rt-icon { width: 13px; height: 13px; }
+.rt-stat-channel-rank .rt-icon { width: 10px; height: 10px; }
 .rt-stat-channel-rank-1 {
     color: rgba(255, 214, 105, 0.98);
-    border-color: rgba(255, 200, 100, 0.28);
-    background: rgba(255, 200, 100, 0.09);
+    border-color: rgba(255, 200, 100, 0.45);
 }
 .rt-stat-channel-rank-2 {
     color: rgba(221, 228, 238, 0.98);
-    border-color: rgba(205, 216, 230, 0.24);
-    background: rgba(205, 216, 230, 0.075);
+    border-color: rgba(205, 216, 230, 0.40);
 }
 .rt-stat-channel-rank-3 {
     color: rgba(224, 147, 91, 0.98);
-    border-color: rgba(224, 147, 91, 0.25);
-    background: rgba(224, 147, 91, 0.08);
+    border-color: rgba(224, 147, 91, 0.42);
 }
 .rt-stat-channel-name {
-    min-width: 0; flex: 1 1 auto;
-}
-.rt-stat-channel-time {
-    flex: 0 0 auto;
-    max-width: 48%;
-    padding: 2px 6px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 200, 100, 0.18);
-    background: rgba(255, 200, 100, 0.07);
-    color: rgba(255, 222, 154, 0.96);
-    font-size: 9px; font-weight: 700;
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    color: var(--rt-text);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: block;
 }
 .rt-stat-tile-shortsOpened    { --rt-stat-accent: 255, 126, 126; }
 .rt-stat-tile-shortsBlocked   { --rt-stat-accent: 255, 84, 84; }
 .rt-stat-tile-watchTime       { --rt-stat-accent: 135, 175, 255; }
 .rt-stat-tile-videosWatched   { --rt-stat-accent: 176, 138, 242; }
 .rt-stat-tile-favoriteChannel { --rt-stat-accent: 255, 200, 100; }
-.rt-inline-stats .rt-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.rt-inline-stats .rt-stat-tile-channel { grid-column: span 2; }
-@media (max-width: 420px) {
-    .rt-stat-grid { grid-template-columns: 1fr 1fr; }
-    .rt-stat-tile-channel { grid-column: span 2; }
-}
 
 /* Downloads and progress */
 .rt-download-area { display: flex; flex-direction: column; gap: 8px; }
@@ -1009,12 +1227,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     font-size: 13px;
     color: #fff;
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255,255,255,.13), transparent 62%),
-        rgba(255, 255, 255, 0.045);
+    radial-gradient(80% 80% at 25% 20%, rgba(255,255,255,.13), transparent 62%),
+    rgba(255, 255, 255, 0.045);
     border: 1px solid rgba(255, 255, 255, 0.055);
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.15),
-        inset 0 0 0 1px rgba(255,255,255,0.035);
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    inset 0 0 0 1px rgba(255,255,255,0.035);
 }
 .rt-dl-ico .rt-icon {
     width: 18px; height: 18px;
@@ -1023,10 +1241,10 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 .rt-dl:hover .rt-dl-ico {
     box-shadow:
-        0 4px 13px rgba(255, 255, 255, 0.12),
-        0 0 0 1px rgba(255, 255, 255, 0.035),
-        inset 0 1px 0 rgba(255,255,255,0.18),
-        inset 0 0 0 1px rgba(255,255,255,0.045);
+    0 4px 13px rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.035),
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 0 0 1px rgba(255,255,255,0.045);
 }
 .rt-dl-txt { display: flex; align-items: center; min-width: 0; }
 .rt-dl-p {
@@ -1047,8 +1265,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     padding: 0; border-radius: 13px;
     border: 1px solid rgba(255, 255, 255, 0.095);
     background:
-        radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.12), transparent 62%),
-        rgba(255, 255, 255, 0.045);
+    radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.12), transparent 62%),
+    rgba(255, 255, 255, 0.045);
     color: var(--rt-text-mute);
     font-family: var(--rt-font-ui);
     font-size: 15px; font-weight: 900; line-height: 1;
@@ -1059,8 +1277,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 .rt-ctrl:hover:not([disabled]) {
     transform: translateY(-1px);
     background:
-        radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.18), transparent 62%),
-        rgba(255, 255, 255, 0.075);
+    radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.18), transparent 62%),
+    rgba(255, 255, 255, 0.075);
     border-color: rgba(255, 255, 255, 0.18);
     color: var(--rt-text);
     box-shadow: 0 5px 12px rgba(0, 0, 0, .22);
@@ -1078,8 +1296,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     padding: 8px 9px 9px; border-radius: 12px;
     border: 1px solid rgba(255,255,255,.07);
     background:
-        radial-gradient(120% 140% at 0% 0%, rgba(255,255,255,.04), transparent 62%),
-        rgba(255, 255, 255, 0.025);
+    radial-gradient(120% 140% at 0% 0%, rgba(255,255,255,.04), transparent 62%),
+    rgba(255, 255, 255, 0.025);
 }
 .rt-progress.show { display: block; }
 .rt-progress-top {
@@ -1158,21 +1376,21 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     --rt-tc-ico-shadow-alpha: .18;
     position: relative;
     background:
-        radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-alpha)), transparent 58%),
-        linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-alpha)),
-            rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-tail-alpha)) 52%, transparent 82%),
-        radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.035), transparent 62%),
-        rgba(255, 255, 255, 0.024);
-    border: 1px solid var(--rt-stroke);
-    border-radius: 11px;
-    padding: 7px 7px 21px;
-    min-height: 62px;
-    display: flex; flex-direction: column; gap: 4px;
-    min-width: 0;
-    box-shadow:
-        0 8px 18px rgba(0, 0, 0, .08),
-        0 0 16px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-alpha));
-    transition: border-color .2s, background .2s, box-shadow .2s, transform .14s ease;
+    radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-alpha)), transparent 58%),
+    linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-alpha)),
+                    rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-tail-alpha)) 52%, transparent 82%),
+                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.035), transparent 62%),
+                    rgba(255, 255, 255, 0.024);
+                    border: 1px solid var(--rt-stroke);
+                    border-radius: 11px;
+                    padding: 7px 7px 21px;
+                    min-height: 62px;
+                    display: flex; flex-direction: column; gap: 4px;
+                    min-width: 0;
+                    box-shadow:
+                    0 8px 18px rgba(0, 0, 0, .08),
+                    0 0 16px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-alpha));
+                    transition: border-color .2s, background .2s, box-shadow .2s, transform .14s ease;
 }
 .rt-tc-shorts {
     --rt-tc-ico-rgb: 255, 84, 84;
@@ -1260,33 +1478,33 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 .rt-tc:hover {
     background:
-        radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-hover-alpha)), transparent 58%),
-        linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-hover-alpha)),
-            rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-hover-tail-alpha)) 52%, transparent 82%),
-        radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.052), transparent 62%),
-        rgba(255, 255, 255, 0.036);
-    box-shadow:
-        0 10px 22px rgba(0, 0, 0, .12),
-        0 0 18px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-hover-alpha));
+    radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-hover-alpha)), transparent 58%),
+    linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-hover-alpha)),
+                    rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-hover-tail-alpha)) 52%, transparent 82%),
+                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.052), transparent 62%),
+                    rgba(255, 255, 255, 0.036);
+                    box-shadow:
+                    0 10px 22px rgba(0, 0, 0, .12),
+                    0 0 18px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-hover-alpha));
 }
 .rt-tc.on {
     background:
-        radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-on-alpha)), transparent 58%),
-        linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-alpha)),
-            rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-tail-alpha)) 52%, transparent 82%),
-        radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.050), transparent 62%),
-        rgba(255, 255, 255, 0.032);
-    box-shadow:
-        0 10px 22px rgba(0, 0, 0, .12),
-        0 0 20px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-on-alpha));
+    radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-on-alpha)), transparent 58%),
+    linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-alpha)),
+                    rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-tail-alpha)) 52%, transparent 82%),
+                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.050), transparent 62%),
+                    rgba(255, 255, 255, 0.032);
+                    box-shadow:
+                    0 10px 22px rgba(0, 0, 0, .12),
+                    0 0 20px rgba(var(--rt-tc-glow-rgb), var(--rt-tc-outer-on-alpha));
 }
 .rt-tc.on:hover {
     background:
-        radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-on-hover-alpha)), transparent 58%),
-        linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-hover-alpha)),
-            rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-hover-tail-alpha)) 52%, transparent 82%),
-        radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.058), transparent 62%),
-        rgba(255, 255, 255, 0.040);
+    radial-gradient(130% 100% at 0% 0%, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-glow-on-hover-alpha)), transparent 58%),
+    linear-gradient(145deg, rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-hover-alpha)),
+                    rgba(var(--rt-tc-glow-rgb), var(--rt-tc-wash-on-hover-tail-alpha)) 52%, transparent 82%),
+                    radial-gradient(100% 100% at 0% 0%, rgba(255,255,255,.058), transparent 62%),
+                    rgba(255, 255, 255, 0.040);
 }
 .rt-tc-top {
     display: flex; align-items: center; justify-content: space-between; gap: 7px;
@@ -1299,8 +1517,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     width: 18px; height: 18px; border-radius: 5.75px;
     border: 1px solid rgba(255, 255, 255, 0.095);
     background:
-        radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.12), transparent 62%),
-        rgba(255, 255, 255, 0.045);
+    radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.12), transparent 62%),
+    rgba(255, 255, 255, 0.045);
     color: var(--rt-text-mute);
     font-family: var(--rt-font-ui);
     font-size: 10px; font-weight: 800; line-height: 1; cursor: help;
@@ -1310,22 +1528,22 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 .rt-info:hover {
     background:
-        radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.18), transparent 62%),
-        rgba(255, 255, 255, 0.075);
+    radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.18), transparent 62%),
+    rgba(255, 255, 255, 0.075);
     border-color: rgba(255, 255, 255, 0.18);
     color: var(--rt-text);
     box-shadow: 0 5px 12px rgba(0, 0, 0, .22);
 }
 /* Toggle-card icons. Each feature gets a tinted background tile and a
-   themed glow, so the three cards read as distinct at a glance. */
+ *  themed glow, so the three cards read as distinct at a glance. */
 .rt-tc-ico {
     width: 26px; height: 26px; flex: 0 0 26px;
     display: inline-flex; align-items: center; justify-content: center;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background:
-        radial-gradient(85% 85% at 25% 20%, rgba(255,255,255,.10), transparent 65%),
-        rgba(255, 255, 255, 0.04);
+    radial-gradient(85% 85% at 25% 20%, rgba(255,255,255,.10), transparent 65%),
+    rgba(255, 255, 255, 0.04);
     color: #fff;
     line-height: 1;
     transition: background .22s, border-color .22s, box-shadow .22s, color .22s;
@@ -1337,8 +1555,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 /* Active feature icons use per-card variables for their colored glow. */
 .rt-tc.on .rt-tc-ico {
     background:
-        radial-gradient(85% 85% at 25% 20%, rgba(var(--rt-tc-ico-rgb), var(--rt-tc-ico-spot-alpha)), transparent 62%),
-        rgba(var(--rt-tc-ico-rgb), var(--rt-tc-ico-bg-alpha));
+    radial-gradient(85% 85% at 25% 20%, rgba(var(--rt-tc-ico-rgb), var(--rt-tc-ico-spot-alpha)), transparent 62%),
+    rgba(var(--rt-tc-ico-rgb), var(--rt-tc-ico-bg-alpha));
     border-color: rgba(var(--rt-tc-ico-rgb), var(--rt-tc-ico-border-alpha));
     box-shadow: 0 4px 14px rgba(var(--rt-tc-ico-rgb), var(--rt-tc-ico-shadow-alpha));
 }
@@ -1348,8 +1566,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 .rt-tc-chart .rt-tc-bot {
     /* The fourth card has the longest label. Free the label row from the
-       bottom-corner help-button reserve so “Statistics” can render fully
-       without shrinking the whole feature-card system. */
+     *      bottom-corner help-button reserve so “Statistics” can render fully
+     *      without shrinking the whole feature-card system. */
     padding-right: 0;
 }
 .rt-tc-name {
@@ -1366,13 +1584,13 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     width: 32px; height: 18px; border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.11);
     background:
-        linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.055)),
-        rgba(255, 255, 255, 0.08);
+    linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.055)),
+    rgba(255, 255, 255, 0.08);
     position: relative; cursor: pointer; padding: 0;
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.11),
-        inset 0 -1px 0 rgba(0,0,0,0.22),
-        0 4px 10px rgba(0,0,0,0.12);
+    inset 0 1px 0 rgba(255,255,255,0.11),
+    inset 0 -1px 0 rgba(0,0,0,0.22),
+    0 4px 10px rgba(0,0,0,0.12);
     transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
     flex: 0 0 auto;
 }
@@ -1388,36 +1606,36 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 .rt-sw:hover {
     border-color: rgba(255, 255, 255, 0.18);
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.14),
-        inset 0 -1px 0 rgba(0,0,0,0.20),
-        0 6px 14px rgba(0,0,0,0.16);
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.20),
+    0 6px 14px rgba(0,0,0,0.16);
 }
 .rt-sw:focus-visible { outline: 2px solid rgba(var(--rt-sw-accent), 0.78); outline-offset: 2px; }
 .rt-sw.on {
     background:
-        linear-gradient(135deg, rgba(var(--rt-sw-accent), 0.98), rgba(var(--rt-sw-accent-2), 0.84));
+    linear-gradient(135deg, rgba(var(--rt-sw-accent), 0.98), rgba(var(--rt-sw-accent-2), 0.84));
     border-color: rgba(var(--rt-sw-accent), 0.55);
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.22),
-        inset 0 -1px 0 rgba(0,0,0,0.18),
-        0 0 14px rgba(var(--rt-sw-accent), 0.24);
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.18),
+    0 0 14px rgba(var(--rt-sw-accent), 0.24);
 }
 .rt-thumb {
     position: absolute; top: 2px; left: 2px;
     width: 14px; height: 14px; border-radius: 999px;
     background:
-        radial-gradient(circle at 32% 26%, #fff, #f6f7fb 56%, #dfe4ec);
+    radial-gradient(circle at 32% 26%, #fff, #f6f7fb 56%, #dfe4ec);
     box-shadow:
-        0 2px 7px rgba(0, 0, 0, 0.34),
-        inset 0 1px 0 rgba(255,255,255,0.95);
+    0 2px 7px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255,255,255,0.95);
     transition: transform .22s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease;
 }
 .rt-sw.on .rt-thumb {
     transform: translateX(14px);
     box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.34),
-        0 0 7px rgba(255,255,255,0.28),
-        inset 0 1px 0 rgba(255,255,255,0.95);
+    0 2px 8px rgba(0, 0, 0, 0.34),
+    0 0 7px rgba(255,255,255,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.95);
 }
 
 /* Settings sections and fields */
@@ -1434,11 +1652,11 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 16px;
     border: 1px solid var(--rt-stroke);
     background:
-        radial-gradient(140% 100% at 0% 0%, rgba(var(--rt-set-glow-rgb), var(--rt-set-glow-alpha)), transparent 55%),
-        rgba(255, 255, 255, 0.025);
+    radial-gradient(140% 100% at 0% 0%, rgba(var(--rt-set-glow-rgb), var(--rt-set-glow-alpha)), transparent 55%),
+    rgba(255, 255, 255, 0.025);
     box-shadow:
-        0 10px 22px rgba(0, 0, 0, .12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    0 10px 22px rgba(0, 0, 0, .12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .rt-set-general {
     --rt-set-glow-rgb: 255, 255, 255;
@@ -1485,8 +1703,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.10);
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255,255,255, 0.12), transparent 62%),
-        rgba(255, 255, 255, 0.04);
+    radial-gradient(80% 80% at 25% 20%, rgba(255,255,255, 0.12), transparent 62%),
+    rgba(255, 255, 255, 0.04);
     color: #fff;
 }
 .rt-set-icon .rt-icon {
@@ -1495,50 +1713,50 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 .rt-set-icon-general {
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255, 255, 255, 0.24), transparent 62%),
-        linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.055));
+    radial-gradient(80% 80% at 25% 20%, rgba(255, 255, 255, 0.24), transparent 62%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.055));
     border-color: rgba(255, 255, 255, 0.22);
     box-shadow: 0 6px 14px rgba(255, 255, 255, 0.10);
 }
 .rt-set-icon-customize {
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(135, 175, 255, 0.30), transparent 62%),
-        linear-gradient(135deg, rgba(135, 175, 255, 0.22), rgba(78, 116, 200, 0.10));
+    radial-gradient(80% 80% at 25% 20%, rgba(135, 175, 255, 0.30), transparent 62%),
+    linear-gradient(135deg, rgba(135, 175, 255, 0.22), rgba(78, 116, 200, 0.10));
     border-color: rgba(135, 175, 255, 0.32);
     box-shadow: 0 6px 14px rgba(135, 175, 255, 0.16);
 }
 .rt-set-icon-shorts {
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255, 84, 84, 0.30), transparent 62%),
-        linear-gradient(135deg, rgba(255, 84, 84, 0.22), rgba(200, 50, 50, 0.10));
+    radial-gradient(80% 80% at 25% 20%, rgba(255, 84, 84, 0.30), transparent 62%),
+    linear-gradient(135deg, rgba(255, 84, 84, 0.22), rgba(200, 50, 50, 0.10));
     border-color: rgba(255, 84, 84, 0.32);
     box-shadow: 0 6px 14px rgba(255, 84, 84, 0.16);
 }
 .rt-set-icon-quality {
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(176, 138, 242, 0.32), transparent 62%),
-        linear-gradient(135deg, rgba(176, 138, 242, 0.22), rgba(106, 77, 190, 0.11));
+    radial-gradient(80% 80% at 25% 20%, rgba(176, 138, 242, 0.32), transparent 62%),
+    linear-gradient(135deg, rgba(176, 138, 242, 0.22), rgba(106, 77, 190, 0.11));
     border-color: rgba(176, 138, 242, 0.38);
     box-shadow: 0 6px 14px rgba(176, 138, 242, 0.18);
 }
 .rt-set-icon-chart {
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255, 200, 100, 0.34), transparent 62%),
-        linear-gradient(135deg, rgba(255, 200, 100, 0.24), rgba(210, 145, 50, 0.10));
+    radial-gradient(80% 80% at 25% 20%, rgba(255, 200, 100, 0.34), transparent 62%),
+    linear-gradient(135deg, rgba(255, 200, 100, 0.24), rgba(210, 145, 50, 0.10));
     border-color: rgba(255, 200, 100, 0.38);
     box-shadow: 0 6px 14px rgba(255, 200, 100, 0.16);
 }
 .rt-set-icon-private {
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(40, 212, 168, 0.30), transparent 62%),
-        linear-gradient(135deg, rgba(40, 212, 168, 0.20), rgba(20, 160, 130, 0.10));
+    radial-gradient(80% 80% at 25% 20%, rgba(40, 212, 168, 0.30), transparent 62%),
+    linear-gradient(135deg, rgba(40, 212, 168, 0.20), rgba(20, 160, 130, 0.10));
     border-color: rgba(40, 212, 168, 0.32);
     box-shadow: 0 6px 14px rgba(40, 212, 168, 0.16);
 }
 .rt-set-icon-warn {
     background:
-        radial-gradient(80% 80% at 25% 20%, rgba(255, 80, 80, 0.32), transparent 62%),
-        linear-gradient(135deg, rgba(255, 80, 80, 0.22), rgba(150, 25, 35, 0.12));
+    radial-gradient(80% 80% at 25% 20%, rgba(255, 80, 80, 0.32), transparent 62%),
+    linear-gradient(135deg, rgba(255, 80, 80, 0.22), rgba(150, 25, 35, 0.12));
     border-color: rgba(255, 90, 90, 0.38);
     box-shadow: 0 6px 14px rgba(255, 80, 80, 0.18);
 }
@@ -1567,9 +1785,9 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 
 /* ── Shared setting-control typography ──────────────────────────────────
-   Every setting row uses .rt-control-row so labels are no longer sized by
-   control type. Sliders, selects, checkboxes, and action rows all share the
-   same label sizing; the individual control CSS only handles layout/shape. */
+ *  Every setting row uses .rt-control-row so labels are no longer sized by
+ *  control type. Sliders, selects, checkboxes, and action rows all share the
+ *  same label sizing; the individual control CSS only handles layout/shape. */
 .rt-control-row {
     font-family: var(--rt-control-font-family);
     font-size: var(--rt-control-label-size);
@@ -1595,9 +1813,9 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 12px;
     border: 1px solid rgba(255, 206, 92, 0.28);
     background:
-        radial-gradient(110% 140% at 0% 0%, rgba(255, 206, 92, 0.12), transparent 62%),
-        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018)),
-        rgba(255, 206, 92, 0.055);
+    radial-gradient(110% 140% at 0% 0%, rgba(255, 206, 92, 0.12), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018)),
+    rgba(255, 206, 92, 0.055);
     color: rgba(243, 240, 235, 0.78);
     font-family: var(--rt-control-font-family);
 }
@@ -1616,7 +1834,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-color: rgba(255, 206, 92, 0.88);
     background: linear-gradient(135deg, rgba(255, 206, 92, 1), rgba(204, 139, 28, 1));
     box-shadow: 0 1px 0 rgba(255,255,255,.24) inset, 0 0 0 3px rgba(255,206,92,.12),
-        0 7px 16px rgba(255,206,92,.18);
+    0 7px 16px rgba(255,206,92,.18);
 }
 .rt-setting-warning-box .rt-check input:checked::after {
     border-color: #211400;
@@ -1642,9 +1860,9 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 /* ── Sliders ─────────────────────────────────────────────────────────── */
 /* ── Compact inline slider ─────────────────────────────────────────────
-   Layout:  [ label + chip ........... ━━━●━━━ ]
-   The slider takes the right ~55% of the row; label/chip share the left.
-   Drops the awkward full-width feel that the stacked column had. */
+ *  Layout:  [ label + chip ........... ━━━●━━━ ]
+ *  The slider takes the right ~55% of the row; label/chip share the left.
+ *  Drops the awkward full-width feel that the stacked column had. */
 .rt-slider-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(150px, 1.2fr);
@@ -1683,7 +1901,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     white-space: nowrap;
     transform-origin: center;
     transition: transform .18s ease, color .18s ease,
-        background .18s ease, border-color .18s ease;
+    background .18s ease, border-color .18s ease;
 }
 .rt-slider-chip.rt-chip-pulse {
     animation: rt-chip-bump .42s cubic-bezier(.34, 1.56, .64, 1);
@@ -1715,9 +1933,9 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 
 /* ── Visible track elements (positioned overlays driven by JS) ───────
-   These are absolutely positioned inside .rt-slider-track-wrap and have
-   pointer-events: none so all interaction passes through to the native
-   input that sits on top of them. The input itself is transparent. */
+ *  These are absolutely positioned inside .rt-slider-track-wrap and have
+ *  pointer-events: none so all interaction passes through to the native
+ *  input that sits on top of them. The input itself is transparent. */
 .rt-slider-track,
 .rt-slider-fill,
 .rt-slider-thumb-custom {
@@ -1733,8 +1951,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border: 1px solid rgba(255, 255, 255, 0.06);
 }
 /* Fill ends at the thumb's center (matching the native input's behavior).
-   Math: thumb_center = pct% − pf * thumb_w/2 = pct% − pf * 8px, then
-   fill_width = thumb_center + thumb_w/2 = pct% − pf * 8px + 8px. */
+ *  Math: thumb_center = pct% − pf * thumb_w/2 = pct% − pf * 8px, then
+ *  fill_width = thumb_center + thumb_w/2 = pct% − pf * 8px + 8px. */
 .rt-slider-fill {
     left: 0;
     top: 50%; transform: translateY(-50%);
@@ -1745,8 +1963,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     box-shadow: 0 0 12px rgba(var(--rt-control-blue-rgb), 0.22);
 }
 /* Inset-thumb positioning: thumb_left = pct% − pf * thumb_w = pct% − pf * 16px.
-   At pct=0, thumb's left edge is at 0; at pct=100, thumb's right edge
-   is at 100%. The thumb never hangs off the track ends. */
+ *  At pct=0, thumb's left edge is at 0; at pct=100, thumb's right edge
+ *  is at 100%. The thumb never hangs off the track ends. */
 .rt-slider-thumb-custom {
     top: 50%;
     left: calc(var(--rt-p, 50%) - var(--rt-pf, 0.5) * 16px);
@@ -1755,7 +1973,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45),
-        0 0 0 3px rgba(var(--rt-control-blue-rgb), 0.18);
+    0 0 0 3px rgba(var(--rt-control-blue-rgb), 0.18);
     transition: transform .14s ease, box-shadow .18s ease;
 }
 .rt-slider-track-wrap:hover .rt-slider-thumb-custom,
@@ -1769,10 +1987,10 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 
 /* ── Native input: invisible interaction layer on top ─────────────────
-   The native input is overlaid on the visible track wrap, made fully
-   transparent, but stays interactive — clicks, drags, keyboard, focus
-   all flow through it. The thumb is sized to roughly match the visible
-   custom thumb so the click target stays right. */
+ *  The native input is overlaid on the visible track wrap, made fully
+ *  transparent, but stays interactive — clicks, drags, keyboard, focus
+ *  all flow through it. The thumb is sized to roughly match the visible
+ *  custom thumb so the click target stays right. */
 .rt-slider-input {
     -webkit-appearance: none; appearance: none;
     position: absolute;
@@ -1849,8 +2067,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 5px;
     border: 1px solid rgba(255, 255, 255, 0.16);
     background:
-        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)),
-        rgba(0, 0, 0, 0.18);
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)),
+    rgba(0, 0, 0, 0.18);
     box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 5px 12px rgba(0,0,0,.16);
     cursor: pointer; position: relative;
     transition: background .16s, border-color .16s, transform .12s, box-shadow .16s;
@@ -1861,7 +2079,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-color: rgba(var(--rt-control-blue-rgb), 0.84);
     background: linear-gradient(135deg, rgba(var(--rt-control-blue-rgb), 1), rgba(var(--rt-control-blue-deep-rgb), 1));
     box-shadow: 0 1px 0 rgba(255,255,255,.22) inset, 0 0 0 3px rgba(var(--rt-control-blue-rgb), .10),
-        0 7px 16px rgba(var(--rt-control-blue-rgb), .16);
+    0 7px 16px rgba(var(--rt-control-blue-rgb), .16);
 }
 .rt-check input:checked::after {
     content: ''; position: absolute; left: 5px; top: 2px;
@@ -1887,7 +2105,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-color: rgba(255, 80, 80, .84);
     background: linear-gradient(135deg, rgba(255, 80, 80, 1), rgba(160, 22, 35, 1));
     box-shadow: 0 1px 0 rgba(255,255,255,.20) inset, 0 0 0 3px rgba(255,80,80,.10),
-        0 7px 16px rgba(255,80,80,.16);
+    0 7px 16px rgba(255,80,80,.16);
 }
 .rt-danger-confirm-row { display: flex; justify-content: flex-end; }
 .rt-confirm-delete:disabled { opacity: .45; cursor: not-allowed; transform: none; }
@@ -1918,14 +2136,14 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 11px;
     border-color: rgba(255, 80, 80, 0.46);
     background:
-        radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.14), transparent 55%),
-        linear-gradient(135deg, rgba(255, 80, 80, 0.24), rgba(160, 22, 35, 0.16));
+    radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.14), transparent 55%),
+    linear-gradient(135deg, rgba(255, 80, 80, 0.24), rgba(160, 22, 35, 0.16));
     color: #fff;
     font-size: 12px;
     font-weight: 800;
     box-shadow:
-        0 7px 16px rgba(255, 80, 80, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.13);
+    0 7px 16px rgba(255, 80, 80, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
 }
 .rt-action-btn-danger::after {
     content: '';
@@ -1937,12 +2155,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 }
 .rt-action-btn-danger:hover {
     background:
-        radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.20), transparent 55%),
-        linear-gradient(135deg, rgba(255, 80, 80, 0.32), rgba(160, 22, 35, 0.22));
+    radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.20), transparent 55%),
+    linear-gradient(135deg, rgba(255, 80, 80, 0.32), rgba(160, 22, 35, 0.22));
     border-color: rgba(255, 100, 100, 0.66);
     box-shadow:
-        0 10px 22px rgba(255, 80, 80, 0.22),
-        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    0 10px 22px rgba(255, 80, 80, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .rt-field { justify-content: space-between; cursor: default; gap: 12px; }
@@ -1995,8 +2213,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 13px;
     background: transparent;
     box-shadow:
-        0 0 0 1px rgba(var(--rt-select-glow-rgb), .18),
-        0 0 16px rgba(var(--rt-select-glow-rgb), .10);
+    0 0 0 1px rgba(var(--rt-select-glow-rgb), .18),
+    0 0 16px rgba(var(--rt-select-glow-rgb), .10);
     opacity: 0;
     pointer-events: none;
     transition: opacity .18s ease, transform .18s ease;
@@ -2014,7 +2232,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     transform-origin: 55% 55%;
     pointer-events: none;
     transition: transform .22s cubic-bezier(.22, 1, .36, 1),
-        border-color .18s ease;
+    border-color .18s ease;
 }
 .rt-select-wrap:hover,
 .rt-select-wrap:focus-within {
@@ -2039,35 +2257,35 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     width: 100%; border-radius: 11px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background:
-        radial-gradient(85% 120% at 12% 0%,
-            rgba(255, 255, 255, .075), transparent 62%),
-        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)),
-        rgba(0, 0, 0, 0.24);
-    color: var(--rt-text);
-    font-family: var(--rt-font-ui);
-    font-size: var(--rt-control-label-size); font-weight: 800;
-    padding: 7px 32px 7px 11px; outline: none;
-    box-shadow:
-        0 1px 0 rgba(255,255,255,.055) inset,
-        0 8px 18px rgba(0,0,0,.16);
-    transition: border-color .18s, background .18s, box-shadow .18s,
-        color .18s;
+    radial-gradient(85% 120% at 12% 0%,
+                    rgba(255, 255, 255, .075), transparent 62%),
+                    linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)),
+                    rgba(0, 0, 0, 0.24);
+                    color: var(--rt-text);
+                    font-family: var(--rt-font-ui);
+                    font-size: var(--rt-control-label-size); font-weight: 800;
+                    padding: 7px 32px 7px 11px; outline: none;
+                    box-shadow:
+                    0 1px 0 rgba(255,255,255,.055) inset,
+                    0 8px 18px rgba(0,0,0,.16);
+                    transition: border-color .18s, background .18s, box-shadow .18s,
+                    color .18s;
 }
 .rt-select:hover {
     border-color: rgba(var(--rt-select-glow-rgb), 0.32);
     background:
-        radial-gradient(85% 120% at 12% 0%,
-            rgba(255, 255, 255, .105), transparent 62%),
-        linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.035)),
-        rgba(0, 0, 0, 0.24);
+    radial-gradient(85% 120% at 12% 0%,
+                    rgba(255, 255, 255, .105), transparent 62%),
+                    linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.035)),
+                    rgba(0, 0, 0, 0.24);
 }
 .rt-select:focus {
     border-color: rgba(var(--rt-select-glow-rgb), 0.66);
     box-shadow:
-        0 1px 0 rgba(255,255,255,.07) inset,
-        0 0 0 3px rgba(var(--rt-select-glow-rgb), .12),
-        0 0 18px rgba(var(--rt-select-glow-rgb), .12),
-        0 8px 18px rgba(0,0,0,.16);
+    0 1px 0 rgba(255,255,255,.07) inset,
+    0 0 0 3px rgba(var(--rt-select-glow-rgb), .12),
+    0 0 18px rgba(var(--rt-select-glow-rgb), .12),
+    0 8px 18px rgba(0,0,0,.16);
 }
 .rt-select option { background: #17171a; color: #f3f0eb; }
 
@@ -2076,14 +2294,14 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     display: flex; gap: 9px; align-items: flex-start;
     padding: 10px 12px; border-radius: 11px;
     background:
-        radial-gradient(120% 140% at 0% 0%, rgba(var(--rt-control-blue-rgb), 0.13), transparent 62%),
-        linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02)),
-        rgba(var(--rt-control-blue-rgb), 0.065);
+    radial-gradient(120% 140% at 0% 0%, rgba(var(--rt-control-blue-rgb), 0.13), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02)),
+    rgba(var(--rt-control-blue-rgb), 0.065);
     border: 1px solid rgba(64, 186, 226, 0.26);
     box-shadow:
-        0 8px 18px rgba(0, 0, 0, 0.14),
-        0 0 14px rgba(var(--rt-control-blue-rgb), 0.05),
-        inset 0 1px 0 rgba(255,255,255,.055);
+    0 8px 18px rgba(0, 0, 0, 0.14),
+    0 0 14px rgba(var(--rt-control-blue-rgb), 0.05),
+    inset 0 1px 0 rgba(255,255,255,.055);
     font-size: 11px; line-height: 1.45;
     color: rgba(243, 240, 235, 0.72);
 }
@@ -2116,19 +2334,19 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 /* Toasts */
 #rt_toasts {
-    position: fixed;
-    top: var(--rt-toast-top, auto);
-    bottom: var(--rt-toast-bottom, 120px);
-    right: var(--rt-toast-right, 24px);
-    left: var(--rt-toast-left, auto);
-    display: flex; flex-direction: column-reverse; gap: 8px;
-    align-items: flex-end;
-    z-index: 2147483646; pointer-events: none;
-    max-width: min(380px, calc(100vw - 48px));
-    transition: top .18s ease, right .18s ease, bottom .18s ease, left .18s ease;
+position: fixed;
+top: var(--rt-toast-top, auto);
+bottom: var(--rt-toast-bottom, 120px);
+right: var(--rt-toast-right, 24px);
+left: var(--rt-toast-left, auto);
+display: flex; flex-direction: column-reverse; gap: 8px;
+align-items: flex-end;
+z-index: 2147483646; pointer-events: none;
+max-width: min(380px, calc(100vw - 48px));
+transition: top .18s ease, right .18s ease, bottom .18s ease, left .18s ease;
 }
 #rt_toasts.rt-toast-video-anchored {
-    max-width: min(380px, calc(100vw - 24px));
+max-width: min(380px, calc(100vw - 24px));
 }
 #rt_toasts.rt-toast-top { flex-direction: column; }
 #rt_toasts.rt-toast-bottom { flex-direction: column-reverse; }
@@ -2150,28 +2368,28 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     align-items: start;
     gap: 10px;
     background:
-        radial-gradient(120px 92px at 0% 0%,
-            rgba(var(--rt-toast-rgb), .13), transparent 68%),
-        linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)),
-        rgba(18, 18, 22, 0.95);
-    backdrop-filter: blur(18px) saturate(170%);
-    -webkit-backdrop-filter: blur(18px) saturate(170%);
-    border: 1px solid rgba(var(--rt-toast-rgb), var(--rt-toast-border-alpha));
-    border-radius: 14px;
-    padding: 12px 38px 14px 12px;
-    color: var(--rt-text);
-    font-family: var(--rt-font-ui);
-    box-shadow:
-        0 16px 36px rgba(0, 0, 0, 0.55),
-        0 0 22px rgba(var(--rt-toast-rgb), var(--rt-toast-glow-alpha)),
-        0 1px 0 rgba(255,255,255,0.04) inset;
-    opacity: 0;
-    transform: translateY(12px) scale(.96);
-    transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
-    overflow: hidden;
-    width: fit-content;
-    max-width: 100%;
-    min-width: 250px;
+    radial-gradient(120px 92px at 0% 0%,
+                    rgba(var(--rt-toast-rgb), .13), transparent 68%),
+                    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)),
+                    rgba(18, 18, 22, 0.95);
+                    backdrop-filter: blur(18px) saturate(170%);
+                    -webkit-backdrop-filter: blur(18px) saturate(170%);
+                    border: 1px solid rgba(var(--rt-toast-rgb), var(--rt-toast-border-alpha));
+                    border-radius: 14px;
+                    padding: 12px 38px 14px 12px;
+                    color: var(--rt-text);
+                    font-family: var(--rt-font-ui);
+                    box-shadow:
+                    0 16px 36px rgba(0, 0, 0, 0.55),
+                    0 0 22px rgba(var(--rt-toast-rgb), var(--rt-toast-glow-alpha)),
+                    0 1px 0 rgba(255,255,255,0.04) inset;
+                    opacity: 0;
+                    transform: translateY(12px) scale(.96);
+                    transition: opacity .22s ease, transform .26s cubic-bezier(.22, 1, .36, 1);
+                    overflow: hidden;
+                    width: fit-content;
+                    max-width: 100%;
+                    min-width: 250px;
 }
 .rt-toast.show {
     opacity: 1; transform: translateY(0) scale(1);
@@ -2186,13 +2404,13 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border-radius: 11px;
     color: #fff;
     background:
-        radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.18), transparent 62%),
-        rgba(var(--rt-toast-rgb), .13);
+    radial-gradient(90% 90% at 25% 20%, rgba(255,255,255,.18), transparent 62%),
+    rgba(var(--rt-toast-rgb), .13);
     border: 1px solid rgba(var(--rt-toast-rgb), .34);
     box-shadow:
-        0 7px 16px rgba(var(--rt-toast-rgb), .16),
-        inset 0 1px 0 rgba(255,255,255,.16),
-        inset 0 0 0 1px rgba(255,255,255,.035);
+    0 7px 16px rgba(var(--rt-toast-rgb), .16),
+    inset 0 1px 0 rgba(255,255,255,.16),
+    inset 0 0 0 1px rgba(255,255,255,.035);
 }
 .rt-toast-ico .rt-icon {
     width: 18px; height: 18px;
@@ -2280,26 +2498,26 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 /* On smaller viewports, keep corner placement but clamp the toast width. */
 @media (max-width: 640px) {
     #rt_toasts:not(.rt-toast-video-anchored) {
-        max-width: min(360px, calc(100vw - 24px));
+    max-width: min(360px, calc(100vw - 24px));
     }
     #rt_toasts.rt-toast-video-anchored {
-        max-width: min(360px, calc(100vw - 24px));
+    max-width: min(360px, calc(100vw - 24px));
     }
     .rt-toast { min-width: min(250px, 100%); }
 }
 
 /* Settings modal */
 #rt_settings_root {
-    position: fixed; inset: 0;
-    z-index: 2147483647;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity .22s ease;
-    font-family: var(--rt-font-ui);
+position: fixed; inset: 0;
+z-index: 2147483647;
+pointer-events: none;
+opacity: 0;
+transition: opacity .22s ease;
+font-family: var(--rt-font-ui);
 }
 #rt_settings_root.show {
-    pointer-events: auto;
-    opacity: 1;
+pointer-events: auto;
+opacity: 1;
 }
 
 .rt-settings-backdrop {
@@ -2324,8 +2542,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     border: 1px solid var(--rt-stroke);
     border-radius: 22px;
     box-shadow:
-        0 32px 80px rgba(0, 0, 0, 0.6),
-        0 2px 0 rgba(255, 255, 255, 0.04) inset;
+    0 32px 80px rgba(0, 0, 0, 0.6),
+    0 2px 0 rgba(255, 255, 255, 0.04) inset;
     color: var(--rt-text);
     overflow: hidden;
     opacity: 0;
@@ -2333,16 +2551,16 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     will-change: transform, opacity;
 }
 #rt_settings_root.show .rt-settings-modal {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+opacity: 1;
+transform: translate(-50%, -50%) scale(1);
 }
 
 .rt-settings-hdr {
     display: flex; align-items: center; justify-content: space-between;
     padding: 16px 18px 15px;
     background:
-        radial-gradient(140% 200% at 0% 0%, rgba(var(--rt-control-blue-deep-rgb), 0.20), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0));
+    radial-gradient(140% 200% at 0% 0%, rgba(var(--rt-control-blue-deep-rgb), 0.20), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0));
     border-bottom: 1px solid var(--rt-stroke);
     flex: 0 0 auto;
 }
@@ -2355,12 +2573,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     font-size: 18px;
     border-radius: 12px;
     background:
-        radial-gradient(80% 80% at 28% 22%, rgba(255,255,255,.13), transparent 62%),
-        rgba(255, 255, 255, 0.045);
+    radial-gradient(80% 80% at 28% 22%, rgba(255,255,255,.13), transparent 62%),
+    rgba(255, 255, 255, 0.045);
     box-shadow:
-        0 6px 18px rgba(var(--rt-control-blue-rgb), 0.34),
-        inset 0 1px 0 rgba(255,255,255,0.16),
-        inset 0 0 0 1px rgba(255,255,255,0.05);
+    0 6px 18px rgba(var(--rt-control-blue-rgb), 0.34),
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 0 0 1px rgba(255,255,255,0.05);
     color: #fff;
 }
 /* Subtle, slow spin on idle — only the glyph rotates, not the tile. */
@@ -2446,16 +2664,16 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
     padding: 8px 19px; border-radius: 11px;
     border: 1px solid rgba(var(--rt-control-blue-rgb), 0.46);
     background:
-        radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
-        linear-gradient(135deg, rgba(var(--rt-control-blue-rgb), 0.24), rgba(var(--rt-control-blue-deep-rgb), 0.14));
+    radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+    linear-gradient(135deg, rgba(var(--rt-control-blue-rgb), 0.24), rgba(var(--rt-control-blue-deep-rgb), 0.14));
     color: #fff;
     font-family: var(--rt-font-ui);
     font-size: 12.5px; font-weight: 800;
     letter-spacing: 0;
     cursor: pointer;
     box-shadow:
-        0 7px 16px rgba(var(--rt-control-blue-rgb), 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.13);
+    0 7px 16px rgba(var(--rt-control-blue-rgb), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
     transition: transform .14s ease, background .18s, border-color .18s, box-shadow .18s;
 }
 .rt-settings-done::after {
@@ -2469,12 +2687,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 .rt-settings-done:hover {
     transform: translateY(-1px);
     background:
-        radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.20), transparent 55%),
-        linear-gradient(135deg, rgba(var(--rt-control-blue-rgb), 0.30), rgba(var(--rt-control-blue-deep-rgb), 0.18));
+    radial-gradient(90% 120% at 20% 0%, rgba(255, 255, 255, 0.20), transparent 55%),
+    linear-gradient(135deg, rgba(var(--rt-control-blue-rgb), 0.30), rgba(var(--rt-control-blue-deep-rgb), 0.18));
     border-color: rgba(var(--rt-control-blue-rgb), 0.64);
     box-shadow:
-        0 10px 22px rgba(var(--rt-control-blue-rgb), 0.20),
-        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    0 10px 22px rgba(var(--rt-control-blue-rgb), 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 .rt-settings-done:active { transform: translateY(0); }
 
@@ -2491,47 +2709,47 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 /* Tooltip and responsive rules */
 #rt_tip {
-    position: fixed; max-width: 220px;
-    padding: 8px 11px; border-radius: 10px;
-    background: rgba(18, 18, 20, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, .34);
-    color: var(--rt-text);
-    font-family: var(--rt-font-ui);
-    font-size: 10.5px; font-weight: 700; line-height: 1.35;
-    text-align: left;
-    opacity: 0; transform: none; pointer-events: none;
-    transition: opacity .16s ease;
-    z-index: 2147483647;
+position: fixed; max-width: 220px;
+padding: 8px 11px; border-radius: 10px;
+background: rgba(18, 18, 20, 0.96);
+border: 1px solid rgba(255, 255, 255, 0.12);
+box-shadow: 0 12px 26px rgba(0, 0, 0, .34);
+color: var(--rt-text);
+font-family: var(--rt-font-ui);
+font-size: 10.5px; font-weight: 700; line-height: 1.35;
+text-align: left;
+opacity: 0; transform: none; pointer-events: none;
+transition: opacity .16s ease;
+z-index: 2147483647;
 }
 #rt_tip.rt-tip-rich {
-    transform: translateY(4px);
-    transition: opacity .16s ease, transform .16s ease;
+transform: translateY(4px);
+transition: opacity .16s ease, transform .16s ease;
 }
 #rt_tip.rt-tip-native {
-    max-width: none;
-    min-height: 32px;
-    padding: 8px 9px;
-    border-radius: 4px;
-    background: rgba(97, 97, 97, 0.96);
-    border: none;
-    box-shadow: none;
-    color: #fff;
-    font-family: var(--rt-font-ui);
-    font-size: 12px; font-weight: 400; line-height: 16px;
-    text-align: center;
-    white-space: nowrap;
-    transform: none;
-    transition: opacity .075s cubic-bezier(.4, 0, 1, 1);
+max-width: none;
+min-height: 32px;
+padding: 8px 9px;
+border-radius: 4px;
+background: rgba(97, 97, 97, 0.96);
+border: none;
+box-shadow: none;
+color: #fff;
+font-family: var(--rt-font-ui);
+font-size: 12px; font-weight: 400; line-height: 16px;
+text-align: center;
+white-space: nowrap;
+transform: none;
+transition: opacity .075s cubic-bezier(.4, 0, 1, 1);
 }
 #rt_tip.show { opacity: 1; }
 #rt_tip.rt-tip-rich.show { transform: translateY(0); }
 #rt_tip.rt-tip-native.show {
-    transform: none;
-    animation: rt-tip-native-fade-in 150ms cubic-bezier(0, 0, .2, 1) both;
+transform: none;
+animation: rt-tip-native-fade-in 150ms cubic-bezier(0, 0, .2, 1) both;
 }
 #rt_tip.rt-tip-native.rt-tip-hiding {
-    animation: rt-tip-native-fade-out 100ms cubic-bezier(.4, 0, 1, 1) both;
+animation: rt-tip-native-fade-out 100ms cubic-bezier(.4, 0, 1, 1) both;
 }
 @keyframes rt-tip-native-fade-in {
     from { opacity: 0; }
@@ -2548,7 +2766,7 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 #rt_settings_root,
 #rt_toasts,
 #rt_tip {
-    font-family: var(--rt-font-ui);
+font-family: var(--rt-font-ui);
 }
 
 .rt-hdr-title,
@@ -2568,10 +2786,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 .rt-card-id code,
 .rt-tc-st,
 .rt-stat-name,
-.rt-stat-tile-sub,
-.rt-stat-channel-time,
+.rt-stat-channel-sub,
 .rt-stat-channel-rank,
-.rt-stats-card-eyebrow,
 .rt-stats-menu-eyebrow,
 .rt-set-eyebrow,
 .rt-settings-eyebrow,
@@ -2595,18 +2811,18 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host .rt-rain-hit::after {
 
 /* OLED pure-black theme */
 /* Activated by body.rt-oled, scoped to YouTube's dark theme so light mode
-   is untouched. We redefine the page-level YouTube design tokens that
-   carry dark-gray backgrounds; everything that reads var(--yt-spec-*)
-   picks the new values automatically.
-
-   !important is used because YouTube re-declares the same variables at
-   html[dark] and on raised-component shadow roots; without it, our
-   body-scoped definition loses to whichever YouTube rule was declared
-   later. The rules are gated to body.rt-oled, so they only ever fire
-   when the user has explicitly opted in.
-
-   Raised surfaces (cards, dropdowns, menus) stay one step above pure
-   black so they remain visible against the page background. */
+ *  is untouched. We redefine the page-level YouTube design tokens that
+ *  carry dark-gray backgrounds; everything that reads var(--yt-spec-*)
+ *  picks the new values automatically.
+ *
+ *  !important is used because YouTube re-declares the same variables at
+ *  html[dark] and on raised-component shadow roots; without it, our
+ *  body-scoped definition loses to whichever YouTube rule was declared
+ *  later. The rules are gated to body.rt-oled, so they only ever fire
+ *  when the user has explicitly opted in.
+ *
+ *  Raised surfaces (cards, dropdowns, menus) stay one step above pure
+ *  black so they remain visible against the page background. */
 html[dark] body.rt-oled {
     --yt-spec-base-background: #000 !important;
     --yt-spec-raised-background: #0a0a0a !important;
@@ -2627,10 +2843,10 @@ html[dark] body.rt-oled {
 }
 
 /* Safety net for app-shell elements that hard-code their background
-   instead of reading a token. Limited to dark mode + the OLED class so
-   nothing leaks into the default theme. We only target the chrome
-   (the app shell and the topbar) — page-level wrappers inherit from
-   body.rt-oled via the normal cascade. */
+ *  instead of reading a token. Limited to dark mode + the OLED class so
+ *  nothing leaks into the default theme. We only target the chrome
+ *  (the app shell and the topbar) — page-level wrappers inherit from
+ *  body.rt-oled via the normal cascade. */
 html[dark] body.rt-oled ytd-app,
 html[dark] body.rt-oled #content.ytd-app,
 html[dark] body.rt-oled #page-manager.ytd-app,
@@ -2640,12 +2856,12 @@ html[dark] body.rt-oled #masthead-container {
 }
 
 /* Disable YouTube's cinematic ambient mode when OLED is on. The
-   "glow" is a pair of canvases inside #cinematics-container that paint
-   a blurred render of the video onto the area surrounding the player —
-   producing a coloured haze that fundamentally conflicts with what
-   OLED wants (uniform pure black). The video player is a sibling of
-   the cinematics container, not a child, so hiding it doesn't touch
-   playback. */
+ *  "glow" is a pair of canvases inside #cinematics-container that paint
+ *  a blurred render of the video onto the area surrounding the player —
+ *  producing a coloured haze that fundamentally conflicts with what
+ *  OLED wants (uniform pure black). The video player is a sibling of
+ *  the cinematics container, not a child, so hiding it doesn't touch
+ *  playback. */
 html[dark] body.rt-oled #cinematics-container.ytd-watch-flexy,
 html[dark] body.rt-oled #cinematics.ytd-watch-flexy {
     display: none !important;
