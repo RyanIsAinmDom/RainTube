@@ -915,7 +915,7 @@ cursor: auto;
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
-    padding: 8px 10px 9px;
+    padding: 8px 10px 2px;
     /* Glow originates at the star (top-left), fading outward; layered over a
      *      glassy top sheen for a frosted look. */
     background:
@@ -981,7 +981,7 @@ cursor: auto;
  *  panel (avatar + full name + share of watch time); only one opens at a time. */
 .rt-stat-channel-board {
     display: flex; flex-direction: column;
-    gap: 4px;
+    gap: 0;
 }
 .rt-cb-empty {
     font-size: 11px; font-weight: 500;
@@ -996,16 +996,21 @@ cursor: auto;
  *  are what signal it can be opened. */
 .rt-cb-bar {
     appearance: none; -webkit-appearance: none;
-    margin: 0; padding: 0; border: 0;
+    margin: 0;
     width: 100%;
-    background: transparent;
+    /* Outlined container so the full clickable row reads as one surface. */
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.018);
     color: inherit; font: inherit; text-align: left;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) 14px;
+    grid-template-columns: auto minmax(0, 1fr) auto 14px;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
     cursor: pointer;
     outline: none;
+    transition: background .16s ease, border-color .16s ease;
 }
 .rt-cb-medal {
     display: flex; align-items: center; gap: 5px;
@@ -1032,37 +1037,66 @@ cursor: auto;
     position: relative;
     display: flex; align-items: center; gap: 8px;
     min-width: 0;
-    height: 18px;
+    height: 16px;
     padding: 0 9px;
-    border-radius: 6px;
+    border-radius: 5px;
     overflow: hidden;
-    background: rgba(255, 255, 255, 0.045);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-    transition: background .16s ease, box-shadow .16s ease;
+    /* Dark glassy plaque: lighter sheen up top fading into deeper black. */
+    background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, rgba(28, 30, 36, 0.55), rgba(8, 9, 12, 0.75));
+    /* Medal-tinted outline reads the rank at rest, not just on hover. */
+    box-shadow:
+    inset 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: box-shadow .16s ease;
 }
 .rt-cb-fill {
     position: absolute; inset: 0 auto 0 0;
     border-radius: inherit; z-index: 0;
-    background: linear-gradient(90deg,
-                                rgba(var(--rt-cb-accent, 255, 200, 100), 0.32),
-                                rgba(var(--rt-cb-accent, 255, 200, 100), 0.12));
+    /* Brighter accent body; the leading edge gets a soft highlight (below)
+       rather than a hard bright line, which read as too harsh. */
+    background:
+    linear-gradient(90deg,
+                    rgba(var(--rt-cb-accent, 255, 200, 100), 0.45),
+                    rgba(var(--rt-cb-accent, 255, 200, 100), 0.18));
+    box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    3px 0 8px rgba(var(--rt-cb-accent, 255, 200, 100), 0.18);
     transition: width .35s cubic-bezier(.22, .61, .36, 1);
+}
+/* Soft medal-colored leading edge — vertically faded so it's a gentle
+   highlight at the bar's tip, not a hard full-height stripe. */
+.rt-cb-fill::after {
+    content: '';
+    position: absolute; top: 0; bottom: 0; right: 0;
+    width: 1px;
+    background: linear-gradient(180deg,
+                                transparent,
+                                rgba(var(--rt-cb-accent, 255, 200, 100), 0.5) 35%,
+                                rgba(var(--rt-cb-accent, 255, 200, 100), 0.5) 65%,
+                                transparent);
 }
 .rt-cb-name {
     position: relative; z-index: 1;
     flex: 1 1 auto; min-width: 0;
     font-family: var(--rt-font-ui);
     font-size: 11px; font-weight: 700; line-height: 1;
-    color: var(--rt-text-mute);
+    color: var(--rt-text);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .rt-cb-time {
-    position: relative; z-index: 1;
-    flex: 0 0 auto;
+    justify-self: end;
+    min-width: 42px;
     font-family: var(--rt-font-mono);
-    font-size: 9px; font-weight: 800; line-height: 1;
-    color: var(--rt-text-dim);
+    font-size: 10px; font-weight: 800; line-height: 1;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--rt-text-mute);
+    text-align: right;
     white-space: nowrap;
+    transition: color .16s ease;
 }
 .rt-cb-chev {
     justify-self: center;
@@ -1075,22 +1109,35 @@ cursor: auto;
 }
 
 /* Hover / focus / open affordances. */
+.rt-cb-bar:hover {
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.30);
+}
 .rt-cb-bar:hover .rt-cb-track {
-    background: rgba(255, 255, 255, 0.075);
-    box-shadow: inset 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.34);
+    box-shadow:
+    inset 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 10px rgba(var(--rt-cb-accent, 255, 200, 100), 0.12);
 }
 .rt-cb-bar:hover .rt-cb-medal-badge { transform: scale(1.1); }
 .rt-cb-bar:hover .rt-cb-chev { opacity: 0.92; }
-.rt-cb-bar:focus-visible .rt-cb-track {
-    box-shadow:
-    inset 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.5),
-    0 0 0 2px rgba(var(--rt-cb-accent, 255, 200, 100), 0.18);
+.rt-cb-bar:hover .rt-cb-time { color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.92); }
+.rt-cb-bar:focus-visible {
+    border-color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.55);
+    box-shadow: 0 0 0 2px rgba(var(--rt-cb-accent, 255, 200, 100), 0.20);
+}
+.rt-cb-row.is-open .rt-cb-bar {
+    background: rgba(var(--rt-cb-accent, 255, 200, 100), 0.05);
+    border-color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.38);
 }
 .rt-cb-row.is-open .rt-cb-track {
-    background: rgba(var(--rt-cb-accent, 255, 200, 100), 0.07);
-    box-shadow: inset 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.42);
+    box-shadow:
+    inset 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.70),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 12px rgba(var(--rt-cb-accent, 255, 200, 100), 0.15);
 }
 .rt-cb-row.is-open .rt-cb-name { color: var(--rt-text); }
+.rt-cb-row.is-open .rt-cb-time { color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.96); }
 .rt-cb-row.is-open .rt-cb-chev {
     transform: translateY(1px) rotate(225deg);
     opacity: 0.95;
@@ -1111,38 +1158,67 @@ cursor: auto;
 .rt-cb-detail-inner {
     overflow: hidden;
     min-height: 0;
-    display: flex; align-items: center; gap: 10px;
-    padding: 5px 2px 2px 10px;
+    display: flex; align-items: center; gap: 11px;
+    padding: 7px 4px 3px 10px;
 }
 .rt-cb-avatar {
-    width: 34px; height: 34px; flex: 0 0 34px;
+    width: 38px; height: 38px; flex: 0 0 38px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.28);
-    color: rgba(255, 220, 150, 0.96);
-    box-shadow: 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.4);
+    color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.9);
+    box-shadow: 0 0 0 1px rgba(var(--rt-cb-accent, 255, 200, 100), 0.45);
 }
 .rt-cb-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.rt-cb-avatar .rt-icon { width: 15px; height: 15px; }
+.rt-cb-avatar .rt-icon { width: 16px; height: 16px; }
+.rt-cb-detail-body {
+    flex: 1 1 auto; min-width: 0;
+    display: flex; flex-direction: column; gap: 6px;
+}
 .rt-cb-detail-text {
     min-width: 0;
-    display: flex; flex-direction: column; gap: 2px;
+    display: flex; flex-direction: column; gap: 1px;
 }
-.rt-cb-detail-name {
+.rt-cb-detail-headline {
     font-family: var(--rt-font-ui);
-    font-size: 12px; font-weight: 800; line-height: 1.15;
-    color: var(--rt-text);
-    overflow-wrap: anywhere;
-}
-.rt-cb-detail-meta {
-    font-family: var(--rt-font-mono);
-    font-size: 9.5px; font-weight: 600; line-height: 1.2;
+    font-size: 12px; font-weight: 700; line-height: 1.2;
     color: var(--rt-text-mute);
 }
-.rt-cb-detail-meta strong {
-    color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.96);
+.rt-cb-detail-headline strong {
     font-weight: 800;
+    color: rgba(var(--rt-cb-accent, 255, 200, 100), 0.98);
+}
+.rt-cb-detail-compare {
+    font-family: var(--rt-font-mono);
+    font-size: 9px; font-weight: 600; line-height: 1.2;
+    letter-spacing: 0.02em;
+    color: var(--rt-text-dim);
+    text-transform: uppercase;
+}
+.rt-cb-detail-stats {
+    display: flex; flex-wrap: wrap;
+    gap: 6px;
+}
+.rt-cb-stat {
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 4px 9px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+}
+.rt-cb-stat-val {
+    font-family: var(--rt-font-mono);
+    font-size: 11px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--rt-text);
+}
+.rt-cb-stat-lbl {
+    font-family: var(--rt-font-mono);
+    font-size: 8px; font-weight: 600; line-height: 1.1;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--rt-text-dim);
 }
 
 /* Gold / silver / bronze medal + bar tints. */
@@ -1168,8 +1244,8 @@ cursor: auto;
 }
 .rt-dl {
     display: flex; align-items: center; gap: 8px;
-    min-height: 44px; padding: 8px 10px;
-    border-radius: 12px;
+    min-height: 34px; padding: 5px 10px;
+    border-radius: 10px;
     border: 1px solid var(--rt-stroke);
     background: rgba(255, 255, 255, 0.025);
     color: var(--rt-text);
@@ -1190,7 +1266,7 @@ cursor: auto;
     animation: rt-pulse 1.4s ease-in-out infinite;
 }
 .rt-dl-ico {
-    width: 30px; height: 30px; border-radius: 9px; flex: 0 0 30px;
+    width: 24px; height: 24px; border-radius: 7px; flex: 0 0 24px;
     display: flex; align-items: center; justify-content: center;
     font-size: 13px;
     color: #fff;
@@ -1203,7 +1279,7 @@ cursor: auto;
     inset 0 0 0 1px rgba(255,255,255,0.035);
 }
 .rt-dl-ico .rt-icon {
-    width: 18px; height: 18px;
+    width: 15px; height: 15px;
     display: block;
     filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.22));
 }
@@ -2717,7 +2793,6 @@ font-family: var(--rt-font-ui);
 .rt-dl-p,
 .rt-tc-name,
 .rt-stat-tile-val,
-.rt-cb-detail-name,
 .rt-stats-card-title,
 .rt-stats-menu-title,
 .rt-set-title,
