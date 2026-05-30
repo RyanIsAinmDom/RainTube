@@ -2,7 +2,7 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.231
+// @version            1.20.246
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
 // @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
@@ -32,7 +32,7 @@
 // @resource           rtFontMonoLatin https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono:vf@5.2.8/latin-wght-normal.woff2
 
 // Keep @version, CFG.version, and this rt= cache-bust in sync.
-// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.231
+// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.246
 
 // Core support APIs.
 // @connect            raw.githubusercontent.com
@@ -72,7 +72,7 @@ const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '1.20.231',
+    version: '1.20.246',
     instances: {
         mdUrl: 'https://raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md',
         invidiousJsonUrl: 'https://api.invidious.io/instances.json',
@@ -2934,7 +2934,7 @@ const RT_ICONS = Object.freeze({
     ]),
 
     star: () => makeSvgIcon([
-        { d: 'M12 3.2 L14.5 9.5 L21.2 10 L16 14.3 L17.6 21 L12 17.2 L6.4 21 L8 14.3 L2.8 10 L9.5 9.5 Z', fill: 'currentColor', stroke: 'currentColor', strokeWidth: 1 },
+        { d: 'M12 3.2 L14.5 9.5 L21.2 10 L16 14.3 L17.6 21 L12 17.2 L6.4 21 L8 14.3 L2.8 10 L9.5 9.5 Z', strokeWidth: 1.7 },
     ]),
 
     trophy: () => makeSvgIcon([
@@ -3252,6 +3252,8 @@ const StatsTracker = (() => {
         let videosWatched = 0;
         const channelSec = Object.create(null);
         const channelAvatar = Object.create(null);
+        const channelDays = Object.create(null);   // distinct date-buckets watched
+        const channelPeakSec = Object.create(null); // best single-day watch time
 
         for (const key of keys) {
             const bucket = state.buckets[key];
@@ -3261,7 +3263,11 @@ const StatsTracker = (() => {
             watchSec += Number(bucket.watchSec) || 0;
             videosWatched += Number(bucket.videosWatched) || 0;
             for (const [channel, sec] of Object.entries(bucket.channelSec || {})) {
-                channelSec[channel] = (channelSec[channel] || 0) + (Number(sec) || 0);
+                const n = Number(sec) || 0;
+                if (n <= 0) continue;
+                channelSec[channel] = (channelSec[channel] || 0) + n;
+                channelDays[channel] = (channelDays[channel] || 0) + 1;
+                if (n > (channelPeakSec[channel] || 0)) channelPeakSec[channel] = n;
             }
             for (const [channel, avatarUrl] of Object.entries(bucket.channelAvatar || {})) {
                 if (channel && avatarUrl) channelAvatar[channel] = avatarUrl;
@@ -3276,12 +3282,14 @@ const StatsTracker = (() => {
             .filter(channel => channel.name && channel.sec > 0)
             .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
             .slice(0, FAVORITE_BOARD_MAX)
-            // Each of the top-3 reveals a picture when expanded, so resolve all
-            // three avatars (not just the leader's).
+            // Each of the top-3 reveals a picture + breakdown when expanded, so
+            // resolve all three avatars and carry the derived per-channel stats.
             .map((channel, index) => ({
                 ...channel,
                 rank: index + 1,
                 avatar: channelAvatar[channel.name] || '',
+                days: channelDays[channel.name] || 0,
+                peakSec: Math.round(channelPeakSec[channel.name] || 0),
             }));
 
         return {
@@ -3416,7 +3424,7 @@ const StatsTracker = (() => {
         }
     }
 
-    function buildFavoriteRow(tile, board, channel, pct, sharePct, detailId) {
+    function buildFavoriteRow(tile, board, channel, pct, stats, detailId) {
         const rankClass = channel.rank <= 3 ? ` rt-cb-rank-${channel.rank}` : '';
         const row = mk('div', `rt-cb-row${rankClass}`, null, { role: 'listitem' });
         row.dataset.channel = channel.name;
@@ -3433,12 +3441,12 @@ const StatsTracker = (() => {
             children: [
                 fill,
                 mk('span', 'rt-cb-name', channel.name),
-                mk('span', 'rt-cb-time', formatStatsDuration(channel.sec)),
             ],
         });
         appendChildren(bar, [
             makeFavoriteMedal(channel.rank),
             track,
+            mk('span', 'rt-cb-time', formatStatsDuration(channel.sec)),
             // CSS-drawn chevron (no icon dependency); rotates when open.
             mk('span', 'rt-cb-chev', null, { 'aria-hidden': 'true' }),
         ]);
@@ -3452,10 +3460,30 @@ const StatsTracker = (() => {
         };
         row.appendChild(bar);
 
-        // Avatars are cached for all top-3; lazy <img> defers the load.
+        // Collapsible detail: avatar + context stats (no duplicated name/time).
         const detail = mk('div', 'rt-cb-detail', null, { id: detailId });
-        const inner = mk('div', 'rt-cb-detail-inner');
+        const inner = mk('div', 'rt-cb-detail-inner', null, {
+            children: favoriteDetailContent(channel, stats),
+        });
+        appendChildren(detail, inner);
+        row.appendChild(detail);
+        return row;
+    }
 
+    function favoriteStatPair(label, value) {
+        return mk('span', 'rt-cb-stat', null, {
+            children: [
+                mk('span', 'rt-cb-stat-val', value),
+                mk('span', 'rt-cb-stat-lbl', label),
+            ],
+        });
+    }
+
+    // Builds the inner content of an expanded row. Deliberately omits the
+    // channel name and total watch time — both already shown on the bar — and
+    // instead surfaces context the bar can't: rank framing, how it stacks up
+    // against the leader, and viewing cadence (active days + daily average).
+    function favoriteDetailContent(channel, stats) {
         const avatar = mk('span', 'rt-cb-avatar');
         if (channel.avatar) {
             const img = mk('img', null, null, { src: channel.avatar, alt: '', loading: 'lazy' });
@@ -3465,16 +3493,49 @@ const StatsTracker = (() => {
             avatar.appendChild(RT_ICONS.star());
         }
 
-        const text = mk('div', 'rt-cb-detail-text');
-        text.appendChild(mk('span', 'rt-cb-detail-name', channel.name));
-        const meta = mk('span', 'rt-cb-detail-meta');
-        meta.appendChild(mk('strong', null, `${sharePct}%`));
-        meta.appendChild(document.createTextNode(` of your watch time · ${formatStatsDuration(channel.sec)}`));
-        text.appendChild(meta);
-        appendChildren(inner, [avatar, text]);
-        appendChildren(detail, inner);
-        row.appendChild(detail);
-        return row;
+        // Headline: share of all watch time, with a rank-aware comparison.
+        const headline = mk('span', 'rt-cb-detail-headline', null, {
+            children: [
+                mk('strong', null, `${stats.sharePct}%`),
+                document.createTextNode(' of your watch time'),
+            ],
+        });
+        const compare = mk('span', 'rt-cb-detail-compare',
+            stats.isLeader ? 'Your most-watched channel' : `${stats.vsLeaderPct}% of your #1`);
+
+        const text = mk('div', 'rt-cb-detail-text', null, { children: [headline, compare] });
+
+        // Stat chips: cadence the bar doesn't convey. Only meaningful across
+        // multiple days — on a single day, avg/day and best day just restate
+        // the total, so they're omitted (along with the row itself).
+        const bodyChildren = [text];
+        if (stats.days > 1) {
+            const chips = [favoriteStatPair('avg / day', formatStatsDuration(stats.avgPerDaySec))];
+            if (stats.peakSec > 0) {
+                chips.push(favoriteStatPair('best day', formatStatsDuration(stats.peakSec)));
+            }
+            bodyChildren.push(mk('div', 'rt-cb-detail-stats', null, { children: chips }));
+        }
+
+        return [avatar, mk('div', 'rt-cb-detail-body', null, { children: bodyChildren })];
+    }
+
+    function favoriteRosterSignature(channels) {
+        // Identity = which channels, in what order, at what rank. Numeric
+        // values (sec/width/share) are intentionally excluded so a ticking
+        // watch-second patches in place instead of forcing a rebuild.
+        return channels.map(c => `${c.rank}:${c.name}`).join('|');
+    }
+
+    function patchFavoriteRow(row, channel, pct, stats) {
+        const timeText = formatStatsDuration(channel.sec);
+        row.querySelector('.rt-cb-fill').style.width = `${pct}%`;
+        row.querySelector('.rt-cb-time').textContent = timeText;
+        row.querySelector('.rt-cb-bar')?.setAttribute(
+            'title', `${channel.name} — ${timeText} watched · tap to expand`);
+
+        const inner = row.querySelector('.rt-cb-detail-inner');
+        if (inner) replaceChildrenSafe(inner, favoriteDetailContent(channel, stats));
     }
 
     function renderFavoriteChannelBoard(tile, totals) {
@@ -3487,27 +3548,63 @@ const StatsTracker = (() => {
         if (!channels.length) {
             tile.classList.add('rt-channel-empty');
             tile._rtOpenChannel = null;
+            board._rtRoster = '';
             replaceChildrenSafe(board, mk('div', 'rt-cb-empty', 'No watch history yet'));
             return;
         }
         tile.classList.remove('rt-channel-empty');
-        replaceChildrenSafe(board, []);
 
         // Forget a stored open channel that no longer ranks.
         if (tile._rtOpenChannel && !channels.some(c => c.name === tile._rtOpenChannel)) {
             tile._rtOpenChannel = null;
         }
 
-        // Bar width is leader-relative; share % is against total watch time.
-        const maxSec = Math.max(1, ...channels.map(c => c.sec || 0));
-        const totalSec = Math.max(1, Number(totals.watchSec) || channels.reduce((s, c) => s + (c.sec || 0), 0));
+        // Bar fill = share of the shown channels' combined watch time, so the
+        // bars compare the favorites against each other AND #1's length reflects
+        // how dominant it actually is (rather than always pegging at 100%, which
+        // a leader-relative scale produced). The detail panel still reports each
+        // channel's share of ALL watch time separately.
+        const shownSec = Math.max(1, channels.reduce((s, c) => s + (c.sec || 0), 0));
+        const totalSec = Math.max(1, Number(totals.watchSec) || shownSec);
+        const leaderSec = channels[0]?.sec || 0;
+        const compute = channel => {
+            const sec = channel.sec || 0;
+            const days = Math.max(0, channel.days || 0);
+            return {
+                pct: Math.max(6, Math.round((sec / shownSec) * 100)),
+                stats: {
+                    sharePct: Math.round((sec / totalSec) * 100),
+                    vsLeaderPct: leaderSec ? Math.round((sec / leaderSec) * 100) : 100,
+                    isLeader: channel.rank === 1,
+                    days,
+                    avgPerDaySec: days ? Math.round(sec / days) : sec,
+                    peakSec: channel.peakSec || 0,
+                },
+            };
+        };
 
+        // Reconcile in place when the roster is unchanged. A full rebuild here
+        // would destroy the row the user is hovering — and since a playing
+        // video re-renders every watch-tick (~1s), that manifested as the bar
+        // "pulsating" as its hover/transition state reset each second.
+        const signature = favoriteRosterSignature(channels);
+        const rows = board.querySelectorAll(':scope > .rt-cb-row');
+        if (board._rtRoster === signature && rows.length === channels.length) {
+            channels.forEach((channel, i) => {
+                const { pct, stats } = compute(channel);
+                patchFavoriteRow(rows[i], channel, pct, stats);
+            });
+            return;
+        }
+
+        // Roster changed (different channels/order) — rebuild from scratch.
+        replaceChildrenSafe(board, []);
         channels.forEach((channel, index) => {
-            const pct = Math.max(6, Math.round(((channel.sec || 0) / maxSec) * 100));
-            const sharePct = Math.round(((channel.sec || 0) / totalSec) * 100);
+            const { pct, stats } = compute(channel);
             const detailId = `rt-cbd-${tile._rtId}-${index}`;
-            board.appendChild(buildFavoriteRow(tile, board, channel, pct, sharePct, detailId));
+            board.appendChild(buildFavoriteRow(tile, board, channel, pct, stats, detailId));
         });
+        board._rtRoster = signature;
 
         applyFavoriteOpenState(board, tile._rtOpenChannel);
     }
