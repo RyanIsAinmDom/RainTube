@@ -25,7 +25,7 @@
     --rt-font-mono: 'RainTube Mono';
 }
 
-#rt_panel, #rt_panel *, #rt_stats_panel, #rt_stats_panel *, #rt_fab, #rt_stats_fab, #rt_toasts, #rt_toasts *, #rt_tip,
+#rt_panel, #rt_panel *, #rt_stats_panel, #rt_stats_panel *, #rt_fab, #rt_stats_fab, #rt_settings_fab, #rt_toasts, #rt_toasts *, #rt_tip,
 #rt_settings_root, #rt_settings_root * {
     box-sizing: border-box;
     -webkit-font-smoothing: antialiased;
@@ -33,7 +33,7 @@
 }
 
 /* Topbar button */
-#rt_fab, #rt_stats_fab {
+#rt_fab, #rt_stats_fab, #rt_settings_fab {
     width: 40px; min-width: 40px; height: 40px;
     padding: 0; margin: 0 4px 0 0;
     border-radius: 50%;
@@ -45,28 +45,28 @@
     box-shadow: none;
     transition: background-color .12s ease, transform .08s ease, color .12s ease;
 }
-#rt_fab .rt-fab-icon, #rt_stats_fab .rt-fab-icon {
+#rt_fab .rt-fab-icon, #rt_stats_fab .rt-fab-icon, #rt_settings_fab .rt-fab-icon {
     flex: 0 0 auto;
     display: inline-flex; align-items: center; justify-content: center;
     color: currentColor;
     transition: transform .08s ease;
 }
-#rt_fab .rt-fab-icon .rt-logo-svg, #rt_stats_fab .rt-fab-icon .rt-icon {
+#rt_fab .rt-fab-icon .rt-logo-svg, #rt_stats_fab .rt-fab-icon .rt-icon, #rt_settings_fab .rt-fab-icon .rt-icon {
     display: block;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.42));
 }
-#rt_fab.rt-topbar, #rt_stats_fab.rt-topbar {
+#rt_fab.rt-topbar, #rt_stats_fab.rt-topbar, #rt_settings_fab.rt-topbar {
     position: relative; flex: 0 0 40px;
     z-index: 1;
 }
-#rt_fab.rt-watch-action, #rt_stats_fab.rt-watch-action {
+#rt_fab.rt-watch-action, #rt_stats_fab.rt-watch-action, #rt_settings_fab.rt-watch-action {
     position: relative; flex: 0 0 36px;
     width: 36px; min-width: 36px; height: 36px;
     margin: 0 4px 0 0;
     background: rgba(255, 255, 255, 0.08);
     z-index: 1;
 }
-#rt_fab.rt-floating, #rt_stats_fab.rt-floating {
+#rt_fab.rt-floating, #rt_stats_fab.rt-floating, #rt_settings_fab.rt-floating {
     position: fixed; top: 10px; right: 96px;
     background: rgba(15, 15, 18, 0.32);
     backdrop-filter: blur(12px) saturate(140%);
@@ -76,16 +76,20 @@
 #rt_fab:hover,
 #rt_fab.active,
 #rt_stats_fab:hover,
-#rt_stats_fab.active {
+#rt_stats_fab.active,
+#rt_settings_fab:hover,
+#rt_settings_fab.active {
     background-color: rgba(255, 255, 255, 0.10);
 }
-#rt_fab:active, #rt_stats_fab:active {
+#rt_fab:active, #rt_stats_fab:active, #rt_settings_fab:active {
     transform: scale(.96);
     background-color: rgba(255, 255, 255, 0.16);
 }
-#rt_fab:focus-visible, #rt_stats_fab:focus-visible { outline: 2px solid #3ea6ff; outline-offset: 2px; }
+#rt_fab:focus-visible, #rt_stats_fab:focus-visible, #rt_settings_fab:focus-visible { outline: 2px solid #3ea6ff; outline-offset: 2px; }
 #rt_stats_fab.rt-floating { right: 142px; }
 #rt_stats_fab .rt-fab-icon .rt-icon { width: 22px; height: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.42)); }
+#rt_settings_fab.rt-floating { right: 188px; }
+#rt_settings_fab .rt-fab-icon .rt-icon { width: 22px; height: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.42)); }
 
 /* YouTube topbar theme */
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host {
@@ -517,25 +521,12 @@ display: none;
     border-color: rgba(255, 84, 84, 0.42);
     background: rgba(255, 84, 84, 0.10);
 }
-.rt-hdr-settings {
-    font-size: 14px; font-weight: 800;
-    color: var(--rt-text-mute);
-}
-.rt-hdr-settings:hover {
-    color: #fff;
-    border-color: rgba(var(--rt-control-blue-rgb), 0.42);
-    background: rgba(var(--rt-control-blue-rgb), 0.08);
-}
-.rt-hdr-gear-icon,
 .rt-close-glyph {
     position: relative;
     z-index: 1;
     display: inline-block;
     line-height: 1;
     transition: transform .38s cubic-bezier(.22, 1, .36, 1);
-}
-.rt-hdr-settings:hover .rt-hdr-gear-icon {
-    transform: rotate(60deg);
 }
 .rt-close:hover .rt-close-glyph {
     transform: scale(1.20);
@@ -1855,6 +1846,12 @@ cursor: auto;
 .rt-setting-warning-box .rt-check {
     margin: 0;
 }
+.rt-warning-check-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 9px;
+}
+.rt-warning-check-grid .rt-check-wide { width: 100%; }
 .rt-setting-warning-box .rt-check:hover {
     background: rgba(255, 206, 92, 0.060);
     border-color: rgba(255, 206, 92, 0.18);
@@ -2596,11 +2593,11 @@ transform: translate(-50%, -50%) scale(1);
     overflow: hidden;
     isolation: isolate;
 }
-.rt-settings-icon-glyph {
+.rt-settings-icon .rt-icon {
     position: relative;
     z-index: 1;
-    display: inline-block;
-    line-height: 1;
+    display: block;
+    width: 20px; height: 20px;
     animation: rt-settings-spin 6s linear infinite;
 }
 @keyframes rt-settings-spin {
