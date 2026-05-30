@@ -2,7 +2,7 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.246
+// @version            1.20.257
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
 // @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
@@ -32,7 +32,7 @@
 // @resource           rtFontMonoLatin https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono:vf@5.2.8/latin-wght-normal.woff2
 
 // Keep @version, CFG.version, and this rt= cache-bust in sync.
-// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.246
+// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.257
 
 // Core support APIs.
 // @connect            raw.githubusercontent.com
@@ -72,7 +72,7 @@ const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '1.20.246',
+    version: '1.20.257',
     instances: {
         mdUrl: 'https://raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md',
         invidiousJsonUrl: 'https://api.invidious.io/instances.json',
@@ -116,6 +116,7 @@ const CFG = Object.freeze({
         statsBuckets: 'rt_stats_buckets',
         buttonPlacement: 'rt_button_placement',
         mainButtonVisible: 'rt_main_button_visible',
+        settingsButtonVisible: 'rt_settings_button_visible',
         toastDurationMs: 'rt_toast_duration_ms',
         toastPlacement: 'rt_toast_placement',
         rainQuantity: 'rt_rain_quantity',
@@ -319,6 +320,7 @@ const DEFAULT_SETTINGS = Object.freeze({
     privateDownloadTimeoutMs: CFG.api.downloadTimeout,
     buttonPlacement: BUTTON_PLACEMENT_DEFAULT,
     mainButtonVisible: true,
+    settingsButtonVisible: true,
     toastDurationMs: TOAST_DURATION_DEFAULT_MS,
     toastPlacement: TOAST_PLACEMENT_DEFAULT,
     rainQuantity: 'ultra',
@@ -539,6 +541,7 @@ async function loadRuntimeState() {
         rawPrivateDownloadTimeoutMs,
         rawButtonPlacement,
         rawMainButtonVisible,
+        rawSettingsButtonVisible,
         lightningEnabled,
     ] = await Promise.all([
         readStoredValue(CFG.storage.qualityMax, DEFAULT_SETTINGS.qualityMax),
@@ -563,6 +566,7 @@ async function loadRuntimeState() {
         readStoredValue(CFG.storage.privateDownloadTimeoutMs, DEFAULT_SETTINGS.privateDownloadTimeoutMs),
         readStoredValue(CFG.storage.buttonPlacement, DEFAULT_SETTINGS.buttonPlacement),
         readStoredValue(CFG.storage.mainButtonVisible, null),
+        readStoredValue(CFG.storage.settingsButtonVisible, null),
         readStoredValue(CFG.storage.lightning, DEFAULT_SETTINGS.lightningEnabled),
     ]);
 
@@ -593,6 +597,7 @@ async function loadRuntimeState() {
         toastPlacement: readToastPlacementSetting(rawToastPlacement),
         buttonPlacement: readButtonPlacement(rawButtonPlacement),
         mainButtonVisible: readButtonVisible(rawMainButtonVisible, !oldPlacementWasHidden),
+        settingsButtonVisible: readButtonVisible(rawSettingsButtonVisible, true),
         rainQuantity: readRainQuantitySetting(rawRainQuantity),
         rainFpsCap: readRainFpsCap(rawRainFpsCap),
         lightningEnabled,
@@ -604,6 +609,7 @@ async function loadRuntimeState() {
         _lastKnownQuality: null,
         _fab: null,
         _statsFab: null,
+        _settingsFab: null,
         _player: null,
         _video: null,
         _tooltip: null,
@@ -675,30 +681,6 @@ class RainTubeResourceError extends Error {
     }
 }
 
-async function readTextResource(resourceName) {
-    let url;
-    try {
-        url = await GM.getResourceUrl(resourceName);
-    } catch (err) {
-        throw new RainTubeResourceError(resourceName, 'unavailable', err);
-    }
-
-    const r = await gmRequest({
-        method: 'GET',
-        url,
-        headers: { Accept: 'text/css, text/plain, */*' },
-        responseType: 'text',
-        timeout: CFG.api.metaTimeout,
-    });
-
-    if (!r.ok) {
-        const reason = r.status ? `failed (HTTP ${r.status})` : `failed (${r.reason || 'network'})`;
-        throw new RainTubeResourceError(resourceName, reason);
-    }
-    if (!r.responseText?.trim()) throw new RainTubeResourceError(resourceName, 'loaded empty');
-    return r.responseText;
-}
-
 /* ── Font resources ──────────────────────────────────────────────────────── */
 
 const RT_FONT_LATIN_RANGE = 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD';
@@ -739,14 +721,45 @@ async function buildRainTubeFontCss() {
 async function injectRainTubeStyles() {
     if (!IS_YOUTUBE) return;
 
+    // Read both CSS resources as TEXT, then inject as a <style> element. Two
+    // paths that DON'T work on Greasemonkey and are deliberately avoided:
+    //   • GM.xmlHttpRequest against the resource URL throws synchronously.
+    //   • A <link href>/@import to the resource URL is blocked by YouTube's CSP
+    //     style-src (it restricts where stylesheets LOAD from). An inline
+    //     <style> element's own text isn't a network load, so it applies fine.
+    // GM.getResourceUrl gives an opaque URL that fetch() reads as text.
+    // (Font @font-face rules embed their own resource URLs in url(), which the
+    // browser loads natively.)
     const [fontCss, youtubeCss] = await Promise.all([
         buildRainTubeFontCss(),
-        readTextResource('rtYouTubeCss'),
+        readResourceCss('rtYouTubeCss'),
     ]);
 
     const style = document.createElement('style');
-    style.textContent = [fontCss, youtubeCss].filter(Boolean).join('\n\n');
+    style.id = 'rt-styles';
+    style.textContent = `${fontCss}\n\n${youtubeCss}`;
     (document.head || document.documentElement).appendChild(style);
+}
+
+async function readResourceCss(resourceName) {
+    let url;
+    try {
+        url = await GM.getResourceUrl(resourceName);
+    } catch (err) {
+        throw new RainTubeResourceError(resourceName, 'unavailable', err);
+    }
+    if (!url) throw new RainTubeResourceError(resourceName, 'unavailable');
+
+    let css = '';
+    try {
+        const res = await fetch(url);
+        if (res.ok) css = await res.text();
+    } catch (err) {
+        throw new RainTubeResourceError(resourceName, 'failed (fetch)', err);
+    }
+
+    if (!css.trim()) throw new RainTubeResourceError(resourceName, 'loaded empty');
+    return css;
 }
 
 /* ── Video metadata ──────────────────────────────────────────────────────── */
@@ -2963,6 +2976,19 @@ const RT_ICONS = Object.freeze({
             stroke: 'none',
         },
     ]),
+
+    gear: () => makeSvgIcon([
+        // Clean 8-tooth cog (geometry computed: outer r=10, root r=7.6, centred at 12,12).
+        {
+            d: 'M19.31 9.94 L21.93 10.82 L21.93 13.18 L19.31 14.06 L18.63 15.71 L19.85 18.19 '
+             + 'L18.19 19.85 L15.71 18.63 L14.06 19.31 L13.18 21.93 L10.82 21.93 L9.94 19.31 '
+             + 'L8.29 18.63 L5.81 19.85 L4.15 18.19 L5.37 15.71 L4.69 14.06 L2.07 13.18 '
+             + 'L2.07 10.82 L4.69 9.94 L5.37 8.29 L4.15 5.81 L5.81 4.15 L8.29 5.37 L9.94 4.69 '
+             + 'L10.82 2.07 L13.18 2.07 L14.06 4.69 L15.71 5.37 L18.19 4.15 L19.85 5.81 L18.63 8.29 Z',
+            strokeWidth: 1.5,
+        },
+        { d: 'M12 12 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0', strokeWidth: 1.6 },
+    ]),
 });
 
 function iconFor(key, fallback = '◦') {
@@ -3967,7 +3993,7 @@ const StatsTracker = (() => {
             panel.setAttribute('aria-hidden', 'true');
             panel.classList.remove('rt-drag');
         }
-        mountRainTubeButtons(S?._statsFab, S?._fab);
+        mountRainTubeButtons(S?._statsFab, S?._fab, S?._settingsFab);
     }
 
     function applyVisibility() {
@@ -4290,6 +4316,28 @@ function buildWarningCheckboxField({ noteText, noteIcon = '⚠', ...checkbox }) 
     return box;
 }
 
+// Two related warning checkboxes side by side under one shared note, instead of
+// two stacked full-width boxes that each repeat the same warning.
+function buildWarningCheckboxPair({ items = [], noteText, noteIcon = '⚠' }) {
+    const box = mk('div', 'rt-setting-warning-box');
+    const grid = mk('div', 'rt-warning-check-grid');
+    for (const item of items) {
+        grid.appendChild(buildCheckboxField({ ...settingControl('checkbox', item), wide: true }));
+    }
+    box.appendChild(grid);
+
+    if (noteText) {
+        box.appendChild(mk('div', 'rt-setting-warning-note', null, {
+            children: [
+                mk('span', 'rt-setting-warning-ico', noteIcon),
+                mk('span', 'rt-setting-warning-text', noteText),
+            ],
+        }));
+    }
+
+    return box;
+}
+
 function buildSettingControl(control) {
     if (control.type === 'slider') return buildSlider(control);
     if (control.type === 'select') return buildSelectField(control);
@@ -4297,6 +4345,7 @@ function buildSettingControl(control) {
     if (control.type === 'checkboxGrid') return buildCheckboxGrid(control);
     if (control.type === 'button') return buildActionButton(control);
     if (control.type === 'warningCheckbox') return buildWarningCheckboxField(control);
+    if (control.type === 'warningCheckboxPair') return buildWarningCheckboxPair(control);
     if (control.type === 'dangerConfirm') return buildDangerConfirm(control);
     return null;
 }
@@ -4336,7 +4385,6 @@ function settingControl(type, control) {
 const selectSetting = control => settingControl('select', control);
 const sliderSetting = control => settingControl('slider', control);
 const checkboxSetting = control => settingControl('checkbox', control);
-const warningCheckboxSetting = control => settingControl('warningCheckbox', control);
 const SETTINGS_SECTION_ORDER = Object.freeze(['general', 'customization', 'shorts', 'statistics', 'quality', 'private', 'danger']);
 const labelOptions = (order, labels) => order.map(value => ({ value, label: labels[value] || value }));
 const shortsSurfaceSetting = (inputId, text, stateKey, storageKey) => checkboxSetting({
@@ -4416,16 +4464,30 @@ function SETTINGS_SECTIONS() {
                     read: readButtonPlacement,
                     afterChange: syncButtonPlacement,
                 }),
-                warningCheckboxSetting({
-                    inputId: 'rt_main_button_visible',
-                    text: 'Show main RainTube button',
-                    helpText: "Shows the main RainTube button on YouTube. If you hide it, open RainTube from your userscript manager's menu command.",
-                    noteText: "Advanced option, don't toggle blindly.",
-                    stateKey: 'mainButtonVisible',
-                    storageKey: CFG.storage.mainButtonVisible,
-                    read: Boolean,
-                    afterChange: syncButtonPlacement,
-                }),
+                {
+                    type: 'warningCheckboxPair',
+                    noteText: "Advanced options, don't toggle blindly.",
+                    items: [
+                        {
+                            inputId: 'rt_main_button_visible',
+                            text: 'Show RainTube button',
+                            helpText: "Shows the RainTube button on YouTube. If you hide it, open RainTube from your userscript manager's menu command.",
+                            stateKey: 'mainButtonVisible',
+                            storageKey: CFG.storage.mainButtonVisible,
+                            read: Boolean,
+                            afterChange: syncButtonPlacement,
+                        },
+                        {
+                            inputId: 'rt_settings_button_visible',
+                            text: 'Show settings button',
+                            helpText: "Shows the dedicated settings button next to the RainTube button. If you hide it, open settings from your userscript manager's menu command.",
+                            stateKey: 'settingsButtonVisible',
+                            storageKey: CFG.storage.settingsButtonVisible,
+                            read: Boolean,
+                            afterChange: syncButtonPlacement,
+                        },
+                    ],
+                },
             ],
         },
         customization: {
@@ -4643,6 +4705,7 @@ function syncAllSettingsControls() {
     syncSettingControlValue('rt_toast_position_select', S.toastPlacement);
     syncSettingControlValue('rt_button_placement_select', S.buttonPlacement);
     syncSettingControlValue('rt_main_button_visible', null, { checked: S.mainButtonVisible });
+    syncSettingControlValue('rt_settings_button_visible', null, { checked: S.settingsButtonVisible });
     syncSettingControlValue('rt_rain_quantity_select', S.rainQuantity);
     syncSettingControlValue('rt_rain_fps_cap_slider', S.rainFpsCap, { input: true });
     syncSettingControlValue('rt_lightning_enabled', null, { checked: S.lightningEnabled });
@@ -5515,6 +5578,18 @@ function buildPanel() {
     document.body.appendChild(fab);
     initTooltips(fab);
 
+    const settingsFab = mk('button', 'rt-floating', null, {
+        id: 'rt_settings_fab', type: 'button',
+        'aria-label': 'Open RainTube settings', 'aria-expanded': 'false',
+        'data-tip': 'RainTube settings', 'data-tip-place': 'bottom', 'data-tip-style': 'native',
+    });
+    setToolbarButtonHidden(settingsFab, !readButtonVisible(S.settingsButtonVisible, true));
+    const settingsFabIcon = mk('span', 'rt-fab-icon');
+    settingsFabIcon.appendChild(RT_ICONS.gear());
+    settingsFab.appendChild(settingsFabIcon);
+    document.body.appendChild(settingsFab);
+    initTooltips(settingsFab);
+
     const statsPanel = mk('div', null, null, {
         id: 'rt_stats_panel', role: 'dialog', 'aria-hidden': 'true', 'aria-label': 'RainTube statistics',
     });
@@ -5563,11 +5638,6 @@ function buildPanel() {
     text.appendChild(mk('p', 'rt-hdr-sub', 'Private · Quality · Quiet'));
     left.appendChild(text);
     const hdrRight = mk('div', 'rt-hdr-r');
-    const settingsBtn = mk('button', 'rt-hdr-btn rt-hdr-settings', null, {
-        id: 'rt_settings_open', type: 'button', 'aria-label': 'Open settings',
-    });
-    settingsBtn.appendChild(mk('span', 'rt-hdr-gear-icon', '⚙'));
-    hdrRight.appendChild(settingsBtn);
     const closeBtn = mk('button', 'rt-hdr-btn rt-close', null,
                         { id: 'rt_close', type: 'button', 'aria-label': 'Close RainTube' });
     closeBtn.appendChild(mk('span', 'rt-close-glyph', '×'));
@@ -5646,7 +5716,7 @@ function buildPanel() {
     buildSettingsModal();
     syncRainQuantity();
 
-    return { panel, fab, statsFab, statsPanel };
+    return { panel, fab, statsFab, settingsFab, statsPanel };
 }
 
 function findYouTubeTopbarControls() {
@@ -5681,7 +5751,7 @@ function findYouTubeUploadControl(container) {
     for (const selector of selectors) {
         const match = container.querySelector(selector);
         const child = match && directChildWithin(container, match);
-        if (child && child.id !== 'rt_fab' && child.id !== 'rt_stats_fab') return child;
+        if (child && child.id !== 'rt_fab' && child.id !== 'rt_stats_fab' && child.id !== 'rt_settings_fab') return child;
     }
     return null;
 }
@@ -5708,7 +5778,7 @@ function findYouTubeLikeActionSlot() {
         for (const likeSel of likeSelectors) {
             const match = host.querySelector(likeSel);
             const child = match && directChildWithin(host, match);
-            if (child && child.id !== 'rt_fab' && child.id !== 'rt_stats_fab') return { row: host, before: child };
+            if (child && child.id !== 'rt_fab' && child.id !== 'rt_stats_fab' && child.id !== 'rt_settings_fab') return { row: host, before: child };
         }
         return { row: host, before: host.firstElementChild || null };
     }
@@ -5736,9 +5806,11 @@ function parkHiddenToolbarButton(btn) {
 function syncButtonPlacement() {
     const fab = S?._fab || document.getElementById('rt_fab');
     const statsFab = S?._statsFab || document.getElementById('rt_stats_fab');
+    const settingsFab = S?._settingsFab || document.getElementById('rt_settings_fab');
     if (fab) setToolbarButtonHidden(fab, !readButtonVisible(S?.mainButtonVisible, true));
     if (statsFab) setToolbarButtonHidden(statsFab, !StatsTracker.isPanelEnabled());
-    mountRainTubeButtons(statsFab, fab);
+    if (settingsFab) setToolbarButtonHidden(settingsFab, !readButtonVisible(S?.settingsButtonVisible, true));
+    mountRainTubeButtons(statsFab, fab, settingsFab);
 }
 
 function insertRainTubeButtons(row, before, buttons, placementClass) {
@@ -5760,13 +5832,15 @@ function parkUnavailablePlacementButton(btn) {
     btn.style.display = 'none';
 }
 
-function mountRainTubeButtons(statsFab, fab) {
+function mountRainTubeButtons(statsFab, fab, settingsFab) {
     parkHiddenToolbarButton(statsFab);
     parkHiddenToolbarButton(fab);
+    parkHiddenToolbarButton(settingsFab);
 
     const buttons = [
         statsFab && !statsFab.hidden ? statsFab : null,
         fab && !fab.hidden ? fab : null,
+        settingsFab && !settingsFab.hidden ? settingsFab : null,
     ].filter(Boolean);
     if (!buttons.length) return;
 
@@ -6003,7 +6077,7 @@ function buildSettingsModal() {
     hdr.appendChild(rain);
     const hdrL = mk('div', 'rt-settings-hdr-l');
     const settingsTile = mk('div', 'rt-settings-icon');
-    settingsTile.appendChild(mk('span', 'rt-settings-icon-glyph', '⚙'));
+    settingsTile.appendChild(RT_ICONS.gear());
     hdrL.appendChild(settingsTile);
     const titleWrap = mk('div', 'rt-settings-title-wrap');
     titleWrap.appendChild(mk('span', 'rt-settings-eyebrow', 'RainTube'));
@@ -6156,13 +6230,14 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         hideTooltip();
         setOpen(!open);
     };
+    const clickSettingsFab = () => {
+        hideTooltip();
+        setSettingsOpen(!isSettingsOpen());
+    };
     statsFab?.addEventListener('click', clickStatsFab);
     fab.addEventListener('click', clickFab);
+    S._settingsFab?.addEventListener('click', clickSettingsFab);
 
-    const openSettings = e => {
-        e.stopPropagation();
-        setSettingsOpen(true);
-    };
     const closeSettings = () => setSettingsOpen(false);
     const downloads = {
         rt_dl_v: ['video', 'Video download failed'],
@@ -6177,7 +6252,6 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         ['rt_close', () => setOpen(false)],
         ['rt_stats_close', () => setStatsOpen(false)],
         ['rt_dl_stop', requestStopAfterCurrentRequest],
-        ['rt_settings_open', openSettings],
         ['rt_settings_close', closeSettings],
         ['rt_settings_done', closeSettings],
         ['rt_settings_backdrop', closeSettings],
@@ -6419,6 +6493,7 @@ const TopbarTheme = (() => {
         '#avatar-btn',
         '#rt_fab',
         '#rt_stats_fab',
+        '#rt_settings_fab',
     ].join(',');
 
     let host = null;
@@ -6536,7 +6611,7 @@ const ChromeRuntime = (() => {
         if (document.hidden && !force) return;
 
         const currentFab = fab || S._fab;
-        if (currentFab) mountRainTubeButtons(S._statsFab, currentFab);
+        if (currentFab) mountRainTubeButtons(S._statsFab, currentFab, S._settingsFab);
         TopbarTheme.apply();
 
         if (force || isPanelOpen() || isSettingsOpen() || S.downloading) uiSync();
@@ -6656,10 +6731,11 @@ function onNavigate() {
 /* ── Boot ───────────────────────────────────────────────────────────────── */
 
 function boot() {
-    const { panel, fab, statsFab, statsPanel } = buildPanel();
+    const { panel, fab, statsFab, settingsFab, statsPanel } = buildPanel();
     S._fab = fab;
     S._statsFab = statsFab;
-    mountRainTubeButtons(statsFab, fab);
+    S._settingsFab = settingsFab;
+    mountRainTubeButtons(statsFab, fab, settingsFab);
     initDrag(panel, fab);
     initDrag(statsPanel, statsFab, { handleSelector: '#rt_stats_drag', fallbackW: 454, fallbackH: 380, snapToDevicePixels: true });
     bindEvents(panel, fab, statsFab, statsPanel);
