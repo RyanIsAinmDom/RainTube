@@ -2,7 +2,7 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.219
+// @version            1.20.231
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
 // @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
@@ -32,7 +32,7 @@
 // @resource           rtFontMonoLatin https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono:vf@5.2.8/latin-wght-normal.woff2
 
 // Keep @version, CFG.version, and this rt= cache-bust in sync.
-// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.219
+// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.231
 
 // Core support APIs.
 // @connect            raw.githubusercontent.com
@@ -72,7 +72,7 @@ const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '1.20.219',
+    version: '1.20.231',
     instances: {
         mdUrl: 'https://raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md',
         invidiousJsonUrl: 'https://api.invidious.io/instances.json',
@@ -110,7 +110,6 @@ const CFG = Object.freeze({
         privateFallback: 'rt_private_fallback_enabled',
         privateProvider: 'rt_private_provider',
         privateDownloadTimeoutMs: 'rt_private_download_timeout_ms',
-        statsRange: 'rt_stats_range',
         statsEnabled: 'rt_stats_enabled',
         statsDisplay: 'rt_stats_display',
         statsMetrics: 'rt_stats_metrics',
@@ -343,8 +342,10 @@ function readPrivateDownloadTimeoutMs(value) {
     const raw = Math.round(Number(value));
     if (!Number.isFinite(raw)) return CFG.api.downloadTimeout;
     const stepped = Math.round(raw / PRIVATE_DOWNLOAD_TIMEOUT_STEP_MS) * PRIVATE_DOWNLOAD_TIMEOUT_STEP_MS;
-    return Math.max(PRIVATE_DOWNLOAD_TIMEOUT_MIN_MS,
-                    Math.min(PRIVATE_DOWNLOAD_TIMEOUT_MAX_MS, stepped));
+    return Math.max(
+        PRIVATE_DOWNLOAD_TIMEOUT_MIN_MS,
+        Math.min(PRIVATE_DOWNLOAD_TIMEOUT_MAX_MS, stepped)
+    );
 }
 
 function formatPrivateDownloadTimeoutSeconds(value) {
@@ -356,6 +357,7 @@ function formatPrivateDownloadTimeoutSeconds(value) {
 }
 
 const STATS_RANGE_ORDER = ['daily', 'monthly', 'yearly', 'alltime'];
+const STATS_SESSION_DEFAULT_RANGE = 'alltime';
 const STATS_RANGE_LABEL = Object.freeze({
     daily: 'Today',
     monthly: 'This month',
@@ -379,7 +381,7 @@ const STATS_METRIC_INFO = Object.freeze({
     videosWatched: { label: 'Videos opened', icon: 'play' },
     shortsOpened: { label: 'Shorts opened', icon: 'shortsOpen' },
     shortsBlocked: { label: 'Shorts blocked', icon: 'shorts' },
-    favoriteChannel: { label: 'Favorite channel', icon: 'star' },
+    favoriteChannel: { label: 'Favorite channels', icon: 'star' },
 });
 const STATS_METRICS_DEFAULTS = Object.freeze(
     Object.fromEntries(STATS_METRICS_ORDER.map(key => [key, true]))
@@ -584,8 +586,10 @@ async function loadRuntimeState() {
         privateFallbackEnabled,
         privateProvider: readPrivateProvider(rawPrivateProvider),
         privateDownloadTimeoutMs: readPrivateDownloadTimeoutMs(rawPrivateDownloadTimeoutMs),
-        toastDurationMs: Math.max(TOAST_DURATION_MIN_MS, Math.min(TOAST_DURATION_MAX_MS,
-            parseInt(rawToastDurationMs, 10) || TOAST_DURATION_DEFAULT_MS)),
+        toastDurationMs: Math.max(
+            TOAST_DURATION_MIN_MS,
+            Math.min(TOAST_DURATION_MAX_MS, parseInt(rawToastDurationMs, 10) || TOAST_DURATION_DEFAULT_MS)
+        ),
         toastPlacement: readToastPlacementSetting(rawToastPlacement),
         buttonPlacement: readButtonPlacement(rawButtonPlacement),
         mainButtonVisible: readButtonVisible(rawMainButtonVisible, !oldPlacementWasHidden),
@@ -617,7 +621,7 @@ const instanceCache = {
 function $player() {
     if (S._player && S._player.isConnected) return S._player;
     S._player = document.getElementById('movie_player')
-        || document.querySelector('.html5-video-player');
+    || document.querySelector('.html5-video-player');
     return S._player;
 }
 
@@ -628,13 +632,31 @@ function $video() {
     return S._video;
 }
 
+function appendChildren(parent, children) {
+    const list = Array.isArray(children) ? children : [children];
+    for (const child of list) {
+        if (child === null || child === undefined || child === false) continue;
+        parent.appendChild(child instanceof Node ? child : document.createTextNode(String(child)));
+    }
+    return parent;
+}
+
+function replaceChildrenSafe(parent, children) {
+    parent.replaceChildren();
+    return appendChildren(parent, children);
+}
+
 function mk(tag, cls, text, attrs) {
     const el = document.createElement(tag);
     if (cls) el.className = cls;
-    if (text !== null && text !== undefined) el.appendChild(document.createTextNode(text));
+    appendChildren(el, text);
     if (attrs) {
         for (const [k, v] of Object.entries(attrs)) {
+            if (v === null || v === undefined || v === false) continue;
             if (k === 'id') el.id = v;
+            else if (k === 'dataset') Object.assign(el.dataset, v);
+            else if (k === 'props') Object.assign(el, v);
+            else if (k === 'children') appendChildren(el, v);
             else el.setAttribute(k, v);
         }
     }
@@ -980,6 +1002,12 @@ function clearQualityMemos() {
     S._lastQualityTargetKey = null;
 }
 
+function restartQualityTargeting({ enabled = S.qualityEnabled } = {}) {
+    clearQualitySchedule();
+    clearQualityMemos();
+    if (enabled) scheduleQualityApply();
+}
+
 function pickQualityMenuOption(options, targetLevel, { includeSuperResolution = false } = {}) {
     const targetHeight = qualityHeight(targetLevel);
     const eligible = options.filter(opt => {
@@ -995,8 +1023,10 @@ function pickQualityMenuOption(options, targetLevel, { includeSuperResolution = 
 }
 
 function closeQualityMenu(root, settingsButton) {
-    const backButton = playerQuery(root,
-        '.ytp-settings-menu .ytp-panel-header button, ytp-settings-menu .ytp-panel-header button');
+    const backButton = playerQuery(
+        root,
+        '.ytp-settings-menu .ytp-panel-header button, ytp-settings-menu .ytp-panel-header button'
+    );
     if (backButton) clickMenuElement(backButton);
     if (isSettingsMenuOpen(settingsButton)) clickMenuElement(settingsButton);
 }
@@ -1124,7 +1154,8 @@ function parseJsonMaybe(value) {
 
 function normalizeBaseUrl(raw) {
     const clean = String(raw || '').trim()
-        .replace(/[),.;\]>"'`]+$/g, '').replace(/\/+$/g, '');
+        .replace(/[),.;\]>"'`]+$/g, '')
+        .replace(/\/+$/g, '');
     if (!clean) return null;
     try {
         const u = new URL(clean);
@@ -1169,13 +1200,13 @@ function normalizeHost(value) {
 
 function resolveMediaUrl(instance, url) {
     if (!url) return null;
-        try {
-            const raw = String(url).trim();
-            const href = raw.startsWith('//')
-                ? `https:${raw}`
-                : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
-            const parsed = new URL(href);
-            return parsed.protocol === 'https:' ? parsed.href : null;
+    try {
+        const raw = String(url).trim();
+        const href = raw.startsWith('//')
+            ? `https:${raw}`
+            : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
+        const parsed = new URL(href);
+        return parsed.protocol === 'https:' ? parsed.href : null;
     } catch {
         return null;
     }
@@ -1467,8 +1498,11 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
         if (isBotOrLoginFailure(message)) { killHost = true; hardKill = true; }
 
         if (killHost) {
-            markEndpointDead(provider.id, instance,
-                             hardKill ? CFG.api.hardFailureTtlMs : CFG.api.failureTtlMs);
+            markEndpointDead(
+                provider.id,
+                instance,
+                hardKill ? CFG.api.hardFailureTtlMs : CFG.api.failureTtlMs
+            );
         }
 
         return {
@@ -1712,8 +1746,7 @@ async function downloadUrlWithProgress(url, filename, btn, sourceLabel) {
         }
 
         triggerBlobDownload(blob, filename);
-        setProgress(100, 'Download complete',
-                    `${sourceLabel} · ${formatSpeed(bestRate || lastRate)}`, 'done');
+        setProgress(100, 'Download complete', `${sourceLabel} · ${formatSpeed(bestRate || lastRate)}`, 'done');
         resetProgress(2400);
         return { ok: true, reason: 'done', bestRate };
     } catch (err) {
@@ -1784,7 +1817,7 @@ function findCnvMp3UrlField() {
         if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return false;
         const type = String(el.getAttribute('type') || '').toLowerCase();
         return isVisible(el) && !el.disabled && !el.readOnly
-        && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file', 'password'].includes(type);
+            && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file', 'password'].includes(type);
     });
 
     const hintFor = el => [el.placeholder, el.name, el.id, el.className,
@@ -1987,19 +2020,19 @@ async function runCnvMp3Autofill() {
         if (field.value !== payload.url) setNativeValue(field, payload.url);
     }, 300);
 
-    if (payload.format === 'mp3' || payload.format === 'mp4') {
-        await waitForElement(findFormatDropdownTrigger, 200, 50);
-        await trySetCnvMp3Format(payload.format);
-    }
+        if (payload.format === 'mp3' || payload.format === 'mp4') {
+            await waitForElement(findFormatDropdownTrigger, 200, 50);
+            await trySetCnvMp3Format(payload.format);
+        }
 
-    try { field.focus(); field.select?.(); } catch {}
+        try { field.focus(); field.select?.(); } catch {}
 }
 
 /* ── Piped instance discovery (docs markdown source) ───────────────────── */
 
 function isInstanceCacheFresh(cache) {
     return !!cache?.values?.length
-        && (Date.now() - cache.loadedAt) < CFG.instances.cacheTtlMs;
+    && (Date.now() - cache.loadedAt) < CFG.instances.cacheTtlMs;
 }
 
 function limitInstances(urls) {
@@ -2009,7 +2042,7 @@ function limitInstances(urls) {
 function isPipedApiHost(url) {
     const host = normalizeHost(url).toLowerCase();
     return host.includes('pipedapi') || host.includes('piped-api') || host.includes('api-piped')
-        || host === 'api.piped.yt' || host.startsWith('api.piped.');
+    || host === 'api.piped.yt' || host.startsWith('api.piped.');
 }
 
 async function loadInstancesFromMd() {
@@ -2019,7 +2052,7 @@ async function loadInstancesFromMd() {
 
     return limitInstances(
         (result.text.match(/https:\/\/[^\s)\]>"'`]+/gi) || [])
-            .map(normalizeBaseUrl).filter(Boolean).filter(isPipedApiHost));
+    .map(normalizeBaseUrl).filter(Boolean).filter(isPipedApiHost));
 }
 
 async function getPipedInstances() {
@@ -2140,11 +2173,11 @@ function pickPrivateCandidates(data, mode) {
 
     // Audio filters out auto-dubs when metadata exists; video stays best muxed/progressive.
     return streams
-        .filter(stream => isUsablePrivateStream(stream, mode))
-        .map(s => ({ stream: s, score: scoreOf(s) }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 4)
-        .map(entry => entry.stream);
+    .filter(stream => isUsablePrivateStream(stream, mode))
+    .map(s => ({ stream: s, score: scoreOf(s) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map(entry => entry.stream);
 }
 
 /* ── Private download job (provider orchestration) ──────────────────────── */
@@ -2442,8 +2475,8 @@ function getToastAnchorRect() {
         if (!el?.isConnected || typeof el.getBoundingClientRect !== 'function') continue;
         const rect = el.getBoundingClientRect();
         const visible = rect.width >= 120 && rect.height >= 80
-            && rect.right > 0 && rect.bottom > 0
-            && rect.left < window.innerWidth && rect.top < window.innerHeight;
+        && rect.right > 0 && rect.bottom > 0
+        && rect.left < window.innerWidth && rect.top < window.innerHeight;
         if (visible) return rect;
     }
     return null;
@@ -2469,17 +2502,17 @@ function syncToastPosition(container = document.getElementById('rt_toasts')) {
     const isTop = vertical === 'top';
     const isLeft = horizontal === 'left';
     const x = rect
-        ? (isLeft ? rect.left + TOAST_VIDEO_SIDE_INSET : window.innerWidth - rect.right + TOAST_VIDEO_SIDE_INSET)
-        : TOAST_VIEWPORT_MARGIN;
+    ? (isLeft ? rect.left + TOAST_VIDEO_SIDE_INSET : window.innerWidth - rect.right + TOAST_VIDEO_SIDE_INSET)
+    : TOAST_VIEWPORT_MARGIN;
     const y = rect
-        ? (isTop ? rect.top + TOAST_VIDEO_SIDE_INSET : window.innerHeight - rect.bottom + TOAST_VIDEO_CONTROL_CLEARANCE)
-        : TOAST_VIEWPORT_MARGIN;
+    ? (isTop ? rect.top + TOAST_VIDEO_SIDE_INSET : window.innerHeight - rect.bottom + TOAST_VIDEO_CONTROL_CLEARANCE)
+    : TOAST_VIEWPORT_MARGIN;
     const safeX = rect
-        ? Math.min(maxHorizontal, Math.max(TOAST_VIEWPORT_MARGIN, x))
-        : TOAST_VIEWPORT_MARGIN;
+    ? Math.min(maxHorizontal, Math.max(TOAST_VIEWPORT_MARGIN, x))
+    : TOAST_VIEWPORT_MARGIN;
     const safeY = rect
-        ? Math.min(maxVertical, Math.max(TOAST_VIEWPORT_MARGIN, y))
-        : TOAST_VIEWPORT_MARGIN;
+    ? Math.min(maxVertical, Math.max(TOAST_VIEWPORT_MARGIN, y))
+    : TOAST_VIEWPORT_MARGIN;
 
     container.classList.toggle('rt-toast-video-anchored', !!rect);
     container.classList.toggle('rt-toast-top', isTop);
@@ -2553,9 +2586,7 @@ function toast(message, variant = 'default', opts = {}) {
     const meta = resolveToastMeta(variant, opts);
 
     const iconWrap = mk('span', 'rt-toast-ico');
-    const builder = RT_ICONS[meta.icon];
-    if (typeof builder === 'function') iconWrap.appendChild(builder());
-    else iconWrap.appendChild(RT_ICONS.general());
+    appendChildren(iconWrap, iconFor(meta.icon, RT_ICONS.general()));
     el.appendChild(iconWrap);
 
     const main = mk('div', 'rt-toast-main');
@@ -2575,8 +2606,7 @@ function toast(message, variant = 'default', opts = {}) {
     }
     el.appendChild(main);
 
-    const close = mk('button', 'rt-toast-close', '×',
-                     { type: 'button', 'aria-label': 'Dismiss' });
+    const close = mk('button', 'rt-toast-close', '×', { type: 'button', 'aria-label': 'Dismiss' });
     close.addEventListener('click', dismiss);
     el.appendChild(close);
 
@@ -2711,8 +2741,8 @@ function bindTooltipTarget(el) {
 
 function initTooltips(root = document) {
     const targets = root.matches?.('[data-tip]')
-        ? [root, ...Array.from(root.querySelectorAll('[data-tip]'))]
-        : Array.from(root.querySelectorAll('[data-tip]'));
+    ? [root, ...Array.from(root.querySelectorAll('[data-tip]'))]
+    : Array.from(root.querySelectorAll('[data-tip]'));
     for (const el of targets) bindTooltipTarget(el);
     if (!_tooltipWindowEventsBound) {
         _tooltipWindowEventsBound = true;
@@ -2935,6 +2965,11 @@ const RT_ICONS = Object.freeze({
     ]),
 });
 
+function iconFor(key, fallback = '◦') {
+    const builder = RT_ICONS[key];
+    return typeof builder === 'function' ? builder() : fallback;
+}
+
 /* ── Statistics (GM v4 storage, rewritten) ─────────────────────────────── */
 
 const StatsStore = Object.freeze({
@@ -2956,8 +2991,7 @@ const StatsTracker = (() => {
     const state = {
         loaded: false,
         enabled: true,
-        range: 'daily',
-        defaultRange: 'daily',
+        range: STATS_SESSION_DEFAULT_RANGE,
         display: 'panel',
         metrics: { ...STATS_METRICS_DEFAULTS },
         buckets: {},
@@ -2976,7 +3010,6 @@ const StatsTracker = (() => {
     let inlineMountRaf = 0;
     const attachedVideos = new WeakSet();
     let inlineRetryTimers = [];
-    let favoriteChannelIndex = 0;
     const STATS_UI_SELECTOR = [
         '.rt-inline-stats',
         '#rt_stats_panel',
@@ -2984,16 +3017,16 @@ const StatsTracker = (() => {
         '#rt_settings_root',
         '#rt_toasts',
         '#rt_tip',
-        '.rt-stat-channel-menu',
         '.rt-stats-range-menu',
     ].join(',');
+    const FAVORITE_BOARD_MAX = 3;
+    const FAVORITE_MEDAL_LABELS = { 1: 'Gold', 2: 'Silver', 3: 'Bronze' };
 
     function clearInlineRetryTimers() {
         for (const timer of inlineRetryTimers) clearTimeout(timer);
         inlineRetryTimers = [];
     }
 
-    const getRange = () => state.defaultRange;
     const getDisplay = () => state.display;
     const getEnabled = () => !!state.enabled;
     const isPanelEnabled = () => getEnabled() && state.display === 'panel';
@@ -3074,7 +3107,7 @@ const StatsTracker = (() => {
         for (const sel of selectors) {
             const img = document.querySelector(sel);
             const src = img?.currentSrc || img?.src || img?.getAttribute?.('src')
-                || img?.getAttribute?.('data-thumb') || '';
+            || img?.getAttribute?.('data-thumb') || '';
             const clean = sanitizeStatsAvatarUrl(src);
             if (clean) return clean;
         }
@@ -3239,23 +3272,23 @@ const StatsTracker = (() => {
             .map(([name, sec]) => ({
                 name,
                 sec: Math.round(Number(sec) || 0),
-                avatar: channelAvatar[name] || '',
             }))
             .filter(channel => channel.name && channel.sec > 0)
             .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
-            .slice(0, 5)
-            .map((channel, index) => ({ ...channel, rank: index + 1 }));
-
-        const favorite = topFavoriteChannels[0] || null;
+            .slice(0, FAVORITE_BOARD_MAX)
+            // Each of the top-3 reveals a picture when expanded, so resolve all
+            // three avatars (not just the leader's).
+            .map((channel, index) => ({
+                ...channel,
+                rank: index + 1,
+                avatar: channelAvatar[channel.name] || '',
+            }));
 
         return {
             shortsOpened: Math.round(shortsOpened),
             shortsBlocked: Math.round(shortsBlocked),
             watchSec: Math.round(watchSec),
             videosWatched: Math.round(videosWatched),
-            favoriteChannelName: favorite?.name || '',
-            favoriteChannelAvatar: favorite?.avatar || '',
-            favoriteChannelSec: favorite?.sec || 0,
             topFavoriteChannels,
         };
     }
@@ -3287,20 +3320,6 @@ const StatsTracker = (() => {
         if (key === 'shortsOpened') return formatStatsCount(totals.shortsOpened);
         if (key === 'shortsBlocked') return formatStatsCount(totals.shortsBlocked);
         return '';
-    }
-
-    function makeFavoriteChannelTrophy(rank) {
-        if (rank < 1 || rank > 3) return null;
-        const label = rank === 1 ? 'Gold trophy'
-            : rank === 2 ? 'Silver trophy' : 'Copper trophy';
-        const trophy = mk('span', `rt-stat-channel-rank rt-stat-channel-rank-${rank}`, null, { title: label });
-        trophy.appendChild(RT_ICONS.trophy());
-        return trophy;
-    }
-
-    function favoriteChannelsFromTotals(totals) {
-        return Array.isArray(totals.topFavoriteChannels)
-            ? totals.topFavoriteChannels.slice(0, 5) : [];
     }
 
     function hidePortaledMenu(menu, homeProp) {
@@ -3341,14 +3360,6 @@ const StatsTracker = (() => {
         menu.style.top = `${Math.round(top)}px`;
     }
 
-    function hideFavoriteChannelMenu(menu) {
-        hidePortaledMenu(menu, '_rtHomeTile');
-    }
-
-    function closeFavoriteChannelMenus() {
-        closePortaledMenus('.rt-stat-channel-picker', '.rt-stat-channel-menu', hideFavoriteChannelMenu);
-    }
-
     function hideStatsRangeMenu(menu) {
         hidePortaledMenu(menu, '_rtHomeWrap');
     }
@@ -3383,187 +3394,132 @@ const StatsTracker = (() => {
         }
     }
 
-    function setFavoriteChannelMenuOpen(tile, open, { focusSelected = false } = {}) {
-        const button = tile.querySelector('.rt-stat-channel-picker');
-        const menu = tile._rtChannelMenu || tile.querySelector('.rt-stat-channel-menu');
-        if (!button || !menu) return;
-        if (open) closeFavoriteChannelMenus();
-        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    // Top channels by watch time; one row expands at a time.
+    let favoriteTileSeq = 0;
 
-        if (!open) {
-            hideFavoriteChannelMenu(menu);
-            return;
-        }
-
-        // Escape #rt_panel backdrop clipping while open.
-        menu._rtHomeTile = tile;
-        if (menu.parentNode !== document.body) document.body.appendChild(menu);
-        menu.hidden = false;
-        menu.style.display = '';
-
-        positionPortaledMenu(menu, button, { align: 'right' });
-
-        if (focusSelected) {
-            (menu.querySelector('.rt-stat-channel-menu-item[aria-checked="true"]')
-                || menu.querySelector('.rt-stat-channel-menu-item'))?.focus?.();
-        }
-    }
-
-    function bindFavoriteChannelPicker(button, tile) {
-        button.onpointerdown = stopStatsControlPropagation;
-        button.onclick = event => {
-            event.stopPropagation();
-            setFavoriteChannelMenuOpen(tile, button.getAttribute('aria-expanded') !== 'true');
-        };
-        button.onkeydown = event => {
-            if (event.key === 'Escape') {
-                event.stopPropagation();
-                setFavoriteChannelMenuOpen(tile, false);
-                return;
-            }
-            if (!['Enter', ' ', 'ArrowDown'].includes(event.key)) return;
-            event.preventDefault();
-            event.stopPropagation();
-            setFavoriteChannelMenuOpen(tile, true, { focusSelected: true });
-        };
-    }
-
-    function syncFavoriteChannelPicker(tile, topChannels, selectedIndex) {
-        let button = tile.querySelector('.rt-stat-channel-picker');
-        let menu = tile._rtChannelMenu || tile.querySelector('.rt-stat-channel-menu');
-        const wasOpen = button?.getAttribute('aria-expanded') === 'true';
-
-        if (topChannels.length <= 1) {
-            button?.remove();
-            menu?.remove();
-            tile._rtChannelMenu = null;
-            return;
-        }
-
-        if (!button) {
-            button = mk('span', 'rt-stat-channel-picker', null, {
-                role: 'button',
-                tabindex: '0',
-                'aria-haspopup': 'menu',
-                'aria-expanded': 'false',
-                'aria-label': 'Choose favorite channel rank',
-            });
-            tile.appendChild(button);
-        }
-        if (!button.querySelector('.rt-stat-channel-picker-label')) {
-            button.className = 'rt-stat-channel-picker';
-            button.replaceChildren(
-                mk('span', 'rt-stat-channel-picker-label'),
-                mk('span', 'rt-stat-channel-picker-caret', null, { 'aria-hidden': 'true' }));
-        }
-        if (!menu) {
-            menu = mk('div', 'rt-stat-channel-menu', null, { role: 'menu' });
-            menu.hidden = true;
-            menu.style.display = 'none';
-            tile.appendChild(menu);
-        }
-        tile._rtChannelMenu = menu;
-        menu._rtHomeTile = tile;
-
-        const selected = topChannels[selectedIndex] || topChannels[0];
-        const label = button.querySelector('.rt-stat-channel-picker-label');
-        if (label) label.textContent = selected ? `#${selected.rank}` : '—';
-        button.title = selected?.name || '';
-        button.setAttribute('aria-haspopup', 'menu');
-        button.setAttribute('aria-expanded', wasOpen ? 'true' : 'false');
-        button.setAttribute('aria-label', 'Choose favorite channel rank');
-        bindFavoriteChannelPicker(button, tile);
-
-        menu.replaceChildren();
-        const chooseChannel = index => {
-            favoriteChannelIndex = index;
-            setFavoriteChannelMenuOpen(tile, false);
-            syncFavoriteChannelPicker(tile, topChannels, favoriteChannelIndex);
-            renderFavoriteChannel(tile, topChannels, favoriteChannelIndex);
-        };
-
-        topChannels.forEach((channel, index) => {
-            const item = mk('button', 'rt-stat-channel-menu-item', null, {
-                type: 'button',
-                role: 'menuitemradio',
-                tabindex: '-1',
-                'aria-checked': index === selectedIndex ? 'true' : 'false',
-            });
-            item.appendChild(mk('span', 'rt-stat-channel-menu-rank', `#${channel.rank}`));
-            item.appendChild(mk('span', 'rt-stat-channel-menu-name', channel.name));
-            item.appendChild(mk('span', 'rt-stat-channel-menu-time', formatStatsDuration(channel.sec)));
-            item.onpointerdown = stopStatsControlPropagation;
-            item.onclick = event => {
-                event.stopPropagation();
-                chooseChannel(index);
-            };
-            item.onkeydown = event => {
-                if (event.key === 'Escape') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setFavoriteChannelMenuOpen(tile, false);
-                    button.focus?.();
-                    return;
-                }
-                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    focusSiblingMenuItem(
-                        menu,
-                        item,
-                        '.rt-stat-channel-menu-item',
-                        event.key === 'ArrowDown' ? 1 : -1
-                    );
-                    return;
-                }
-                if (!['Enter', ' '].includes(event.key)) return;
-                event.preventDefault();
-                event.stopPropagation();
-                chooseChannel(index);
-            };
-            menu.appendChild(item);
+    function makeFavoriteMedal(rank) {
+        const badge = mk('span', 'rt-cb-medal-badge', null, {
+            title: FAVORITE_MEDAL_LABELS[rank] ? `${FAVORITE_MEDAL_LABELS[rank]} — rank ${rank}` : `Rank ${rank}`,
         });
-        setFavoriteChannelMenuOpen(tile, wasOpen);
+        badge.appendChild(RT_ICONS.trophy());
+        return mk('span', `rt-cb-medal rt-cb-medal-${rank}`, null, {
+            'aria-hidden': 'true',
+            children: [badge, mk('span', 'rt-cb-rnk', `#${rank}`)],
+        });
     }
 
-    function renderFavoriteChannel(tile, topChannels, index) {
-        const channel = topChannels[index] || null;
-        const avatar = tile.querySelector('.rt-stat-channel-avatar');
-        const nameEl = tile.querySelector('.rt-stat-channel-name');
-        const headSub = tile.querySelector('.rt-stat-channel-sub');
-        if (!avatar || !nameEl || !headSub) return;
+    function applyFavoriteOpenState(board, openName) {
+        for (const row of board.querySelectorAll('.rt-cb-row')) {
+            const isOpen = !!openName && row.dataset.channel === openName;
+            row.classList.toggle('is-open', isOpen);
+            row.querySelector('.rt-cb-bar')?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        }
+    }
 
-        avatar.replaceChildren();
-        if (channel?.avatar) {
-            const img = mk('img', null, null, { src: channel.avatar, alt: '' });
+    function buildFavoriteRow(tile, board, channel, pct, sharePct, detailId) {
+        const rankClass = channel.rank <= 3 ? ` rt-cb-rank-${channel.rank}` : '';
+        const row = mk('div', `rt-cb-row${rankClass}`, null, { role: 'listitem' });
+        row.dataset.channel = channel.name;
+
+        const bar = mk('button', 'rt-cb-bar', null, {
+            type: 'button',
+            'aria-expanded': 'false',
+            'aria-controls': detailId,
+            title: `${channel.name} — ${formatStatsDuration(channel.sec)} watched · tap to expand`,
+        });
+        const fill = mk('span', 'rt-cb-fill');
+        fill.style.width = `${pct}%`;
+        const track = mk('span', 'rt-cb-track', null, {
+            children: [
+                fill,
+                mk('span', 'rt-cb-name', channel.name),
+                mk('span', 'rt-cb-time', formatStatsDuration(channel.sec)),
+            ],
+        });
+        appendChildren(bar, [
+            makeFavoriteMedal(channel.rank),
+            track,
+            // CSS-drawn chevron (no icon dependency); rotates when open.
+            mk('span', 'rt-cb-chev', null, { 'aria-hidden': 'true' }),
+        ]);
+
+        bar.onpointerdown = stopStatsControlPropagation;
+        bar.onclick = event => {
+            event.stopPropagation();
+            const willOpen = tile._rtOpenChannel !== channel.name;
+            tile._rtOpenChannel = willOpen ? channel.name : null;
+            applyFavoriteOpenState(board, tile._rtOpenChannel);
+        };
+        row.appendChild(bar);
+
+        // Avatars are cached for all top-3; lazy <img> defers the load.
+        const detail = mk('div', 'rt-cb-detail', null, { id: detailId });
+        const inner = mk('div', 'rt-cb-detail-inner');
+
+        const avatar = mk('span', 'rt-cb-avatar');
+        if (channel.avatar) {
+            const img = mk('img', null, null, { src: channel.avatar, alt: '', loading: 'lazy' });
             img.referrerPolicy = 'no-referrer';
             avatar.appendChild(img);
         } else {
             avatar.appendChild(RT_ICONS.star());
         }
-        const trophy = channel ? makeFavoriteChannelTrophy(channel.rank) : null;
-        if (trophy) avatar.appendChild(trophy);
 
-        nameEl.textContent = channel?.name || '—';
-        headSub.textContent = channel?.sec
-            ? `· ${formatStatsDuration(channel.sec)} watched` : '';
+        const text = mk('div', 'rt-cb-detail-text');
+        text.appendChild(mk('span', 'rt-cb-detail-name', channel.name));
+        const meta = mk('span', 'rt-cb-detail-meta');
+        meta.appendChild(mk('strong', null, `${sharePct}%`));
+        meta.appendChild(document.createTextNode(` of your watch time · ${formatStatsDuration(channel.sec)}`));
+        text.appendChild(meta);
+        appendChildren(inner, [avatar, text]);
+        appendChildren(detail, inner);
+        row.appendChild(detail);
+        return row;
+    }
+
+    function renderFavoriteChannelBoard(tile, totals) {
+        const board = tile.querySelector('.rt-stat-channel-board');
+        if (!board) return;
+
+        if (tile._rtId == null) tile._rtId = ++favoriteTileSeq;
+        const channels = Array.isArray(totals.topFavoriteChannels) ? totals.topFavoriteChannels : [];
+
+        if (!channels.length) {
+            tile.classList.add('rt-channel-empty');
+            tile._rtOpenChannel = null;
+            replaceChildrenSafe(board, mk('div', 'rt-cb-empty', 'No watch history yet'));
+            return;
+        }
+        tile.classList.remove('rt-channel-empty');
+        replaceChildrenSafe(board, []);
+
+        // Forget a stored open channel that no longer ranks.
+        if (tile._rtOpenChannel && !channels.some(c => c.name === tile._rtOpenChannel)) {
+            tile._rtOpenChannel = null;
+        }
+
+        // Bar width is leader-relative; share % is against total watch time.
+        const maxSec = Math.max(1, ...channels.map(c => c.sec || 0));
+        const totalSec = Math.max(1, Number(totals.watchSec) || channels.reduce((s, c) => s + (c.sec || 0), 0));
+
+        channels.forEach((channel, index) => {
+            const pct = Math.max(6, Math.round(((channel.sec || 0) / maxSec) * 100));
+            const sharePct = Math.round(((channel.sec || 0) / totalSec) * 100);
+            const detailId = `rt-cbd-${tile._rtId}-${index}`;
+            board.appendChild(buildFavoriteRow(tile, board, channel, pct, sharePct, detailId));
+        });
+
+        applyFavoriteOpenState(board, tile._rtOpenChannel);
     }
 
     function syncFavoriteChannelTile(tile, totals) {
-        const topChannels = favoriteChannelsFromTotals(totals);
-        const selectedIndex = Math.max(0, Math.min(
-            Number.isFinite(favoriteChannelIndex) ? favoriteChannelIndex : 0,
-            Math.max(0, topChannels.length - 1)));
-        favoriteChannelIndex = selectedIndex;
-        syncFavoriteChannelPicker(tile, topChannels, selectedIndex);
-        renderFavoriteChannel(tile, topChannels, selectedIndex);
+        renderFavoriteChannelBoard(tile, totals);
     }
 
     function buildMetricHead(info, ...extraChildren) {
         const head = mk('div', 'rt-stat-head');
         const ico = mk('span', 'rt-stat-ico');
-        const iconFn = RT_ICONS[info.icon];
-        if (typeof iconFn === 'function') ico.appendChild(iconFn());
+        appendChildren(ico, iconFor(info.icon, null));
         head.appendChild(ico);
         head.appendChild(mk('span', 'rt-stat-name', info.label));
         for (const child of extraChildren) head.appendChild(child);
@@ -3576,13 +3532,13 @@ const StatsTracker = (() => {
         tile.dataset.metricKey = key;
 
         if (key === 'favoriteChannel') {
-            const avatar = mk('span', 'rt-stat-channel-avatar');
-            tile.appendChild(avatar);
+            tile.appendChild(buildMetricHead(info));
 
-            const channelCopy = mk('div', 'rt-stat-channel-copy');
-            channelCopy.appendChild(buildMetricHead(info, mk('span', 'rt-stat-channel-sub')));
-            channelCopy.appendChild(mk('strong', 'rt-stat-tile-val rt-stat-channel-name', '—'));
-            tile.appendChild(channelCopy);
+            const board = mk('div', 'rt-stat-channel-board', null, {
+                role: 'list',
+                'aria-label': 'Top channels by watch time',
+            });
+            tile.appendChild(board);
 
             tile.classList.add('rt-stat-tile-channel');
             syncFavoriteChannelTile(tile, totals);
@@ -3645,16 +3601,19 @@ const StatsTracker = (() => {
     }
 
     function buildStatsCardHead(range) {
-        const head = mk('div', 'rt-stats-card-head');
         const logo = mk('span', 'rt-stats-card-logo');
         logo.appendChild(RT_ICONS.chart());
-        head.appendChild(logo);
-
-        const text = mk('div', 'rt-stats-card-heading');
-        text.appendChild(mk('span', 'rt-stats-card-title', STATS_TITLE));
-        text.appendChild(buildStatsRangePicker(range));
-        head.appendChild(text);
-        return head;
+        return mk('div', 'rt-stats-card-head', null, {
+            children: [
+                logo,
+                mk('div', 'rt-stats-card-heading', null, {
+                    children: [
+                        mk('span', 'rt-stats-card-title', STATS_TITLE),
+                        buildStatsRangePicker(range),
+                    ],
+                }),
+            ],
+        });
     }
 
     function buildStatsRangePicker(activeRange) {
@@ -3745,13 +3704,17 @@ const StatsTracker = (() => {
         setActiveRange(value);
     }
 
-    function buildStatsCard() {
-        if (!state.loaded) return null;
+    function buildStatsCard({ loading = false } = {}) {
+        if (!state.loaded && !loading) return null;
         if (!getEnabled()) return null;
         const range = readStatsRange(state.range);
 
         const card = mk('div', 'rt-stats-card');
         card.appendChild(buildStatsCardHead(range));
+        if (loading) {
+            card.appendChild(mk('div', 'rt-stats-empty', 'Loading local statistics…'));
+            return card;
+        }
 
         const enabled = STATS_METRICS_ORDER.filter(key => state.metrics[key] !== false);
         if (!enabled.length) {
@@ -3766,20 +3729,13 @@ const StatsTracker = (() => {
         return card;
     }
 
-    function buildStatsLoadingCard() {
-        const card = mk('div', 'rt-stats-card');
-        card.appendChild(buildStatsCardHead(readStatsRange(state.range)));
-        card.appendChild(mk('div', 'rt-stats-empty', 'Loading local statistics…'));
-        return card;
-    }
-
     function renderStatsCardInto(wrapper, { loading = false } = {}) {
         const existingCard = wrapper.querySelector(':scope > .rt-stats-card');
         if (!loading && patchStatsCard(existingCard)) return true;
 
-        const card = loading ? buildStatsLoadingCard() : buildStatsCard();
+        const card = buildStatsCard({ loading });
         if (!card) return false;
-        wrapper.replaceChildren(card);
+        replaceChildrenSafe(wrapper, card);
         return true;
     }
 
@@ -3788,7 +3744,7 @@ const StatsTracker = (() => {
         if (!slot) return;
         const canRenderPanel = isPanelEnabled();
         if (!canRenderPanel) {
-            slot.replaceChildren();
+            replaceChildrenSafe(slot, []);
             return;
         }
 
@@ -3796,7 +3752,7 @@ const StatsTracker = (() => {
 
         let wrapper = slot.querySelector(':scope > .rt-inline-stats');
         if (!wrapper) {
-            slot.replaceChildren();
+            replaceChildrenSafe(slot, []);
             wrapper = mk('div', 'rt-inline-stats');
             slot.appendChild(wrapper);
         }
@@ -3819,10 +3775,10 @@ const StatsTracker = (() => {
         const rectWidth = el.getBoundingClientRect?.().width || 0;
         const style = getComputedStyle(el);
         return Math.max(0, rectWidth
-            - cssPx(style.borderLeftWidth)
-            - cssPx(style.borderRightWidth)
-            - cssPx(style.paddingLeft)
-            - cssPx(style.paddingRight));
+        - cssPx(style.borderLeftWidth)
+        - cssPx(style.borderRightWidth)
+        - cssPx(style.paddingLeft)
+        - cssPx(style.paddingRight));
     }
 
     function inlineStatsBaselineWidth() {
@@ -3852,8 +3808,8 @@ const StatsTracker = (() => {
         const sourceWidth = inlineStatsBaselineWidth();
         // Mirror the inline stats card width, ignoring oversized #secondary fallbacks.
         const cardWidth = sourceWidth >= 320 && sourceWidth <= 760
-            ? Math.round(sourceWidth)
-            : 420;
+        ? Math.round(sourceWidth)
+        : 420;
         const targetWidth = cardWidth + statsPanelContentChromeWidth(panel);
 
         panel.style.setProperty('--rt-stats-panel-width', `${targetWidth}px`);
@@ -3926,8 +3882,6 @@ const StatsTracker = (() => {
     }
 
     function syncSettingsControls() {
-        const range = document.getElementById('rt_stats_range_select');
-        if (range) range.value = state.defaultRange;
         const display = document.getElementById('rt_stats_display_select');
         if (display) display.value = state.display;
         for (const key of STATS_METRICS_ORDER) {
@@ -3937,16 +3891,14 @@ const StatsTracker = (() => {
     }
 
     async function load() {
-        const [enabled, range, display, metrics, buckets] = await Promise.all([
+        const [enabled, display, metrics, buckets] = await Promise.all([
             StatsStore.getValue(CFG.storage.statsEnabled, true),
-            StatsStore.getValue(CFG.storage.statsRange, 'daily'),
             StatsStore.getValue(CFG.storage.statsDisplay, 'panel'),
             StatsStore.getJson(CFG.storage.statsMetrics, null),
             StatsStore.getJson(CFG.storage.statsBuckets, null),
         ]);
         state.enabled = typeof enabled === 'boolean' ? enabled : true;
-        state.defaultRange = readStatsRange(range);
-        state.range = state.defaultRange;
+        state.range = STATS_SESSION_DEFAULT_RANGE;
         state.display = readStatsDisplay(display);
         state.metrics = sanitizeStatsMetrics(metrics);
         state.buckets = sanitizeStatsBuckets(buckets);
@@ -3986,8 +3938,7 @@ const StatsTracker = (() => {
 
     function resetSettings() {
         state.enabled = true;
-        state.defaultRange = 'daily';
-        state.range = 'daily';
+        state.range = STATS_SESSION_DEFAULT_RANGE;
         state.display = 'panel';
         state.metrics = { ...STATS_METRICS_DEFAULTS };
         syncSettingsControls();
@@ -4010,9 +3961,6 @@ const StatsTracker = (() => {
         }, { passive: true });
         document.addEventListener('pointerdown', event => {
             const target = event.target instanceof Element ? event.target : null;
-            if (!target?.closest?.('.rt-stat-channel-picker, .rt-stat-channel-menu')) {
-                closeFavoriteChannelMenus();
-            }
             if (!target?.closest?.('.rt-stats-range-picker, .rt-stats-range-menu')) {
                 closeStatsRangeMenus();
             }
@@ -4048,22 +3996,8 @@ const StatsTracker = (() => {
         uiSync();
     }
 
-    // The persisted default range — applied on every page load. Only the
-    // settings "Default time range" control writes this.
-    async function setDefaultRange(value) {
-        state.defaultRange = readStatsRange(value);
-        state.range = state.defaultRange;
-        await StatsStore.setValue(CFG.storage.statsRange, state.defaultRange);
-        renderInlineCard();
-        renderStatsPanelSlot();
-        syncSettingsControls();
-        applyVisibility();
-        uiSync();
-    }
-
     // The active/displayed range — transient. The in-card range picker uses
-    // this so switching ranges is a quick view change that does NOT become the
-    // saved default; on the next load the stored default is shown again.
+    // this so switching ranges is a quick view change that does not persist.
     function setActiveRange(value) {
         state.range = readStatsRange(value);
         renderInlineCard();
@@ -4088,11 +4022,9 @@ const StatsTracker = (() => {
         clearAll,
         resetSettings,
         setEnabled,
-        setDefaultRange,
         setActiveRange,
         setDisplay,
         setMetric,
-        getRange,
         getDisplay,
         getEnabled,
         isPanelEnabled,
@@ -4104,28 +4036,18 @@ const StatsTracker = (() => {
 
 function buildToggleCard(iconKey, swId, name, stId, infoText) {
     const card = mk('div', `rt-tc rt-tc-${iconKey}`);
-    const top = mk('div', 'rt-tc-top');
-
-    const iconWrap = mk('span', 'rt-tc-ico');
-    const builder = RT_ICONS[iconKey];
-    if (typeof builder === 'function') iconWrap.appendChild(builder());
-    else {
-        iconWrap.textContent = '◦'; // fallback if a typo'd key sneaks in
-    }
-    top.appendChild(iconWrap);
-
     const sw = mk('button', 'rt-sw', null, {
         id: swId, type: 'button', role: 'switch', 'aria-checked': 'false',
+        children: mk('span', 'rt-thumb'),
     });
-    sw.appendChild(mk('span', 'rt-thumb'));
-    top.appendChild(sw);
-
-    const bot = mk('div', 'rt-tc-bot');
-    bot.appendChild(mk('span', 'rt-tc-name', name));
-    bot.appendChild(mk('span', 'rt-tc-st', 'OFF', { id: stId }));
-
-    card.appendChild(top);
-    card.appendChild(bot);
+    appendChildren(card, [
+        mk('div', 'rt-tc-top', null, {
+            children: [mk('span', 'rt-tc-ico', null, { children: iconFor(iconKey) }), sw],
+        }),
+        mk('div', 'rt-tc-bot', null, {
+            children: [mk('span', 'rt-tc-name', name), mk('span', 'rt-tc-st', 'OFF', { id: stId })],
+        }),
+    ]);
 
     if (infoText) {
         const tools = mk('div', 'rt-card-tools');
@@ -4143,16 +4065,11 @@ function buildSettingPanel(id, title, icon, eyebrow) {
 
     const head = mk('div', 'rt-set-head');
     if (icon) {
-        const iconEl = mk('span', `rt-set-icon rt-set-icon-${icon}`);
-        const builder = RT_ICONS[icon];
-        if (typeof builder === 'function') iconEl.appendChild(builder());
-        else iconEl.textContent = icon;
-        head.appendChild(iconEl);
+        head.appendChild(mk('span', `rt-set-icon rt-set-icon-${icon}`, null, { children: iconFor(icon, icon) }));
     }
-    const heading = mk('div', 'rt-set-heading');
-    if (eyebrow) heading.appendChild(mk('span', 'rt-set-eyebrow', eyebrow));
-    heading.appendChild(mk('span', 'rt-set-title', title));
-    head.appendChild(heading);
+    head.appendChild(mk('div', 'rt-set-heading', null, {
+        children: [eyebrow && mk('span', 'rt-set-eyebrow', eyebrow), mk('span', 'rt-set-title', title)],
+    }));
     panel.appendChild(head);
 
     return panel;
@@ -4161,9 +4078,6 @@ function buildSettingPanel(id, title, icon, eyebrow) {
 function buildFieldLabel(text, helpText, labelClass = 'rt-field-label') {
     const label = mk('span', labelClass || null, text);
     if (!helpText) return label;
-
-    const wrap = mk('span', 'rt-field-label-wrap');
-    wrap.appendChild(label);
 
     const help = mk('span', 'rt-info rt-field-help', '?', {
         role: 'button',
@@ -4180,8 +4094,7 @@ function buildFieldLabel(text, helpText, labelClass = 'rt-field-label') {
     help.addEventListener('keydown', event => {
         if (event.key === ' ' || event.key === 'Enter') stopLabelActivation(event);
     });
-    wrap.appendChild(help);
-    return wrap;
+    return mk('span', 'rt-field-label-wrap', null, { children: [label, help] });
 }
 
 function buildCheckboxField({ inputId, text, checked, wide = false, helpText, onChange }) {
@@ -4266,14 +4179,15 @@ function buildDangerConfirm({ items = [], buttonText = 'Confirm Deletion', butto
 
 function buildWarningCheckboxField({ noteText, noteIcon = '⚠', ...checkbox }) {
     const box = mk('div', 'rt-setting-warning-box');
-    const row = buildCheckboxField({ ...checkbox, wide: true });
-    box.appendChild(row);
+    box.appendChild(buildCheckboxField({ ...checkbox, wide: true }));
 
     if (noteText) {
-        const note = mk('div', 'rt-setting-warning-note');
-        note.appendChild(mk('span', 'rt-setting-warning-ico', noteIcon));
-        note.appendChild(mk('span', 'rt-setting-warning-text', noteText));
-        box.appendChild(note);
+        box.appendChild(mk('div', 'rt-setting-warning-note', null, {
+            children: [
+                mk('span', 'rt-setting-warning-ico', noteIcon),
+                mk('span', 'rt-setting-warning-text', noteText),
+            ],
+        }));
     }
 
     return box;
@@ -4300,7 +4214,41 @@ function buildSettingsSection(def) {
     return panel;
 }
 
-function createSettingsSections() {
+function applySettingChange(control, rawValue) {
+    const read = control.read || (value => value);
+    const stored = control.store || (value => value);
+    const value = read(rawValue);
+    if (control.stateKey) S[control.stateKey] = value;
+    if (control.storageKey) save(control.storageKey, stored(value));
+    control.afterChange?.(value, rawValue);
+    return value;
+}
+
+function settingControl(type, control) {
+    const current = control.stateKey ? S[control.stateKey] : undefined;
+    const out = { ...control, type };
+    if (!out.onChange) out.onChange = value => applySettingChange(control, value);
+    if (type === 'checkbox' || type === 'warningCheckbox') {
+        if (out.checked === undefined) out.checked = !!current;
+    } else if (out.value === undefined && current !== undefined) {
+        out.value = current;
+    }
+    return out;
+}
+
+const selectSetting = control => settingControl('select', control);
+const sliderSetting = control => settingControl('slider', control);
+const checkboxSetting = control => settingControl('checkbox', control);
+const warningCheckboxSetting = control => settingControl('warningCheckbox', control);
+const SETTINGS_SECTION_ORDER = Object.freeze(['general', 'customization', 'shorts', 'statistics', 'quality', 'private', 'danger']);
+const labelOptions = (order, labels) => order.map(value => ({ value, label: labels[value] || value }));
+const shortsSurfaceSetting = (inputId, text, stateKey, storageKey) => checkboxSetting({
+    inputId, text, stateKey, storageKey,
+    read: Boolean,
+    afterChange: () => ShortsBlocker.apply(),
+});
+
+function SETTINGS_SECTIONS() {
     return {
         general: {
             id: 'rt_set_general',
@@ -4309,8 +4257,7 @@ function createSettingsSections() {
             eyebrow: 'Appearance',
             hint: 'Buttons, rain, lightning, and notifications.',
             controls: [
-                {
-                    type: 'slider',
+                sliderSetting({
                     labelText: 'Toast duration',
                     sliderId: 'rt_toast_duration_slider',
                     min: TOAST_DURATION_MIN_MS / 1000,
@@ -4318,106 +4265,70 @@ function createSettingsSections() {
                     step: 0.5,
                     value: S.toastDurationMs / 1000,
                     valueRender: secs => `${secs.toFixed(1)}s`,
-                    onChange: secs => {
-                        const ms = Math.max(TOAST_DURATION_MIN_MS, Math.min(TOAST_DURATION_MAX_MS, Math.round(secs * 1000)));
-                        S.toastDurationMs = ms;
-                        save(CFG.storage.toastDurationMs, ms);
-                    },
-                },
-                {
-                    type: 'select',
+                    stateKey: 'toastDurationMs',
+                    storageKey: CFG.storage.toastDurationMs,
+                    read: secs => Math.max(TOAST_DURATION_MIN_MS, Math.min(TOAST_DURATION_MAX_MS, Math.round(secs * 1000))),
+                }),
+                selectSetting({
                     labelText: 'Toast position',
                     selectId: 'rt_toast_position_select',
-                    options: TOAST_PLACEMENT_ORDER.map(value => ({
-                        value,
-                        label: TOAST_PLACEMENT_LABEL[value],
-                    })),
-                    value: S.toastPlacement,
-                    onChange: value => {
-                        S.toastPlacement = readToastPlacementSetting(value);
-                        save(CFG.storage.toastPlacement, S.toastPlacement);
-                        scheduleToastPositionSync();
-                    },
-                },
-                {
-                    type: 'select',
+                    options: labelOptions(TOAST_PLACEMENT_ORDER, TOAST_PLACEMENT_LABEL),
+                    stateKey: 'toastPlacement',
+                    storageKey: CFG.storage.toastPlacement,
+                    read: readToastPlacementSetting,
+                    afterChange: scheduleToastPositionSync,
+                }),
+                selectSetting({
                     labelText: 'Rain quantity',
                     selectId: 'rt_rain_quantity_select',
-                    options: RAIN_QUANTITY_ORDER.map(value => ({
-                        value,
-                        label: RAIN_QUANTITY_LABEL[value],
-                    })),
-                    value: S.rainQuantity,
-                    onChange: value => {
-                        S.rainQuantity = readRainQuantitySetting(value);
-                        save(CFG.storage.rainQuantity, S.rainQuantity);
-                        const panelEl = document.getElementById('rt_panel');
-                        if (panelEl) {
-                            panelEl.classList.toggle('rt-rain-off', S.rainQuantity === 'off');
-                            panelEl.__rtRainQuantityChanged?.();
-                        }
-                        TopbarTheme.syncRain();
-                    },
-                },
-                {
-                    type: 'slider',
+                    options: labelOptions(RAIN_QUANTITY_ORDER, RAIN_QUANTITY_LABEL),
+                    stateKey: 'rainQuantity',
+                    storageKey: CFG.storage.rainQuantity,
+                    read: readRainQuantitySetting,
+                    afterChange: syncRainQuantity,
+                }),
+                sliderSetting({
                     labelText: 'Rain FPS cap',
                     helpText: 'Limits how often the rain animation redraws. Lower values may use less power.',
                     sliderId: 'rt_rain_fps_cap_slider',
                     min: RAIN_FPS_MIN,
                     max: RAIN_FPS_MAX,
                     step: 5,
-                    value: S.rainFpsCap,
                     valueRender: fps => `${Math.round(fps)} fps`,
-                    onChange: fps => {
-                        S.rainFpsCap = readRainFpsCap(fps);
-                        save(CFG.storage.rainFpsCap, S.rainFpsCap);
-                        document.getElementById('rt_panel')?.__rtRainFpsChanged?.();
-                        TopbarTheme.syncRain();
-                    },
-                },
-                {
-                    type: 'checkbox',
+                    stateKey: 'rainFpsCap',
+                    storageKey: CFG.storage.rainFpsCap,
+                    read: readRainFpsCap,
+                    afterChange: syncRainFps,
+                }),
+                checkboxSetting({
                     inputId: 'rt_lightning_enabled',
                     text: 'Lightning effects',
-                    checked: S.lightningEnabled,
                     wide: true,
-                    onChange: checked => {
-                        S.lightningEnabled = !!checked;
-                        save(CFG.storage.lightning, S.lightningEnabled);
-                        document.getElementById('rt_panel')?.__rtLightningChanged?.();
-                        TopbarTheme.syncRain();
-                    },
-                },
-                {
-                    type: 'select',
+                    stateKey: 'lightningEnabled',
+                    storageKey: CFG.storage.lightning,
+                    read: Boolean,
+                    afterChange: syncLightning,
+                }),
+                selectSetting({
                     labelText: 'Button placement',
                     helpText: 'Choose where RainTube buttons appear on YouTube.',
                     selectId: 'rt_button_placement_select',
-                    options: BUTTON_PLACEMENT_ORDER.map(value => ({
-                        value,
-                        label: BUTTON_PLACEMENT_LABEL[value],
-                    })),
-                    value: S.buttonPlacement,
-                    onChange: value => {
-                        S.buttonPlacement = readButtonPlacement(value);
-                        save(CFG.storage.buttonPlacement, S.buttonPlacement);
-                        syncButtonPlacement();
-                    },
-                },
-                {
-                    type: 'warningCheckbox',
+                    options: labelOptions(BUTTON_PLACEMENT_ORDER, BUTTON_PLACEMENT_LABEL),
+                    stateKey: 'buttonPlacement',
+                    storageKey: CFG.storage.buttonPlacement,
+                    read: readButtonPlacement,
+                    afterChange: syncButtonPlacement,
+                }),
+                warningCheckboxSetting({
                     inputId: 'rt_main_button_visible',
                     text: 'Show main RainTube button',
                     helpText: "Shows the main RainTube button on YouTube. If you hide it, open RainTube from your userscript manager's menu command.",
-                    checked: S.mainButtonVisible,
                     noteText: "Advanced option, don't toggle blindly.",
-                    onChange: checked => {
-                        S.mainButtonVisible = !!checked;
-                        save(CFG.storage.mainButtonVisible, S.mainButtonVisible);
-                        syncButtonPlacement();
-                    },
-                },
+                    stateKey: 'mainButtonVisible',
+                    storageKey: CFG.storage.mainButtonVisible,
+                    read: Boolean,
+                    afterChange: syncButtonPlacement,
+                }),
             ],
         },
         customization: {
@@ -4428,30 +4339,27 @@ function createSettingsSections() {
             hint: 'Change how YouTube looks.',
             controls: [
                 {
-                    type: 'checkbox',
-                    inputId: 'rt_oled_theme',
-                    text: 'OLED pure-black theme',
-                    helpText: "Makes YouTube dark mode pure black and turns off the player glow.",
-                    checked: S.oledThemeEnabled,
-                    wide: true,
-                    onChange: checked => {
-                        S.oledThemeEnabled = !!checked;
-                        save(CFG.storage.oledTheme, S.oledThemeEnabled);
-                        OledTheme.apply();
-                    },
-                },
-                {
-                    type: 'checkbox',
-                    inputId: 'rt_topbar_theme',
-                    text: 'RainTube top bar',
-                    helpText: "Styles YouTube's top bar with RainTube's dark glass, glow, and rain.",
-                    checked: S.topbarThemeEnabled,
-                    wide: true,
-                    onChange: checked => {
-                        S.topbarThemeEnabled = !!checked;
-                        save(CFG.storage.topbarTheme, S.topbarThemeEnabled);
-                        TopbarTheme.apply();
-                    },
+                    type: 'checkboxGrid',
+                    items: [
+                        checkboxSetting({
+                            inputId: 'rt_oled_theme',
+                            text: 'OLED pure-black theme',
+                            helpText: "Makes YouTube dark mode pure black and turns off the player glow.",
+                            stateKey: 'oledThemeEnabled',
+                            storageKey: CFG.storage.oledTheme,
+                            read: Boolean,
+                            afterChange: () => OledTheme.apply(),
+                        }),
+                        checkboxSetting({
+                            inputId: 'rt_topbar_theme',
+                            text: 'RainTube top bar',
+                            helpText: "Styles YouTube's top bar with RainTube's dark glass, glow, and rain.",
+                            stateKey: 'topbarThemeEnabled',
+                            storageKey: CFG.storage.topbarTheme,
+                            read: Boolean,
+                            afterChange: () => TopbarTheme.apply(),
+                        }),
+                    ],
                 },
             ],
         },
@@ -4465,72 +4373,21 @@ function createSettingsSections() {
                 {
                     type: 'checkboxGrid',
                     items: [
-                        {
-                            inputId: 'rt_shorts_hide_sidebar',
-                            text: 'Sidebar',
-                            checked: S.shortsHideSidebar,
-                            onChange: checked => {
-                                S.shortsHideSidebar = !!checked;
-                                save(CFG.storage.shortsHideSidebar, S.shortsHideSidebar);
-                                ShortsBlocker.apply();
-                            },
-                        },
-                        {
-                            inputId: 'rt_shorts_hide_home',
-                            text: 'Home & feeds',
-                            checked: S.shortsHideHome,
-                            onChange: checked => {
-                                S.shortsHideHome = !!checked;
-                                save(CFG.storage.shortsHideHome, S.shortsHideHome);
-                                ShortsBlocker.apply();
-                            },
-                        },
-                        {
-                            inputId: 'rt_shorts_hide_search',
-                            text: 'Search results',
-                            checked: S.shortsHideSearch,
-                            onChange: checked => {
-                                S.shortsHideSearch = !!checked;
-                                save(CFG.storage.shortsHideSearch, S.shortsHideSearch);
-                                ShortsBlocker.apply();
-                            },
-                        },
-                        {
-                            inputId: 'rt_shorts_hide_channel',
-                            text: 'Channel tabs',
-                            checked: S.shortsHideChannel,
-                            onChange: checked => {
-                                S.shortsHideChannel = !!checked;
-                                save(CFG.storage.shortsHideChannel, S.shortsHideChannel);
-                                ShortsBlocker.apply();
-                            },
-                        },
-                        {
-                            inputId: 'rt_shorts_hide_watch',
-                            text: 'Watch suggestions',
-                            checked: S.shortsHideWatch,
-                            onChange: checked => {
-                                S.shortsHideWatch = !!checked;
-                                save(CFG.storage.shortsHideWatch, S.shortsHideWatch);
-                                ShortsBlocker.apply();
-                            },
-                        },
+                        shortsSurfaceSetting('rt_shorts_hide_sidebar', 'Sidebar', 'shortsHideSidebar', CFG.storage.shortsHideSidebar),
+                        shortsSurfaceSetting('rt_shorts_hide_home', 'Home & feeds', 'shortsHideHome', CFG.storage.shortsHideHome),
+                        shortsSurfaceSetting('rt_shorts_hide_search', 'Search results', 'shortsHideSearch', CFG.storage.shortsHideSearch),
+                        shortsSurfaceSetting('rt_shorts_hide_channel', 'Channel tabs', 'shortsHideChannel', CFG.storage.shortsHideChannel),
+                        shortsSurfaceSetting('rt_shorts_hide_watch', 'Watch suggestions', 'shortsHideWatch', CFG.storage.shortsHideWatch),
                     ],
                 },
-                {
-                    type: 'select',
+                selectSetting({
                     labelText: 'Direct /shorts/ links',
                     selectId: 'rt_shorts_on_visit_select',
-                    options: SHORTS_ON_VISIT_ORDER.map(value => ({
-                        value,
-                        label: SHORTS_ON_VISIT_LABEL[value],
-                    })),
-                    value: S.shortsOnVisit,
-                    onChange: value => {
-                        S.shortsOnVisit = readShortsOnVisit(value);
-                        save(CFG.storage.shortsOnVisit, S.shortsOnVisit);
-                    },
-                },
+                    options: labelOptions(SHORTS_ON_VISIT_ORDER, SHORTS_ON_VISIT_LABEL),
+                    stateKey: 'shortsOnVisit',
+                    storageKey: CFG.storage.shortsOnVisit,
+                    read: readShortsOnVisit,
+                }),
             ],
         },
         statistics: {
@@ -4542,23 +4399,10 @@ function createSettingsSections() {
             controls: [
                 {
                     type: 'select',
-                    labelText: 'Default time range',
-                    helpText: 'The time period shown when stats first load each visit. Switch it temporarily anytime from the range picker on the stats card — that view resets to this default on reload. Turning Statistics off pauses tracking.',
-                    selectId: 'rt_stats_range_select',
-                    options: STATS_RANGE_ORDER.map(value => ({
-                        value, label: STATS_RANGE_LABEL[value],
-                    })),
-                    value: StatsTracker.getRange(),
-                    onChange: value => { void StatsTracker.setDefaultRange(value); },
-                },
-                {
-                    type: 'select',
                     labelText: 'Show statistics',
                     helpText: 'Collapsed keeps statistics behind the Statistics button. Always shows them above recommendations.',
                     selectId: 'rt_stats_display_select',
-                    options: STATS_DISPLAY_ORDER.map(value => ({
-                        value, label: STATS_DISPLAY_LABEL[value],
-                    })),
+                    options: labelOptions(STATS_DISPLAY_ORDER, STATS_DISPLAY_LABEL),
                     value: StatsTracker.getDisplay(),
                     onChange: value => { void StatsTracker.setDisplay(value); },
                 },
@@ -4580,36 +4424,26 @@ function createSettingsSections() {
             eyebrow: 'Targeting',
             hint: 'Choose the video quality RainTube should try to use.',
             controls: [
-                {
-                    type: 'select',
+                selectSetting({
                     labelText: 'Target quality',
                     helpText: 'Uses this quality when available, otherwise chooses the closest lower eligible option.',
                     selectId: 'rt_quality_max',
-                    options: QUALITY_ORDER.map(q => ({ value: q, label: QUALITY_LABEL[q] || q })),
-                    value: S.qualityMax,
-                    onChange: value => {
-                        S.qualityMax = value;
-                        save(CFG.storage.qualityMax, S.qualityMax);
-                        clearQualitySchedule();
-                        clearQualityMemos();
-                        if (S.qualityEnabled) scheduleQualityApply();
-                    },
-                },
-                {
-                    type: 'checkbox',
+                    options: labelOptions(QUALITY_ORDER, QUALITY_LABEL),
+                    stateKey: 'qualityMax',
+                    storageKey: CFG.storage.qualityMax,
+                    read: value => readEnumSetting(value, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax),
+                    afterChange: restartQualityTargeting,
+                }),
+                checkboxSetting({
                     inputId: 'rt_quality_super_resolution',
                     text: 'Include Super resolution',
                     helpText: 'Allows RainTube to choose YouTube AI-upscaled Super resolution rows when they are the first eligible match in YouTube’s quality menu.',
-                    checked: S.qualitySuperResolutionEnabled,
                     wide: true,
-                    onChange: checked => {
-                        S.qualitySuperResolutionEnabled = !!checked;
-                        save(CFG.storage.qualitySuperResolution, S.qualitySuperResolutionEnabled);
-                        clearQualitySchedule();
-                        clearQualityMemos();
-                        if (S.qualityEnabled) scheduleQualityApply();
-                    },
-                },
+                    stateKey: 'qualitySuperResolutionEnabled',
+                    storageKey: CFG.storage.qualitySuperResolution,
+                    read: Boolean,
+                    afterChange: restartQualityTargeting,
+                }),
             ],
         },
         private: {
@@ -4619,23 +4453,16 @@ function createSettingsSections() {
             eyebrow: 'Proxy routing',
             hint: 'Download through privacy-friendly mirrors.',
             controls: [
-                {
-                    type: 'select',
+                selectSetting({
                     labelText: 'Provider',
                     helpText: 'Choose which private mirrors RainTube tries. “Both” uses Piped and Invidious.',
                     selectId: 'rt_private_provider_select',
-                    options: PRIVATE_PROVIDER_ORDER.map(value => ({
-                        value,
-                        label: PRIVATE_PROVIDER_LABEL[value],
-                    })),
-                    value: S.privateProvider,
-                    onChange: value => {
-                        S.privateProvider = readPrivateProvider(value);
-                        save(CFG.storage.privateProvider, S.privateProvider);
-                    },
-                },
-                {
-                    type: 'slider',
+                    options: labelOptions(PRIVATE_PROVIDER_ORDER, PRIVATE_PROVIDER_LABEL),
+                    stateKey: 'privateProvider',
+                    storageKey: CFG.storage.privateProvider,
+                    read: readPrivateProvider,
+                }),
+                sliderSetting({
                     labelText: 'Request timeout',
                     helpText: 'How long RainTube waits for one download mirror before trying another or failing. Lower values recover sooner; higher values help slow downloads finish.',
                     sliderId: 'rt_private_download_timeout_slider',
@@ -4644,24 +4471,19 @@ function createSettingsSections() {
                     step: PRIVATE_DOWNLOAD_TIMEOUT_STEP_MS / 1000,
                     value: S.privateDownloadTimeoutMs / 1000,
                     valueRender: formatPrivateDownloadTimeoutSeconds,
-                    onChange: secs => {
-                        const ms = readPrivateDownloadTimeoutMs(Math.round(secs * 1000));
-                        S.privateDownloadTimeoutMs = ms;
-                        save(CFG.storage.privateDownloadTimeoutMs, ms);
-                    },
-                },
-                {
-                    type: 'checkbox',
+                    stateKey: 'privateDownloadTimeoutMs',
+                    storageKey: CFG.storage.privateDownloadTimeoutMs,
+                    read: secs => readPrivateDownloadTimeoutMs(Math.round(secs * 1000)),
+                }),
+                checkboxSetting({
                     inputId: 'rt_private_fallback',
                     text: 'Open CnvMP3 when private downloads fail',
                     helpText: 'Opens CnvMP3 with the current video link when private mirrors fail.',
-                    checked: S.privateFallbackEnabled,
                     wide: true,
-                    onChange: checked => {
-                        S.privateFallbackEnabled = !!checked;
-                        save(CFG.storage.privateFallback, S.privateFallbackEnabled);
-                    },
-                },
+                    stateKey: 'privateFallbackEnabled',
+                    storageKey: CFG.storage.privateFallback,
+                    read: Boolean,
+                }),
             ],
         },
         danger: {
@@ -4756,7 +4578,9 @@ async function resetAllSettingsToDefaults() {
     OledTheme.apply();
     TopbarTheme.apply();
     scheduleToastPositionSync();
-    document.getElementById('rt_panel')?.__rtLightningChanged?.();
+    syncRainQuantity();
+    syncRainFps();
+    syncLightning();
     syncAllSettingsControls();
     syncButtonPlacement();
     if (S.qualityEnabled) scheduleQualityApply();
@@ -4764,9 +4588,8 @@ async function resetAllSettingsToDefaults() {
 }
 
 function buildSettingsSections() {
-    const sections = createSettingsSections();
-    return ['general', 'customization', 'shorts', 'statistics', 'quality', 'private', 'danger']
-        .map(key => buildSettingsSection(sections[key]));
+    const sections = SETTINGS_SECTIONS();
+    return SETTINGS_SECTION_ORDER.map(key => buildSettingsSection(sections[key]));
 }
 
 function buildSlider({ labelText, helpText, sliderId, min, max, step, value, valueRender, onChange }) {
@@ -4780,20 +4603,21 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
 
     const sliderWrap = mk('div', 'rt-slider-track-wrap');
 
-    const track = mk('div', 'rt-slider-track');
-    const fill = mk('div', 'rt-slider-fill');
-    const thumb = mk('div', 'rt-slider-thumb-custom');
-    sliderWrap.appendChild(track);
-    sliderWrap.appendChild(fill);
-    sliderWrap.appendChild(thumb);
+    appendChildren(sliderWrap, [
+        mk('div', 'rt-slider-track'),
+        mk('div', 'rt-slider-fill'),
+        mk('div', 'rt-slider-thumb-custom'),
+    ]);
 
     const slider = mk('input', 'rt-slider-input', null, {
-        id: sliderId, type: 'range',
-        min: String(min), max: String(max), step: String(step),
+        id: sliderId,
+        type: 'range',
+        min: String(min),
+        max: String(max),
+        step: String(step),
         value: String(value),
     });
     sliderWrap.appendChild(slider);
-
     row.appendChild(sliderWrap);
 
     const span = (max - min) || 1;
@@ -4847,12 +4671,8 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
         onChange?.(parseFloat(e.currentTarget.value), chip);
     });
 
-    const onDown = () => {
-        row.classList.add('rt-slider-grabbing');
-    };
-    const onUp = () => {
-        row.classList.remove('rt-slider-grabbing');
-    };
+    const onDown = () => row.classList.add('rt-slider-grabbing');
+    const onUp = () => row.classList.remove('rt-slider-grabbing');
     slider.addEventListener('pointerdown', onDown, { passive: true });
     slider.addEventListener('pointerup', onUp, { passive: true });
     slider.addEventListener('pointercancel', onUp, { passive: true });
@@ -4879,16 +4699,18 @@ function buildSelectField({ labelText, helpText, selectId, options, value, onCha
 }
 
 function buildDownloadBtn(variant, iconKey, primaryLabel, id) {
-    const btn = mk('button', `rt-dl rt-dl-${variant}`, null, { id, type: 'button' });
     const iconWrap = mk('span', 'rt-dl-ico');
-    const builder = RT_ICONS[iconKey];
-    if (typeof builder === 'function') iconWrap.appendChild(builder());
-    else iconWrap.textContent = iconKey || '◦';
-    btn.appendChild(iconWrap);
-    const txt = mk('span', 'rt-dl-txt');
-    txt.appendChild(mk('span', 'rt-dl-p', primaryLabel));
-    btn.appendChild(txt);
-    return btn;
+    appendChildren(iconWrap, iconFor(iconKey, iconKey || '◦'));
+    return mk('button', `rt-dl rt-dl-${variant}`, null, {
+        id,
+        type: 'button',
+        children: [
+            iconWrap,
+            mk('span', 'rt-dl-txt', null, {
+                children: mk('span', 'rt-dl-p', primaryLabel),
+            }),
+        ],
+    });
 }
 
 function buildControlButton(id, text, cls, label) {
@@ -4901,29 +4723,43 @@ function buildControlButton(id, text, cls, label) {
 
 function buildProgress() {
     const wrap = mk('div', 'rt-progress', null, { id: 'rt_progress' });
-    const top = mk('div', 'rt-progress-top');
-    top.appendChild(mk('span', 'rt-progress-label', 'Ready', { id: 'rt_progress_label' }));
-    top.appendChild(mk('span', 'rt-progress-pct', '0%', { id: 'rt_progress_pct' }));
-    wrap.appendChild(top);
-    const track = mk('div', 'rt-progress-track');
-    track.appendChild(mk('div', 'rt-progress-fill', null, { id: 'rt_progress_fill' }));
-    wrap.appendChild(track);
-    wrap.appendChild(mk('div', 'rt-progress-meta', '', { id: 'rt_progress_meta' }));
+    appendChildren(wrap, [
+        mk('div', 'rt-progress-top', null, {
+            children: [
+                mk('span', 'rt-progress-label', 'Ready', { id: 'rt_progress_label' }),
+                mk('span', 'rt-progress-pct', '0%', { id: 'rt_progress_pct' }),
+            ],
+        }),
+        mk('div', 'rt-progress-track', null, {
+            children: mk('div', 'rt-progress-fill', null, { id: 'rt_progress_fill' }),
+        }),
+        mk('div', 'rt-progress-meta', '', { id: 'rt_progress_meta' }),
+    ]);
     return wrap;
 }
 
-function initHeaderRain(canvas, panel, opts = {}) {
+function createRainCanvas({ canvas, host: panel, ...opts }) {
     const ctx = canvas.getContext?.('2d');
     if (!ctx || !panel) return;
 
     const targetSelector = opts.targetSelector || '.rt-mark, .rt-hdr-btn';
     const targetKind = typeof opts.targetKind === 'function'
-        ? opts.targetKind
-        : el => (el.classList.contains('rt-mark') ? 'logo' : 'button');
+    ? opts.targetKind
+    : el => (el.classList.contains('rt-mark') ? 'logo' : 'button');
     const shouldRun = typeof opts.shouldRun === 'function'
-        ? opts.shouldRun
-        : () => panel.classList.contains('show') && !panel.classList.contains('rt-rain-off');
-    const lightningAllowed = opts.lightning !== false;
+    ? opts.shouldRun
+    : () => panel.classList.contains('show') && !panel.classList.contains('rt-rain-off');
+    const optionValue = (value, fallback) => (typeof value === 'function' ? value() : value ?? fallback);
+    const readQuantityScale = () => {
+        const explicit = optionValue(opts.quantityScale, null);
+        if (explicit !== null && explicit !== undefined && Number.isFinite(Number(explicit))) {
+            return Math.max(0, Number(explicit));
+        }
+        const rainQuantity = readRainQuantitySetting(S.rainQuantity);
+        return RAIN_QUANTITY_PARTICLE_SCALE[rainQuantity] ?? 1;
+    };
+    const readFpsCapOption = () => readRainFpsCap(optionValue(opts.fps, S.rainFpsCap));
+    const lightningEnabled = () => opts.lightning !== false && !!optionValue(opts.lightning, S.lightningEnabled);
     const random = (min, max) => min + Math.random() * (max - min);
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const RAIN_SIZE_SCALE = 1.12;
@@ -4959,7 +4795,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
         raf: null,
         lastTs: 0,
         nextFrameTs: 0,
-        frameIntervalMs: 1000 / readRainFpsCap(S.rainFpsCap),
+        frameIntervalMs: 1000 / readFpsCapOption(),
         width: 0,
         height: 0,
         dpr: 1,
@@ -4974,16 +4810,15 @@ function initHeaderRain(canvas, panel, opts = {}) {
         },
 
         seed(initial = false) {
-            const rainQuantity = readRainQuantitySetting(S.rainQuantity);
-            const quantityScale = RAIN_QUANTITY_PARTICLE_SCALE[rainQuantity] ?? 1;
+            const quantityScale = readQuantityScale();
             const baseDrops = Math.round(Math.min(
                 maxDropCount,
                 Math.max(DROP_MIN_COUNT, state.width / DROP_DENSITY_WIDTH),
             ));
             const targetDrops = quantityScale <= 0 ? 0
-                : Math.max(1, Math.round(baseDrops * quantityScale));
+            : Math.max(1, Math.round(baseDrops * quantityScale));
             const targetBeads = quantityScale <= 0 ? 0
-                : Math.max(1, Math.round(surfaceBeadCount * quantityScale));
+            : Math.max(1, Math.round(surfaceBeadCount * quantityScale));
 
             particles.ensureCount(state.drops, targetDrops);
             particles.ensureCount(state.beads, targetBeads);
@@ -4997,14 +4832,14 @@ function initHeaderRain(canvas, panel, opts = {}) {
             drop.depth = depth;
             drop.background = depth < BACKGROUND_DROP_DEPTH;
             drop.canHitSurface = depth > UI_IMPACT_TOP_DEPTH
-                && Math.random() < UI_IMPACT_CHANCE;
+            && Math.random() < UI_IMPACT_CHANCE;
             drop.x = random(-state.width * 0.15, state.width * 1.15);
             drop.y = initial
-                ? random(-state.height * 0.1, state.height * 1.1)
-                : random(-state.height * 0.75, -8);
+            ? random(-state.height * 0.1, state.height * 1.1)
+            : random(-state.height * 0.75, -8);
             drop.vy = random(118, 248) * (0.54 + depth * 0.68) *
-                RAIN_SPEED_SCALE *
-                (drop.background ? BACKGROUND_DROP_SPEED_SCALE : 1);
+            RAIN_SPEED_SCALE *
+            (drop.background ? BACKGROUND_DROP_SPEED_SCALE : 1);
             drop.vx = state.wind * (0.22 + depth * 0.48) + random(-9, 9);
             drop.len = random(5.5, 14) * (0.76 + depth * 0.72) * RAIN_SIZE_SCALE;
             drop.alpha = random(0.078, 0.25) * (0.8 + depth * 0.88);
@@ -5020,7 +4855,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
         resetBead(bead, initial = false) {
             bead.x = random(state.width * 0.08, state.width * 0.92);
             bead.y = initial ? random(state.height * 0.12, state.height * 0.78)
-                : random(-10, state.height * 0.25);
+            : random(-10, state.height * 0.25);
             bead.r = random(1.35, 3.15) * RAIN_SIZE_SCALE;
             bead.vx = state.wind * random(0.06, 0.18) + random(-0.7, 0.7);
             bead.vy = random(2.4, 8.5) * RAIN_SPEED_SCALE;
@@ -5056,8 +4891,8 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
         escaped(drop) {
             return drop.y - drop.len > state.height + 18
-                || drop.x < -state.width * 0.25
-                || drop.x > state.width * 1.25;
+            || drop.x < -state.width * 0.25
+            || drop.x > state.width * 1.25;
         },
 
         updateBead(bead, dt) {
@@ -5134,21 +4969,21 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             const canvasRect = canvas.getBoundingClientRect();
             state.targets = Array.from(panel.querySelectorAll(targetSelector))
-                .map(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (rect.width < 1 || rect.height < 1) return null;
-                    const kind = targetKind(el);
-                    return {
-                        el,
-                        kind,
-                        x: rect.left - canvasRect.left,
-                        y: rect.top - canvasRect.top,
-                        w: rect.width,
-                        h: rect.height,
-                        pad: kind === 'logo' ? 5 : 4,
-                    };
-                })
-                .filter(Boolean);
+            .map(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.width < 1 || rect.height < 1) return null;
+                const kind = targetKind(el);
+                return {
+                    el,
+                    kind,
+                    x: rect.left - canvasRect.left,
+                    y: rect.top - canvasRect.top,
+                    w: rect.width,
+                    h: rect.height,
+                    pad: kind === 'logo' ? 5 : 4,
+                };
+            })
+            .filter(Boolean);
             state.targetRefreshTs = now;
             return state.targets;
         },
@@ -5184,15 +5019,15 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             for (const target of targets) {
                 const topHit = prevY <= target.y + 1
-                    && drop.y >= target.y - target.pad
-                    && drop.x >= target.x - target.pad
-                    && drop.x <= target.x + target.w + target.pad;
+                && drop.y >= target.y - target.pad
+                && drop.x >= target.x - target.pad
+                && drop.x <= target.x + target.w + target.pad;
                 const insideTarget = drop.x >= target.x - target.pad
-                    && drop.x <= target.x + target.w + target.pad
-                    && drop.y >= target.y - target.pad
-                    && drop.y <= target.y + target.h + target.pad;
+                && drop.x <= target.x + target.w + target.pad
+                && drop.y >= target.y - target.pad
+                && drop.y <= target.y + target.h + target.pad;
                 const visibleHit = topHit
-                    || (insideTarget && drop.depth > UI_IMPACT_INSIDE_DEPTH);
+                || (insideTarget && drop.depth > UI_IMPACT_INSIDE_DEPTH);
 
                 if (!visibleHit) continue;
 
@@ -5211,12 +5046,12 @@ function initHeaderRain(canvas, panel, opts = {}) {
     const lightning = {
         schedule(ts, immediate = false) {
             state.nextLightningTs = ts + (immediate
-                ? random(LIGHTNING_FIRST_MIN_DELAY, LIGHTNING_FIRST_MAX_DELAY)
-                : random(LIGHTNING_MIN_DELAY, LIGHTNING_MAX_DELAY));
+            ? random(LIGHTNING_FIRST_MIN_DELAY, LIGHTNING_FIRST_MAX_DELAY)
+            : random(LIGHTNING_MIN_DELAY, LIGHTNING_MAX_DELAY));
         },
 
         maybeStrike(ts) {
-            if (!lightningAllowed || !S.lightningEnabled) {
+            if (!lightningEnabled()) {
                 state.lightning = null;
                 state.nextLightningTs = 0;
                 return;
@@ -5248,18 +5083,18 @@ function initHeaderRain(canvas, panel, opts = {}) {
             }
 
             const branches = points.slice(1, -1)
-                .filter(() => Math.random() < 0.42)
-                .map(point => {
-                    const side = Math.random() < 0.5 ? -1 : 1;
-                    const len = random(14, 34);
-                    return [
-                        point,
-                        {
-                            x: clamp(point.x + side * len, 4, state.width - 4),
-                            y: clamp(point.y + random(6, 22), 2, state.height - 2),
-                        },
-                    ];
-                });
+            .filter(() => Math.random() < 0.42)
+            .map(point => {
+                const side = Math.random() < 0.5 ? -1 : 1;
+                const len = random(14, 34);
+                return [
+                    point,
+                    {
+                        x: clamp(point.x + side * len, 4, state.width - 4),
+                        y: clamp(point.y + random(6, 22), 2, state.height - 2),
+                    },
+                ];
+            });
 
             return {
                 born: ts,
@@ -5418,7 +5253,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
         },
 
         updateFrameInterval() {
-            state.frameIntervalMs = 1000 / readRainFpsCap(S.rainFpsCap);
+            state.frameIntervalMs = 1000 / readFpsCapOption();
         },
 
         frame(ts) {
@@ -5442,7 +5277,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
 
             if (state.resizePending) layout.resize();
             const dt = state.lastTs ? Math.min(0.05, (ts - state.lastTs) / 1000)
-                : Math.min(0.05, interval / 1000);
+            : Math.min(0.05, interval / 1000);
             state.lastTs = ts;
 
             render.clear();
@@ -5516,7 +5351,7 @@ function initHeaderRain(canvas, panel, opts = {}) {
         lifecycle.sync();
     };
     panel.__rtLightningChanged = () => {
-        if (!S.lightningEnabled) {
+        if (!lightningEnabled()) {
             state.lightning = null;
             state.nextLightningTs = 0;
         }
@@ -5528,6 +5363,31 @@ function initHeaderRain(canvas, panel, opts = {}) {
     document.addEventListener('visibilitychange', lifecycle.sync, { passive: true });
     window.addEventListener('resize', layout.requestResize, { passive: true });
     layout.resize();
+}
+
+function rainHosts() {
+    return ['rt_panel', 'rt_stats_panel', 'rt_settings_root']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+}
+
+function syncRainQuantity() {
+    const off = readRainQuantitySetting(S.rainQuantity) === 'off';
+    for (const host of rainHosts()) {
+        host.classList.toggle('rt-rain-off', off);
+        host.__rtRainQuantityChanged?.();
+    }
+    TopbarTheme.syncRain();
+}
+
+function syncRainFps() {
+    for (const host of rainHosts()) host.__rtRainFpsChanged?.();
+    TopbarTheme.syncRain();
+}
+
+function syncLightning() {
+    for (const host of rainHosts()) host.__rtLightningChanged?.();
+    TopbarTheme.syncRain();
 }
 
 function buildPanel() {
@@ -5562,6 +5422,8 @@ function buildPanel() {
         id: 'rt_stats_panel', role: 'dialog', 'aria-hidden': 'true', 'aria-label': 'RainTube statistics',
     });
     const statsHdr = mk('header', 'rt-hdr rt-stats-menu-hdr', null, { id: 'rt_stats_drag' });
+    const statsRain = mk('canvas', 'rt-rain-canvas', null, { 'aria-hidden': 'true' });
+    statsHdr.appendChild(statsRain);
     const statsHdrLeft = mk('div', 'rt-hdr-l');
     const statsMark = mk('div', 'rt-mark rt-stats-menu-mark');
     statsMark.appendChild(RT_ICONS.chart());
@@ -5581,6 +5443,12 @@ function buildPanel() {
     statsPanel.appendChild(mk('div', 'rt-stats-menu-body', null, { id: 'rt_stats_panel_slot' }));
     statsPanel.appendChild(mk('footer', 'rt-foot rt-stats-menu-foot', APP_FOOTER_TEXT));
     document.body.appendChild(statsPanel);
+    createRainCanvas({
+        canvas: statsRain,
+        host: statsPanel,
+        maxDrops: 78,
+        surfaceBeadCount: 5,
+    });
 
     const panel = mk('div', null, null, { id: 'rt_panel', role: 'dialog' });
 
@@ -5673,13 +5541,13 @@ function buildPanel() {
     panel.appendChild(mk('footer', 'rt-foot', APP_FOOTER_TEXT));
 
     document.body.appendChild(panel);
-    if (S.rainQuantity === 'off') panel.classList.add('rt-rain-off');
-    initHeaderRain(rain, panel);
+    createRainCanvas({ canvas: rain, host: panel });
     initTooltips(panel);
     resetProgress();
     getToastContainer();
 
     buildSettingsModal();
+    syncRainQuantity();
 
     return { panel, fab, statsFab, statsPanel };
 }
@@ -5939,8 +5807,8 @@ function initDrag(panel, fab, opts = {}) {
         ox = snapToDevicePixel(clamp(x, margin, Math.max(margin, vw - pw - margin)));
         oy = snapToDevicePixel(clamp(y, margin, Math.max(margin, vh - ph - margin)));
         panel.style.transform = opts.snapToDevicePixels
-            ? `translate(${ox}px, ${oy}px)`
-            : `translate3d(${ox}px,${oy}px,0)`;
+        ? `translate(${ox}px, ${oy}px)`
+        : `translate3d(${ox}px,${oy}px,0)`;
         panel.__rtRainMoved?.();
     };
 
@@ -5973,8 +5841,8 @@ function initDrag(panel, fab, opts = {}) {
         if (e.target instanceof Element
             && e.target.closest('button, input, select, textarea, a, [role="button"], [data-no-drag]')) {
             return;
-        }
-        dragging = true;
+            }
+            dragging = true;
         userMoved = true;
         pid = e.pointerId;
         ix = e.clientX - ox; iy = e.clientY - oy;
@@ -6034,6 +5902,8 @@ function buildSettingsModal() {
     });
 
     const hdr = mk('header', 'rt-settings-hdr');
+    const rain = mk('canvas', 'rt-rain-canvas', null, { 'aria-hidden': 'true' });
+    hdr.appendChild(rain);
     const hdrL = mk('div', 'rt-settings-hdr-l');
     const settingsTile = mk('div', 'rt-settings-icon');
     settingsTile.appendChild(mk('span', 'rt-settings-icon-glyph', '⚙'));
@@ -6064,6 +5934,15 @@ function buildSettingsModal() {
 
     root.appendChild(modal);
     document.body.appendChild(root);
+    createRainCanvas({
+        canvas: rain,
+        host: root,
+        targetSelector: '.rt-settings-icon, .rt-settings-close',
+        targetKind: el => (el.classList.contains('rt-settings-icon') ? 'logo' : 'button'),
+        maxDrops: 92,
+        surfaceBeadCount: 7,
+    });
+    syncRainQuantity();
 
     initTooltips(root);
 }
@@ -6109,6 +5988,27 @@ function registerMenuCommands({ openPanel, openSettings }) {
     GM.registerMenuCommand('Open RainTube Settings', openSettings);
 }
 
+function safeAction(label, handler, failMessage = null) {
+    return async event => {
+        try {
+            await handler(event);
+        } catch (err) {
+            console.warn(`[RainTube] ${label} failed:`, err);
+            if (failMessage) toast(failMessage, 'warn');
+        }
+    };
+}
+
+function toggleStoredSetting({ stateKey, storageKey, onLabel, offLabel, onVariant, offVariant = 'off', toastMeta, afterChange }) {
+    return () => {
+        S[stateKey] = !S[stateKey];
+        save(storageKey, S[stateKey]);
+        afterChange?.(S[stateKey]);
+        uiSync();
+        toast(S[stateKey] ? onLabel : offLabel, S[stateKey] ? onVariant : offVariant, toastMeta);
+    };
+}
+
 function bindEvents(panel, fab, statsFab, statsPanel) {
     const on = (id, event, handler, opts) => {
         const el = document.getElementById(id);
@@ -6150,44 +6050,42 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         openSettings: () => setSettingsOpen(true),
     });
 
-    statsFab?.addEventListener('click', () => {
+    const clickStatsFab = () => {
         if (!StatsTracker.isPanelEnabled() && !statsOpen) return;
         hideTooltip();
         setStatsOpen(!statsPanel?.classList.contains('show'));
-    });
-    fab.addEventListener('click', () => {
+    };
+    const clickFab = () => {
         hideTooltip();
         setOpen(!open);
-    });
-    on('rt_close', 'click', () => setOpen(false));
-    on('rt_stats_close', 'click', () => setStatsOpen(false));
+    };
+    statsFab?.addEventListener('click', clickStatsFab);
+    fab.addEventListener('click', clickFab);
 
-    on('rt_dl_v', 'click', async e => {
-        try {
-            await downloadViaPublicApisOrFallback(getVideoId(), 'video', e.currentTarget);
-        } catch (err) {
-            console.warn('[RainTube] Video download handler failed:', err);
-            toast('Video download failed', 'warn');
-        }
-    });
-    on('rt_dl_a', 'click', async e => {
-        try {
-            await downloadViaPublicApisOrFallback(getVideoId(), 'audio', e.currentTarget);
-        } catch (err) {
-            console.warn('[RainTube] Audio download handler failed:', err);
-            toast('Audio download failed', 'warn');
-        }
-    });
-
-    on('rt_dl_stop', 'click', requestStopAfterCurrentRequest);
-
-    on('rt_settings_open', 'click', e => {
+    const openSettings = e => {
         e.stopPropagation();
         setSettingsOpen(true);
-    });
-    on('rt_settings_close', 'click', () => setSettingsOpen(false));
-    on('rt_settings_done', 'click', () => setSettingsOpen(false));
-    on('rt_settings_backdrop', 'click', () => setSettingsOpen(false));
+    };
+    const closeSettings = () => setSettingsOpen(false);
+    const downloads = {
+        rt_dl_v: ['video', 'Video download failed'],
+        rt_dl_a: ['audio', 'Audio download failed'],
+    };
+    for (const [id, [mode, message]] of Object.entries(downloads)) {
+        on(id, 'click', safeAction(`${mode} download handler`, e =>
+            downloadViaPublicApisOrFallback(getVideoId(), mode, e.currentTarget), message));
+    }
+
+    [
+        ['rt_close', () => setOpen(false)],
+        ['rt_stats_close', () => setStatsOpen(false)],
+        ['rt_dl_stop', requestStopAfterCurrentRequest],
+        ['rt_settings_open', openSettings],
+        ['rt_settings_close', closeSettings],
+        ['rt_settings_done', closeSettings],
+        ['rt_settings_backdrop', closeSettings],
+    ].forEach(([id, handler]) => on(id, 'click', handler));
+
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape') return;
         if (isSettingsOpen()) {
@@ -6202,54 +6100,42 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         }
     });
 
-    on('rt_sw_shorts', 'click', () => {
-        S.shortsBlockerEnabled = !S.shortsBlockerEnabled;
-        save(CFG.storage.shortsBlocker, S.shortsBlockerEnabled);
-        ShortsBlocker.apply();
-        uiSync();
-        toast(S.shortsBlockerEnabled ? 'Shorts hidden' : 'Shorts shown',
-            S.shortsBlockerEnabled ? 'shorts' : 'off',
-            { icon: 'shorts', label: 'Shorts' });
-    });
+    [
+        ['rt_sw_shorts', {
+            stateKey: 'shortsBlockerEnabled',
+            storageKey: CFG.storage.shortsBlocker,
+            onLabel: 'Shorts hidden',
+            offLabel: 'Shorts shown',
+            onVariant: 'shorts',
+            toastMeta: { icon: 'shorts', label: 'Shorts' },
+            afterChange: () => ShortsBlocker.apply(),
+        }],
+        ['rt_sw_q', {
+            stateKey: 'qualityEnabled',
+            storageKey: CFG.storage.quality,
+            onLabel: 'Quality targeting on',
+            offLabel: 'Quality targeting off',
+            onVariant: 'quality',
+            toastMeta: { icon: 'quality', label: 'Quality' },
+            afterChange: enabled => restartQualityTargeting({ enabled }),
+        }],
+        ['rt_sw_private', {
+            stateKey: 'privateDownloadsEnabled',
+            storageKey: CFG.storage.privateDownloads,
+            onLabel: 'Private downloads on',
+            offLabel: 'Private downloads off',
+            onVariant: 'dl',
+            toastMeta: { icon: 'private', label: 'Download' },
+        }],
+    ].forEach(([id, config]) => on(id, 'click', toggleStoredSetting(config)));
 
-    on('rt_sw_q', 'click', () => {
-        S.qualityEnabled = !S.qualityEnabled;
-        save(CFG.storage.quality, S.qualityEnabled);
-        if (S.qualityEnabled) {
-            clearQualityMemos();
-            scheduleQualityApply();
-        } else {
-            clearQualitySchedule();
-            clearQualityMemos();
-        }
-        uiSync();
-        toast(S.qualityEnabled ? 'Quality targeting on' : 'Quality targeting off',
-            S.qualityEnabled ? 'quality' : 'off',
-            { icon: 'quality', label: 'Quality' });
-    });
-
-    on('rt_sw_private', 'click', () => {
-        S.privateDownloadsEnabled = !S.privateDownloadsEnabled;
-        save(CFG.storage.privateDownloads, S.privateDownloadsEnabled);
-        uiSync();
-        toast(S.privateDownloadsEnabled ? 'Private downloads on' : 'Private downloads off',
-            S.privateDownloadsEnabled ? 'dl' : 'off',
-            { icon: 'private', label: 'Download' });
-    });
-
-    on('rt_sw_stats', 'click', async () => {
+    on('rt_sw_stats', 'click', safeAction('Statistics toggle', async () => {
         const enabled = StatsTracker.getEnabled();
-        try {
-            await StatsTracker.setEnabled(!enabled);
-            uiSync();
-            toast(enabled ? 'Statistics tracking paused' : 'Statistics tracking on',
-                enabled ? 'off' : 'stats',
-                { icon: 'chart', label: STATS_TITLE });
-        } catch (err) {
-            console.warn('[RainTube] Statistics toggle failed:', err);
-            toast('Statistics toggle failed', 'warn');
-        }
-    });
+        await StatsTracker.setEnabled(!enabled);
+        uiSync();
+        toast(enabled ? 'Statistics tracking paused' : 'Statistics tracking on',
+            enabled ? 'off' : 'stats', { icon: 'chart', label: STATS_TITLE });
+    }, 'Statistics toggle failed'));
 }
 
 /* ── Runtime controllers ────────────────────────────────────────────────── */
@@ -6325,8 +6211,8 @@ const ShortsBlocker = (() => {
         if (document.getElementById(STYLE_ID)) return;
         const blocks = SURFACES.map(surface => {
             const rules = surface.selectors
-                .map(s => `body.${surface.bodyClass} ${s}`)
-                .join(',\n');
+            .map(s => `body.${surface.bodyClass} ${s}`)
+            .join(',\n');
             return `${rules} { display: none !important; }`;
         });
         const style = document.createElement('style');
@@ -6394,10 +6280,10 @@ const ShortsBlocker = (() => {
                 }
                 if (total) bumpCounter(total);
             });
-            observer.observe(document.documentElement, {
-                childList: true,
-                subtree: true,
-            });
+                observer.observe(document.documentElement, {
+                    childList: true,
+                    subtree: true,
+                });
         }
 
     }
@@ -6444,8 +6330,8 @@ const TopbarTheme = (() => {
 
     function findMasthead() {
         return document.querySelector('ytd-masthead')
-            || document.getElementById('masthead')
-            || document.getElementById('masthead-container');
+        || document.getElementById('masthead')
+        || document.getElementById('masthead-container');
     }
 
     function topbarTargetKind(el) {
@@ -6466,7 +6352,9 @@ const TopbarTheme = (() => {
             nextHost.insertBefore(el, nextHost.firstChild || null);
         }
         if (el.dataset.rtRainBound !== 'true') {
-            initHeaderRain(el, nextHost, {
+            createRainCanvas({
+                canvas: el,
+                host: nextHost,
                 targetSelector: TARGET_SELECTOR,
                 targetKind: topbarTargetKind,
                 maxDrops: 280,
@@ -6557,18 +6445,18 @@ const ChromeRuntime = (() => {
         if (force || isPanelOpen() || isSettingsOpen() || S.downloading) uiSync();
     };
 
-    const install = nextFab => {
-        fab = nextFab || fab;
-        if (!timer) {
-            timer = setInterval(() => run(false), 5000);
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) run(true);
-            }, { passive: true });
-        }
-        run(true);
-    };
+        const install = nextFab => {
+            fab = nextFab || fab;
+            if (!timer) {
+                timer = setInterval(() => run(false), 5000);
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) run(true);
+                }, { passive: true });
+            }
+            run(true);
+        };
 
-    return Object.freeze({ install, run });
+        return Object.freeze({ install, run });
 })();
 
 /* ── Navigation ─────────────────────────────────────────────────────────── */
