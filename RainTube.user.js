@@ -2,7 +2,7 @@
 // @name               RainTube — Customization, Shorts, Statistics, Quality & Private Downloads
 // @description        Privacy-first YouTube helper: OLED pure-black theme, Shorts blocking, local usage statistics, automatic quality targeting, and Piped/Invidious proxied downloads.
 // @namespace          https://github.com/RyanIsAinmDom/RainTube
-// @version            1.20.257
+// @version            1.20.294
 // @author             RyanIsAinmDom — Created by hand with robust AI assistance
 // @license            MIT
 // @updateURL          https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.user.js
@@ -32,7 +32,7 @@
 // @resource           rtFontMonoLatin https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono:vf@5.2.8/latin-wght-normal.woff2
 
 // Keep @version, CFG.version, and this rt= cache-bust in sync.
-// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.257
+// @resource           rtYouTubeCss https://raw.githubusercontent.com/RyanIsAinmDom/RainTube/refs/heads/main/RainTube.youtube.css?rt=1.20.294
 
 // Core support APIs.
 // @connect            raw.githubusercontent.com
@@ -72,7 +72,7 @@ const IS_YOUTUBE = /(^|\.)youtube\.com$/.test(HOST);
 const IS_CNVMP3 = HOST === 'cnvmp3.com' || HOST.endsWith('.cnvmp3.com');
 
 const CFG = Object.freeze({
-    version: '1.20.257',
+    version: '1.20.294',
     instances: {
         mdUrl: 'https://raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md',
         invidiousJsonUrl: 'https://api.invidious.io/instances.json',
@@ -107,21 +107,21 @@ const CFG = Object.freeze({
         qualityMax: 'rt_quality_max',
         qualitySuperResolution: 'rt_quality_super_resolution_enabled',
         privateDownloads: 'rt_private_downloads_enabled',
-        privateFallback: 'rt_private_fallback_enabled',
-        privateProvider: 'rt_private_provider',
-        privateDownloadTimeoutMs: 'rt_private_download_timeout_ms',
-        statsEnabled: 'rt_stats_enabled',
-        statsDisplay: 'rt_stats_display',
-        statsMetrics: 'rt_stats_metrics',
-        statsBuckets: 'rt_stats_buckets',
-        buttonPlacement: 'rt_button_placement',
-        mainButtonVisible: 'rt_main_button_visible',
-        settingsButtonVisible: 'rt_settings_button_visible',
-        toastDurationMs: 'rt_toast_duration_ms',
-        toastPlacement: 'rt_toast_placement',
-        rainQuantity: 'rt_rain_quantity',
-        rainFpsCap: 'rt_rain_fps_cap',
-        lightning: 'rt_lightning_enabled',
+            privateFallback: 'rt_private_fallback_enabled',
+                privateProvider: 'rt_private_provider',
+                    privateDownloadTimeoutMs: 'rt_private_download_timeout_ms',
+                        statsEnabled: 'rt_stats_enabled',
+                        statsDisplay: 'rt_stats_display',
+                        statsMetrics: 'rt_stats_metrics',
+                        statsBuckets: 'rt_stats_buckets',
+                        buttonPlacement: 'rt_button_placement',
+                        mainButtonVisible: 'rt_main_button_visible',
+                        settingsButtonVisible: 'rt_settings_button_visible',
+                        toastDurationMs: 'rt_toast_duration_ms',
+                        toastPlacement: 'rt_toast_placement',
+                        rainQuantity: 'rt_rain_quantity',
+                        rainFpsCap: 'rt_rain_fps_cap',
+                        lightning: 'rt_lightning_enabled',
     },
 });
 
@@ -165,16 +165,16 @@ async function deleteRainTubeStorageExcept(keptKeys = []) {
     const keep = new Set(keptKeys);
     const keys = await listStoredValues();
     await Promise.all(keys
-        .filter(key => key.startsWith('rt_') && !keep.has(key))
-        .map(deleteStoredValue));
+    .filter(key => key.startsWith('rt_') && !keep.has(key))
+    .map(deleteStoredValue));
 }
 
 async function cleanupDeprecatedStorageKeys() {
     const valid = new Set(Object.values(CFG.storage));
     const keys = await listStoredValues();
     await Promise.all(keys
-        .filter(key => key.startsWith('rt_') && !valid.has(key))
-        .map(deleteStoredValue));
+    .filter(key => key.startsWith('rt_') && !valid.has(key))
+    .map(deleteStoredValue));
 }
 
 const QUALITY_LABEL = Object.freeze({
@@ -315,17 +315,17 @@ const DEFAULT_SETTINGS = Object.freeze({
     qualityMax: 'hd1080',
     qualitySuperResolutionEnabled: false,
     privateDownloadsEnabled: true,
-    privateFallbackEnabled: true,
-    privateProvider: 'both',
-    privateDownloadTimeoutMs: CFG.api.downloadTimeout,
-    buttonPlacement: BUTTON_PLACEMENT_DEFAULT,
-    mainButtonVisible: true,
-    settingsButtonVisible: true,
-    toastDurationMs: TOAST_DURATION_DEFAULT_MS,
-    toastPlacement: TOAST_PLACEMENT_DEFAULT,
-    rainQuantity: 'ultra',
-    rainFpsCap: RAIN_FPS_DEFAULT,
-    lightningEnabled: true,
+        privateFallbackEnabled: true,
+            privateProvider: 'both',
+                privateDownloadTimeoutMs: CFG.api.downloadTimeout,
+                    buttonPlacement: BUTTON_PLACEMENT_DEFAULT,
+                    mainButtonVisible: true,
+                    settingsButtonVisible: true,
+                    toastDurationMs: TOAST_DURATION_DEFAULT_MS,
+                    toastPlacement: TOAST_PLACEMENT_DEFAULT,
+                    rainQuantity: 'ultra',
+                    rainFpsCap: RAIN_FPS_DEFAULT,
+                    lightningEnabled: true,
 });
 
 function readShortsOnVisit(value) {
@@ -376,7 +376,7 @@ const STATS_DISPLAY_LABEL = Object.freeze({
 
 const STATS_METRICS_ORDER = [
     'favoriteChannel', 'watchTime', 'videosWatched', 'shortsOpened',
-    'shortsBlocked',
+'shortsBlocked',
 ];
 const STATS_METRIC_INFO = Object.freeze({
     watchTime: { label: 'Watch time', icon: 'clock' },
@@ -545,29 +545,29 @@ async function loadRuntimeState() {
         lightningEnabled,
     ] = await Promise.all([
         readStoredValue(CFG.storage.qualityMax, DEFAULT_SETTINGS.qualityMax),
-        readStoredValue(CFG.storage.toastDurationMs, DEFAULT_SETTINGS.toastDurationMs),
-        readStoredValue(CFG.storage.toastPlacement, null),
-        readStoredValue(CFG.storage.rainQuantity, DEFAULT_SETTINGS.rainQuantity),
-        readStoredValue(CFG.storage.rainFpsCap, DEFAULT_SETTINGS.rainFpsCap),
-        readStoredValue(CFG.storage.shortsBlocker, DEFAULT_SETTINGS.shortsBlockerEnabled),
-        readStoredValue(CFG.storage.shortsOnVisit, DEFAULT_SETTINGS.shortsOnVisit),
-        readStoredValue(CFG.storage.shortsHideSidebar, DEFAULT_SETTINGS.shortsHideSidebar),
-        readStoredValue(CFG.storage.shortsHideHome, DEFAULT_SETTINGS.shortsHideHome),
-        readStoredValue(CFG.storage.shortsHideSearch, DEFAULT_SETTINGS.shortsHideSearch),
-        readStoredValue(CFG.storage.shortsHideChannel, DEFAULT_SETTINGS.shortsHideChannel),
-        readStoredValue(CFG.storage.shortsHideWatch, DEFAULT_SETTINGS.shortsHideWatch),
-        readStoredValue(CFG.storage.oledTheme, DEFAULT_SETTINGS.oledThemeEnabled),
-        readStoredValue(CFG.storage.topbarTheme, DEFAULT_SETTINGS.topbarThemeEnabled),
-        readStoredValue(CFG.storage.quality, DEFAULT_SETTINGS.qualityEnabled),
-        readStoredValue(CFG.storage.qualitySuperResolution, DEFAULT_SETTINGS.qualitySuperResolutionEnabled),
-        readStoredValue(CFG.storage.privateDownloads, DEFAULT_SETTINGS.privateDownloadsEnabled),
-        readStoredValue(CFG.storage.privateFallback, DEFAULT_SETTINGS.privateFallbackEnabled),
-        readStoredValue(CFG.storage.privateProvider, DEFAULT_SETTINGS.privateProvider),
-        readStoredValue(CFG.storage.privateDownloadTimeoutMs, DEFAULT_SETTINGS.privateDownloadTimeoutMs),
-        readStoredValue(CFG.storage.buttonPlacement, DEFAULT_SETTINGS.buttonPlacement),
-        readStoredValue(CFG.storage.mainButtonVisible, null),
-        readStoredValue(CFG.storage.settingsButtonVisible, null),
-        readStoredValue(CFG.storage.lightning, DEFAULT_SETTINGS.lightningEnabled),
+                          readStoredValue(CFG.storage.toastDurationMs, DEFAULT_SETTINGS.toastDurationMs),
+                          readStoredValue(CFG.storage.toastPlacement, null),
+                          readStoredValue(CFG.storage.rainQuantity, DEFAULT_SETTINGS.rainQuantity),
+                          readStoredValue(CFG.storage.rainFpsCap, DEFAULT_SETTINGS.rainFpsCap),
+                          readStoredValue(CFG.storage.shortsBlocker, DEFAULT_SETTINGS.shortsBlockerEnabled),
+                          readStoredValue(CFG.storage.shortsOnVisit, DEFAULT_SETTINGS.shortsOnVisit),
+                          readStoredValue(CFG.storage.shortsHideSidebar, DEFAULT_SETTINGS.shortsHideSidebar),
+                          readStoredValue(CFG.storage.shortsHideHome, DEFAULT_SETTINGS.shortsHideHome),
+                          readStoredValue(CFG.storage.shortsHideSearch, DEFAULT_SETTINGS.shortsHideSearch),
+                          readStoredValue(CFG.storage.shortsHideChannel, DEFAULT_SETTINGS.shortsHideChannel),
+                          readStoredValue(CFG.storage.shortsHideWatch, DEFAULT_SETTINGS.shortsHideWatch),
+                          readStoredValue(CFG.storage.oledTheme, DEFAULT_SETTINGS.oledThemeEnabled),
+                          readStoredValue(CFG.storage.topbarTheme, DEFAULT_SETTINGS.topbarThemeEnabled),
+                          readStoredValue(CFG.storage.quality, DEFAULT_SETTINGS.qualityEnabled),
+                          readStoredValue(CFG.storage.qualitySuperResolution, DEFAULT_SETTINGS.qualitySuperResolutionEnabled),
+                          readStoredValue(CFG.storage.privateDownloads, DEFAULT_SETTINGS.privateDownloadsEnabled),
+                          readStoredValue(CFG.storage.privateFallback, DEFAULT_SETTINGS.privateFallbackEnabled),
+                          readStoredValue(CFG.storage.privateProvider, DEFAULT_SETTINGS.privateProvider),
+                          readStoredValue(CFG.storage.privateDownloadTimeoutMs, DEFAULT_SETTINGS.privateDownloadTimeoutMs),
+                          readStoredValue(CFG.storage.buttonPlacement, DEFAULT_SETTINGS.buttonPlacement),
+                          readStoredValue(CFG.storage.mainButtonVisible, null),
+                          readStoredValue(CFG.storage.settingsButtonVisible, null),
+                          readStoredValue(CFG.storage.lightning, DEFAULT_SETTINGS.lightningEnabled),
     ]);
 
     const oldPlacementWasHidden = rawButtonPlacement === 'hide' || rawButtonPlacement === false;
@@ -585,34 +585,34 @@ async function loadRuntimeState() {
         qualityEnabled,
         qualityMax: readEnumSetting(rawQualityMax, QUALITY_ORDER, 'hd1080'),
         qualitySuperResolutionEnabled: typeof qualitySuperResolutionEnabled === 'boolean'
-            ? qualitySuperResolutionEnabled : DEFAULT_SETTINGS.qualitySuperResolutionEnabled,
+        ? qualitySuperResolutionEnabled : DEFAULT_SETTINGS.qualitySuperResolutionEnabled,
         privateDownloadsEnabled,
         privateFallbackEnabled,
         privateProvider: readPrivateProvider(rawPrivateProvider),
-        privateDownloadTimeoutMs: readPrivateDownloadTimeoutMs(rawPrivateDownloadTimeoutMs),
-        toastDurationMs: Math.max(
-            TOAST_DURATION_MIN_MS,
-            Math.min(TOAST_DURATION_MAX_MS, parseInt(rawToastDurationMs, 10) || TOAST_DURATION_DEFAULT_MS)
-        ),
-        toastPlacement: readToastPlacementSetting(rawToastPlacement),
-        buttonPlacement: readButtonPlacement(rawButtonPlacement),
-        mainButtonVisible: readButtonVisible(rawMainButtonVisible, !oldPlacementWasHidden),
-        settingsButtonVisible: readButtonVisible(rawSettingsButtonVisible, true),
-        rainQuantity: readRainQuantitySetting(rawRainQuantity),
-        rainFpsCap: readRainFpsCap(rawRainFpsCap),
-        lightningEnabled,
+            privateDownloadTimeoutMs: readPrivateDownloadTimeoutMs(rawPrivateDownloadTimeoutMs),
+                toastDurationMs: Math.max(
+                    TOAST_DURATION_MIN_MS,
+                    Math.min(TOAST_DURATION_MAX_MS, parseInt(rawToastDurationMs, 10) || TOAST_DURATION_DEFAULT_MS)
+                ),
+                toastPlacement: readToastPlacementSetting(rawToastPlacement),
+                buttonPlacement: readButtonPlacement(rawButtonPlacement),
+                mainButtonVisible: readButtonVisible(rawMainButtonVisible, !oldPlacementWasHidden),
+                settingsButtonVisible: readButtonVisible(rawSettingsButtonVisible, true),
+                rainQuantity: readRainQuantitySetting(rawRainQuantity),
+                rainFpsCap: readRainFpsCap(rawRainFpsCap),
+                lightningEnabled,
 
-        videoId: null,
-        downloading: false,
-        privateCancelRequested: false,
-        _lastQualityTargetKey: null,
-        _lastKnownQuality: null,
-        _fab: null,
-        _statsFab: null,
-        _settingsFab: null,
-        _player: null,
-        _video: null,
-        _tooltip: null,
+                videoId: null,
+                downloading: false,
+                privateCancelRequested: false,
+                    _lastQualityTargetKey: null,
+                    _lastKnownQuality: null,
+                    _fab: null,
+                    _statsFab: null,
+                    _settingsFab: null,
+                    _player: null,
+                    _video: null,
+                    _tooltip: null,
     };
 }
 
@@ -732,7 +732,7 @@ async function injectRainTubeStyles() {
     // browser loads natively.)
     const [fontCss, youtubeCss] = await Promise.all([
         buildRainTubeFontCss(),
-        readResourceCss('rtYouTubeCss'),
+                                                    readResourceCss('rtYouTubeCss'),
     ]);
 
     const style = document.createElement('style');
@@ -780,20 +780,20 @@ function getVideoId(url = location.href) {
 
 const TITLE_SEL = [
     'ytd-watch-metadata h1 yt-formatted-string',
-    '#title h1 yt-formatted-string',
-    'h2 span.yt-core-attributed-string[role="text"]',
-    '.title.ytd-video-primary-info-renderer',
+'#title h1 yt-formatted-string',
+'h2 span.yt-core-attributed-string[role="text"]',
+'.title.ytd-video-primary-info-renderer',
 ];
 
 const AUTHOR_SEL = [
     'ytd-watch-metadata #owner ytd-channel-name #text a',
-    'ytd-watch-metadata #owner ytd-channel-name yt-formatted-string',
-    '#owner ytd-channel-name #text a',
-    '#owner #channel-name #text a',
-    'ytd-video-owner-renderer ytd-channel-name a',
-    'ytd-reel-video-renderer[is-active] h2 a',
-    'ytd-reel-video-renderer[is-active] #channel-name',
-    'meta[itemprop="author"][content]',
+'ytd-watch-metadata #owner ytd-channel-name yt-formatted-string',
+'#owner ytd-channel-name #text a',
+'#owner #channel-name #text a',
+'ytd-video-owner-renderer ytd-channel-name a',
+'ytd-reel-video-renderer[is-active] h2 a',
+'ytd-reel-video-renderer[is-active] #channel-name',
+'meta[itemprop="author"][content]',
 ];
 
 function getVideoTitle() {
@@ -839,9 +839,9 @@ function qualitySelectionStillWanted(level) {
 
 function playerDomRoot() {
     return document.querySelector('#movie_player.html5-video-player')
-        || document.getElementById('movie_player')
-        || document.querySelector('.html5-video-player')
-        || document;
+    || document.getElementById('movie_player')
+    || document.querySelector('.html5-video-player')
+    || document;
 }
 
 function playerQuery(root, selector) {
@@ -917,7 +917,7 @@ function wakePlayerControls(root = playerDomRoot()) {
             composed: true,
             view: window,
             clientX: rect.left + Math.max(1, rect.width / 2),
-            clientY: rect.top + Math.max(1, rect.height / 2),
+                                          clientY: rect.top + Math.max(1, rect.height / 2),
         }));
     } catch {}
 }
@@ -929,7 +929,7 @@ function getQualitySettingsButton(root = playerDomRoot()) {
 
 function isSettingsMenuOpen(button) {
     return button?.getAttribute?.('aria-expanded') === 'true'
-        || button?.ariaExpanded === 'true';
+    || button?.ariaExpanded === 'true';
 }
 
 function getActiveSettingsPanel(root = playerDomRoot()) {
@@ -939,7 +939,7 @@ function getActiveSettingsPanel(root = playerDomRoot()) {
 function menuItemsFromPanel(panel) {
     if (!panel) return [];
     const direct = Array.from(panel.children || [])
-        .filter(el => el.matches?.(YT_MENUITEM_SELECTOR));
+    .filter(el => el.matches?.(YT_MENUITEM_SELECTOR));
     return direct.length ? direct : playerQueryAll(panel, YT_MENUITEM_SELECTOR);
 }
 
@@ -974,11 +974,11 @@ function parseQualityMenuOption(item) {
     const hasPremiumBadgeClass = !!item.querySelector('.ytp-premium-label');
     const textSaysPremium = QUALITY_PREMIUM_RE.test(fullText);
     const isSuperResolution = QUALITY_SUPER_RESOLUTION_RE.test(fullText)
-        || (hasPremiumBadgeClass && !textSaysPremium);
+    || (hasPremiumBadgeClass && !textSaysPremium);
     const isPremium = !isSuperResolution && (hasPremiumBadgeClass || textSaysPremium);
     const disabled = item.matches('[disabled], [aria-disabled="true"]')
-        || item.classList.contains('ytp-disabled')
-        || item.getAttribute('aria-hidden') === 'true';
+    || item.classList.contains('ytp-disabled')
+    || item.getAttribute('aria-hidden') === 'true';
     const level = QUALITY_LEVEL_BY_HEIGHT[height] || null;
     const variant = isPremium ? 'Premium' : (isSuperResolution ? 'Super resolution' : '');
     const compactVariant = isPremium ? 'Premium' : (isSuperResolution ? 'SR' : '');
@@ -998,8 +998,8 @@ function parseQualityMenuOption(item) {
 
 function collectQualityMenuOptions(root = playerDomRoot()) {
     return playerQueryAll(root, YT_SETTINGS_MENUITEM_SELECTOR)
-        .map(parseQualityMenuOption)
-        .filter(Boolean);
+    .map(parseQualityMenuOption)
+    .filter(Boolean);
 }
 
 function setKnownQuality(choice, videoId = getVideoId()) {
@@ -1096,17 +1096,17 @@ function applyBestQuality({ silent = false } = {}) {
 
     qualityRescheduleRequested = false;
     qualityApplyInFlight = applyBestQualityFromMenu({ silent })
-        .catch(err => {
-            console.warn('[RainTube] Quality selection failed:', err);
-            return null;
-        })
-        .finally(() => {
-            qualityApplyInFlight = null;
-            if (qualityRescheduleRequested) {
-                qualityRescheduleRequested = false;
-                scheduleQualityApply();
-            }
-        });
+    .catch(err => {
+        console.warn('[RainTube] Quality selection failed:', err);
+        return null;
+    })
+    .finally(() => {
+        qualityApplyInFlight = null;
+        if (qualityRescheduleRequested) {
+            qualityRescheduleRequested = false;
+            scheduleQualityApply();
+        }
+    });
 
     return qualityApplyInFlight;
 }
@@ -1122,8 +1122,8 @@ async function applyBestQualityFromMenu({ silent = false } = {}) {
     } else if (!['settings-menu-already-open', 'quality-no-longer-current'].includes(result?.reason)) {
         console.debug('[RainTube] Quality targeting skipped:', {
             videoId: S.videoId || getVideoId() || null,
-            target,
-            result,
+                      target,
+                      result,
         });
     }
     return result;
@@ -1155,7 +1155,7 @@ const SAFE_NAME_RE = /[\\/:*?"<>|\x00-\x1f]/g;
 
 function sanitizeFilename(s) {
     return (s || 'download').replace(SAFE_NAME_RE, '_')
-        .replace(/\s+/g, ' ').trim().slice(0, 140) || 'download';
+    .replace(/\s+/g, ' ').trim().slice(0, 140) || 'download';
 }
 
 function parseJsonMaybe(value) {
@@ -1167,8 +1167,8 @@ function parseJsonMaybe(value) {
 
 function normalizeBaseUrl(raw) {
     const clean = String(raw || '').trim()
-        .replace(/[),.;\]>"'`]+$/g, '')
-        .replace(/\/+$/g, '');
+    .replace(/[),.;\]>"'`]+$/g, '')
+    .replace(/\/+$/g, '');
     if (!clean) return null;
     try {
         const u = new URL(clean);
@@ -1216,8 +1216,8 @@ function resolveMediaUrl(instance, url) {
     try {
         const raw = String(url).trim();
         const href = raw.startsWith('//')
-            ? `https:${raw}`
-            : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
+        ? `https:${raw}`
+        : (/^https?:\/\//i.test(raw) ? raw : new URL(raw, instance).href);
         const parsed = new URL(href);
         return parsed.protocol === 'https:' ? parsed.href : null;
     } catch {
@@ -1241,7 +1241,7 @@ function isProbablyHls(url, stream) {
     const f = String(stream?.format || stream?.container || '').toLowerCase();
     const m = String(stream?.mimeType || stream?.type || '').toLowerCase();
     return u.includes('.m3u8') || f.includes('hls')
-        || m.includes('mpegurl') || m.includes('x-mpegurl');
+    || m.includes('mpegurl') || m.includes('x-mpegurl');
 }
 
 function isOriginalAudioTrack(stream) {
@@ -1270,15 +1270,15 @@ function extFromMimeOrFormat(stream, mode) {
 
 function streamAudioScore(stream) {
     return parseInt(stream?.bitrate, 10)
-        || parseInt(stream?.quality, 10)
-        || parseInt(stream?.audioQuality, 10)
-        || 0;
+    || parseInt(stream?.quality, 10)
+    || parseInt(stream?.audioQuality, 10)
+    || 0;
 }
 
 function streamVideoScore(stream) {
     return parseInt(stream?.height, 10)
-        || parseHeight(stream?.qualityLabel || stream?.quality
-            || stream?.resolution || '');
+    || parseHeight(stream?.qualityLabel || stream?.quality
+    || stream?.resolution || '');
 }
 
 function isUsablePrivateStream(stream, mode) {
@@ -1308,8 +1308,8 @@ function describeStreamQuality(stream, mode) {
 function isBotOrLoginFailure(text) {
     const s = String(text || '').toLowerCase();
     return s.includes('login_required') || s.includes('sign in to confirm')
-        || s.includes('not a bot') || s.includes('po token') || s.includes('potoken')
-        || s.includes('companion is starting') || s.includes('youtube probably temporarily blocked');
+    || s.includes('not a bot') || s.includes('po token') || s.includes('potoken')
+    || s.includes('companion is starting') || s.includes('youtube probably temporarily blocked');
 }
 
 function formatBytes(n) {
@@ -1348,7 +1348,7 @@ const PRIVATE_PROVIDER_INFO = Object.freeze({
         headers: PIPED_HEADERS,
         loadInstances: getPipedInstances,
         streamUrl: (instance, videoId) => `${instance}/streams/${encodeURIComponent(videoId)}`,
-        normalizeData: data => data,
+                                            normalizeData: data => data,
     },
     invidious: {
         id: 'invidious',
@@ -1368,8 +1368,8 @@ const PRIVATE_PROVIDER_INFO = Object.freeze({
 function selectedPrivateProviders() {
     const choice = readPrivateProvider(S.privateProvider);
     return choice === 'both'
-        ? [PRIVATE_PROVIDER_INFO.piped, PRIVATE_PROVIDER_INFO.invidious]
-        : [PRIVATE_PROVIDER_INFO[choice] || PRIVATE_PROVIDER_INFO.piped];
+    ? [PRIVATE_PROVIDER_INFO.piped, PRIVATE_PROVIDER_INFO.invidious]
+    : [PRIVATE_PROVIDER_INFO[choice] || PRIVATE_PROVIDER_INFO.piped];
 }
 
 function gmRequest({ method = 'GET', url, headers = {}, responseType = 'text', timeout, onprogress }) {
@@ -1392,11 +1392,11 @@ function gmRequest({ method = 'GET', url, headers = {}, responseType = 'text', t
         const fail = reason => (r = {}) => finish({
             ok: false,
             status: Number.isFinite(r.status) ? r.status : null,
-            reason,
-            responseHeaders: String(r.responseHeaders || ''),
-            response: r.response ?? null,
-            responseText: r.responseText || '',
-            finalUrl: r.finalUrl || url,
+                                                  reason,
+                                                  responseHeaders: String(r.responseHeaders || ''),
+                                                  response: r.response ?? null,
+                                                  responseText: r.responseText || '',
+                                                  finalUrl: r.finalUrl || url,
         });
 
         try {
@@ -1412,14 +1412,14 @@ function gmRequest({ method = 'GET', url, headers = {}, responseType = 'text', t
                         ok: status >= 200 && status < 300,
                         status,
                         responseHeaders: String(r.responseHeaders || ''),
-                        response: r.response ?? null,
-                        responseText: r.responseText || '',
-                        finalUrl: r.finalUrl || url,
+                           response: r.response ?? null,
+                           responseText: r.responseText || '',
+                           finalUrl: r.finalUrl || url,
                     });
                 },
                 onerror: fail('network'),
-                ontimeout: fail('timeout'),
-                onabort: fail('abort'),
+                       ontimeout: fail('timeout'),
+                       onabort: fail('abort'),
             };
 
             if (typeof onprogress === 'function') details.onprogress = onprogress;
@@ -1492,7 +1492,7 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
         const raw = parseJsonMaybe(r.response || r.responseText);
         const data = raw ? provider.normalizeData(raw, instance) : null;
         const message = raw?.message || raw?.error || raw?.reason
-            || data?.message || data?.error || data?.reason || null;
+        || data?.message || data?.error || data?.reason || null;
 
         if (r.ok && hasUsableStreams(data, mode)) {
             return {
@@ -1523,8 +1523,8 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
             instance,
             status: r.status,
             reason: data ? 'no-streams' : (r.reason || 'bad-response'),
-            message,
-            killedHost: killHost,
+                               message,
+                               killedHost: killHost,
         };
     });
 
@@ -1534,9 +1534,9 @@ async function raceStreamsRequest(videoId, instances, mode, provider) {
     }
 
     const winners = results
-        .filter(result => result.winner)
-        .map(({ winner, ...entry }) => entry)
-        .sort((a, b) => a.responseMs - b.responseMs);
+    .filter(result => result.winner)
+    .map(({ winner, ...entry }) => entry)
+    .sort((a, b) => a.responseMs - b.responseMs);
     const failed = results.filter(result => !result.winner);
 
     return { ok: winners.length > 0, provider, winners, failed };
@@ -1579,7 +1579,7 @@ function resetProgress(delay = 0) {
         wrap.dataset.state = 'idle';
         fill.style.width = '0%';
         pctEl.textContent = '0%';
-        labelEl.textContent = 'Ready';
+        labelEl.textContent = 'Ready — choose a format to begin';
         metaEl.textContent = '';
     };
     if (delay > 0) setTimeout(run, delay);
@@ -1628,10 +1628,10 @@ function parseResponseHeaders(headers, fallbackSize = 0) {
 
     const contentType = ctMatch ? ctMatch[1].trim().toLowerCase() : '';
     const isMedia = !contentType
-        || contentType.startsWith('video/')
-        || contentType.startsWith('audio/')
-        || contentType === 'application/octet-stream'
-        || contentType === 'binary/octet-stream';
+    || contentType.startsWith('video/')
+    || contentType.startsWith('audio/')
+    || contentType === 'application/octet-stream'
+    || contentType === 'binary/octet-stream';
 
     return { total, contentType, isMedia };
 }
@@ -1709,32 +1709,32 @@ async function downloadUrlWithProgress(url, filename, btn, sourceLabel) {
             headers: { Range: 'bytes=0-' },
             responseType: 'blob',
             timeout: readPrivateDownloadTimeoutMs(S.privateDownloadTimeoutMs),
-            onprogress(e) {
-                const now = performance.now();
-                const loaded = Number(e.loaded || 0);
-                const total = Number(e.total || 0);
-                const deltaBytes = Math.max(0, loaded - lastLoaded);
-                const deltaSec = Math.max(0.001, (now - lastAt) / 1000);
-                const instantRate = deltaBytes / deltaSec;
-                const elapsedSec = Math.max(0.001, (now - startedAt) / 1000);
-                const avgRate = loaded / elapsedSec;
+                                         onprogress(e) {
+                                             const now = performance.now();
+                                             const loaded = Number(e.loaded || 0);
+                                             const total = Number(e.total || 0);
+                                             const deltaBytes = Math.max(0, loaded - lastLoaded);
+                                             const deltaSec = Math.max(0.001, (now - lastAt) / 1000);
+                                             const instantRate = deltaBytes / deltaSec;
+                                             const elapsedSec = Math.max(0.001, (now - startedAt) / 1000);
+                                             const avgRate = loaded / elapsedSec;
 
-                lastLoaded = loaded;
-                lastAt = now;
-                lastRate = instantRate || avgRate;
-                bestRate = Math.max(bestRate, avgRate, instantRate);
+                                             lastLoaded = loaded;
+                                             lastAt = now;
+                                             lastRate = instantRate || avgRate;
+                                             bestRate = Math.max(bestRate, avgRate, instantRate);
 
-                const lengthComputable = !!e.lengthComputable && total > 0;
-                const pct = lengthComputable ? (loaded / total) * 100 : NaN;
-                const label = lengthComputable
-                    ? `${formatBytes(loaded)} / ${formatBytes(total)} · ${formatSpeed(lastRate)}`
-                    : `${formatBytes(loaded)} · ${formatSpeed(lastRate)}`;
-                setBtnProgress(btn, pct, label);
+                                             const lengthComputable = !!e.lengthComputable && total > 0;
+                                             const pct = lengthComputable ? (loaded / total) * 100 : NaN;
+                                             const label = lengthComputable
+                                             ? `${formatBytes(loaded)} / ${formatBytes(total)} · ${formatSpeed(lastRate)}`
+                                             : `${formatBytes(loaded)} · ${formatSpeed(lastRate)}`;
+                                             setBtnProgress(btn, pct, label);
 
-                if (S.privateCancelRequested) {
-                    setProgress(pct, 'Stopping after current request…', label, 'active');
-                }
-            },
+                                             if (S.privateCancelRequested) {
+                                                 setProgress(pct, 'Stopping after current request…', label, 'active');
+                                             }
+                                         },
         });
 
         if (isPrivateCancelled()) {
@@ -1794,7 +1794,7 @@ function isValidYouTubeUrlForFallback(value) {
         const u = new URL(s);
         const host = u.hostname.toLowerCase();
         return host === 'youtu.be' || host.endsWith('.youtu.be')
-            || host === 'youtube.com' || host.endsWith('.youtube.com');
+        || host === 'youtube.com' || host.endsWith('.youtube.com');
     } catch { return false; }
 }
 
@@ -1803,13 +1803,13 @@ function isVisible(el) {
     const rect = el.getBoundingClientRect();
     const style = getComputedStyle(el);
     return rect.width > 0 && rect.height > 0
-        && style.visibility !== 'hidden' && style.display !== 'none'
-        && Number(style.opacity || 1) !== 0;
+    && style.visibility !== 'hidden' && style.display !== 'none'
+    && Number(style.opacity || 1) !== 0;
 }
 
 function setNativeValue(el, value) {
     const proto = el instanceof HTMLTextAreaElement
-        ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
     el.focus();
     if (setter) {
@@ -1830,11 +1830,11 @@ function findCnvMp3UrlField() {
         if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return false;
         const type = String(el.getAttribute('type') || '').toLowerCase();
         return isVisible(el) && !el.disabled && !el.readOnly
-            && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file', 'password'].includes(type);
+        && !['hidden', 'checkbox', 'radio', 'submit', 'button', 'file', 'password'].includes(type);
     });
 
     const hintFor = el => [el.placeholder, el.name, el.id, el.className,
-        el.getAttribute?.('aria-label')].filter(Boolean).join(' ').toLowerCase();
+    el.getAttribute?.('aria-label')].filter(Boolean).join(' ').toLowerCase();
 
     const ytField = candidates.find(el => hintFor(el).includes('youtube'));
     if (ytField) return ytField;
@@ -1860,11 +1860,11 @@ function findClickWrapperForIcon(iconImg) {
         const style = getComputedStyle(node);
         const role = String(node.getAttribute?.('role') || '').toLowerCase();
         const clickable = node.tagName === 'BUTTON'
-            || role === 'button'
-            || node.onclick
-            || node.tabIndex >= 0
-            || node.hasAttribute?.('aria-expanded')
-            || style.cursor === 'pointer';
+        || role === 'button'
+        || node.onclick
+        || node.tabIndex >= 0
+        || node.hasAttribute?.('aria-expanded')
+        || style.cursor === 'pointer';
 
         if (clickable) return node;
     }
@@ -1902,8 +1902,8 @@ function identifyDropdownKind(wrapper) {
 
 function findFormatDropdownTrigger() {
     const icons = Array.from(document.querySelectorAll('img'))
-        .filter(img => /dropdown-icon\.svg/i.test(String(img.src || img.getAttribute('src') || '')))
-        .filter(isVisible);
+    .filter(img => /dropdown-icon\.svg/i.test(String(img.src || img.getAttribute('src') || '')))
+    .filter(isVisible);
 
     for (const icon of icons) {
         const wrapper = findClickWrapperForIcon(icon);
@@ -2155,26 +2155,26 @@ function normalizeInvidiousVideoData(data, instance) {
         ...stream,
         ...extra,
         url: resolveMediaUrl(instance, stream?.url),
-        mimeType: stream?.type || stream?.mimeType,
-        format: stream?.container || stream?.format,
-        height: parseHeight(stream?.height || stream?.qualityLabel || stream?.resolution || stream?.quality),
-        bitrate: parseInt(String(stream?.bitrate || '').replace(/[^\d]/g, ''), 10) || 0,
+                                               mimeType: stream?.type || stream?.mimeType,
+                                               format: stream?.container || stream?.format,
+                                                   height: parseHeight(stream?.height || stream?.qualityLabel || stream?.resolution || stream?.quality),
+                                               bitrate: parseInt(String(stream?.bitrate || '').replace(/[^\d]/g, ''), 10) || 0,
     });
 
     const formatStreams = Array.isArray(data.formatStreams) ? data.formatStreams : [];
     const adaptiveFormats = Array.isArray(data.adaptiveFormats) ? data.adaptiveFormats : [];
     const isAudio = stream => /audio\//i.test(String(stream?.type || stream?.mimeType || ''))
-        || !!stream?.audioQuality || !!stream?.audioSampleRate;
+    || !!stream?.audioQuality || !!stream?.audioSampleRate;
     const isVideo = stream => /video\//i.test(String(stream?.type || stream?.mimeType || ''))
-        || !!stream?.qualityLabel || !!stream?.resolution;
+    || !!stream?.qualityLabel || !!stream?.resolution;
 
     return {
         ...data,
         title: data.title,
         videoStreams: formatStreams.map(stream => mapStream(stream, { videoOnly: false })),
         audioStreams: adaptiveFormats
-            .filter(stream => isAudio(stream) && !isVideo(stream))
-            .map(stream => mapStream(stream, { audioOnly: true })),
+        .filter(stream => isAudio(stream) && !isVideo(stream))
+        .map(stream => mapStream(stream, { audioOnly: true })),
     };
 }
 
@@ -2822,19 +2822,12 @@ function makeRaintubeLogo(size) {
 
 const RT_ICONS = Object.freeze({
     shorts: () => makeSvgIcon([
-        {
-            d: 'M8 3.2 H16 A1.6 1.6 0 0 1 17.6 4.8 V19.2 A1.6 1.6 0 0 1 16 20.8 H8 A1.6 1.6 0 0 1 6.4 19.2 V4.8 A1.6 1.6 0 0 1 8 3.2 Z',
-            strokeWidth: 1.7,
-        },
-        {
-            d: 'M10.6 9 L14.4 12 L10.6 15 Z',
-            fill: 'currentColor',
-            stroke: 'none',
-        },
-        {
-            d: 'M19.5 4.5 L4.5 19.5',
-            strokeWidth: 2.2,
-        },
+        // "Hide" metaphor: an eye crossed out. The strike has a thin knockout
+        // underlay so it reads as sitting cleanly over the eye.
+        { d: 'M3 12 C5 7.5 9 5.5 12 5.5 C15 5.5 19 7.5 21 12 C19 16.5 15 18.5 12 18.5 C9 18.5 5 16.5 3 12 Z', strokeWidth: 1.7 },
+        { d: 'M12 12 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0', strokeWidth: 1.7 },
+        { d: 'M4.5 19.5 L19.5 4.5', stroke: '#0a0d12', strokeWidth: 4 },
+        { d: 'M4.5 19.5 L19.5 4.5', strokeWidth: 2.1 },
     ]),
 
     shortsOpen: () => makeSvgIcon([
@@ -2981,13 +2974,30 @@ const RT_ICONS = Object.freeze({
         // Clean 8-tooth cog (geometry computed: outer r=10, root r=7.6, centred at 12,12).
         {
             d: 'M19.31 9.94 L21.93 10.82 L21.93 13.18 L19.31 14.06 L18.63 15.71 L19.85 18.19 '
-             + 'L18.19 19.85 L15.71 18.63 L14.06 19.31 L13.18 21.93 L10.82 21.93 L9.94 19.31 '
-             + 'L8.29 18.63 L5.81 19.85 L4.15 18.19 L5.37 15.71 L4.69 14.06 L2.07 13.18 '
-             + 'L2.07 10.82 L4.69 9.94 L5.37 8.29 L4.15 5.81 L5.81 4.15 L8.29 5.37 L9.94 4.69 '
-             + 'L10.82 2.07 L13.18 2.07 L14.06 4.69 L15.71 5.37 L18.19 4.15 L19.85 5.81 L18.63 8.29 Z',
+            + 'L18.19 19.85 L15.71 18.63 L14.06 19.31 L13.18 21.93 L10.82 21.93 L9.94 19.31 '
+            + 'L8.29 18.63 L5.81 19.85 L4.15 18.19 L5.37 15.71 L4.69 14.06 L2.07 13.18 '
+            + 'L2.07 10.82 L4.69 9.94 L5.37 8.29 L4.15 5.81 L5.81 4.15 L8.29 5.37 L9.94 4.69 '
+            + 'L10.82 2.07 L13.18 2.07 L14.06 4.69 L15.71 5.37 L18.19 4.15 L19.85 5.81 L18.63 8.29 Z',
             strokeWidth: 1.5,
         },
         { d: 'M12 12 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0', strokeWidth: 1.6 },
+    ]),
+
+    shield: () => makeSvgIcon([
+        { d: 'M12 3.2 L19.5 5.8 V12.4 C19.5 16.2 16.4 19.5 12 20.8 C7.6 19.5 4.5 16.2 4.5 12.4 V5.8 Z', strokeWidth: 1.7 },
+        { d: 'M8.7 11.8 L11 14.1 L15.3 9.4', strokeWidth: 2 },
+    ]),
+
+    shieldOff: () => makeSvgIcon([
+        { d: 'M12 3.2 L19.5 5.8 V12.4 C19.5 16.2 16.4 19.5 12 20.8 C7.6 19.5 4.5 16.2 4.5 12.4 V5.8 Z', strokeWidth: 1.7 },
+        { d: 'M9.5 9 L14.5 14', strokeWidth: 2 },
+        { d: 'M14.5 9 L9.5 14', strokeWidth: 2 },
+    ]),
+
+    download: () => makeSvgIcon([
+        { d: 'M12 4 V14.5', strokeWidth: 1.9 },
+        { d: 'M7.8 10.6 L12 14.8 L16.2 10.6', strokeWidth: 1.9 },
+        { d: 'M5 18.5 H19', strokeWidth: 1.8 },
     ]),
 });
 
@@ -3267,10 +3277,10 @@ const StatsTracker = (() => {
         const cleanRange = readStatsRange(range);
         const prefix = rangeKeyPrefix(cleanRange);
         const keys = cleanRange === 'alltime'
-            ? Object.keys(state.buckets)
-            : cleanRange === 'daily'
-                ? (state.buckets[prefix] ? [prefix] : [])
-                : Object.keys(state.buckets).filter(key => key.startsWith(prefix));
+        ? Object.keys(state.buckets)
+        : cleanRange === 'daily'
+        ? (state.buckets[prefix] ? [prefix] : [])
+        : Object.keys(state.buckets).filter(key => key.startsWith(prefix));
 
         let shortsOpened = 0;
         let shortsBlocked = 0;
@@ -3301,29 +3311,29 @@ const StatsTracker = (() => {
         }
 
         const topFavoriteChannels = Object.entries(channelSec)
-            .map(([name, sec]) => ({
-                name,
-                sec: Math.round(Number(sec) || 0),
-            }))
-            .filter(channel => channel.name && channel.sec > 0)
-            .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
-            .slice(0, FAVORITE_BOARD_MAX)
-            // Each of the top-3 reveals a picture + breakdown when expanded, so
-            // resolve all three avatars and carry the derived per-channel stats.
-            .map((channel, index) => ({
-                ...channel,
-                rank: index + 1,
-                avatar: channelAvatar[channel.name] || '',
-                days: channelDays[channel.name] || 0,
-                peakSec: Math.round(channelPeakSec[channel.name] || 0),
-            }));
+        .map(([name, sec]) => ({
+            name,
+            sec: Math.round(Number(sec) || 0),
+        }))
+        .filter(channel => channel.name && channel.sec > 0)
+        .sort((a, b) => (b.sec - a.sec) || a.name.localeCompare(b.name))
+        .slice(0, FAVORITE_BOARD_MAX)
+        // Each of the top-3 reveals a picture + breakdown when expanded, so
+        // resolve all three avatars and carry the derived per-channel stats.
+        .map((channel, index) => ({
+            ...channel,
+            rank: index + 1,
+            avatar: channelAvatar[channel.name] || '',
+            days: channelDays[channel.name] || 0,
+            peakSec: Math.round(channelPeakSec[channel.name] || 0),
+        }));
 
         return {
             shortsOpened: Math.round(shortsOpened),
-            shortsBlocked: Math.round(shortsBlocked),
-            watchSec: Math.round(watchSec),
-            videosWatched: Math.round(videosWatched),
-            topFavoriteChannels,
+                      shortsBlocked: Math.round(shortsBlocked),
+                      watchSec: Math.round(watchSec),
+                      videosWatched: Math.round(videosWatched),
+                      topFavoriteChannels,
         };
     }
 
@@ -3338,7 +3348,7 @@ const StatsTracker = (() => {
         return !!nodes.length && nodes.every(node => {
             if (node instanceof Element) {
                 return isStatsUiNode(node)
-                    || node.matches?.(STATS_UI_SELECTOR);
+                || node.matches?.(STATS_UI_SELECTOR);
             }
             return true;
         });
@@ -3424,7 +3434,7 @@ const StatsTracker = (() => {
 
         if (focusSelected) {
             (menu.querySelector('.rt-stats-range-item[aria-checked="true"]')
-                || menu.querySelector('.rt-stats-range-item'))?.focus?.();
+            || menu.querySelector('.rt-stats-range-item'))?.focus?.();
         }
     }
 
@@ -3471,10 +3481,10 @@ const StatsTracker = (() => {
         });
         appendChildren(bar, [
             makeFavoriteMedal(channel.rank),
-            track,
-            mk('span', 'rt-cb-time', formatStatsDuration(channel.sec)),
-            // CSS-drawn chevron (no icon dependency); rotates when open.
-            mk('span', 'rt-cb-chev', null, { 'aria-hidden': 'true' }),
+                       track,
+                       mk('span', 'rt-cb-time', formatStatsDuration(channel.sec)),
+                       // CSS-drawn chevron (no icon dependency); rotates when open.
+                       mk('span', 'rt-cb-chev', null, { 'aria-hidden': 'true' }),
         ]);
 
         bar.onpointerdown = stopStatsControlPropagation;
@@ -3500,7 +3510,7 @@ const StatsTracker = (() => {
         return mk('span', 'rt-cb-stat', null, {
             children: [
                 mk('span', 'rt-cb-stat-val', value),
-                mk('span', 'rt-cb-stat-lbl', label),
+                  mk('span', 'rt-cb-stat-lbl', label),
             ],
         });
     }
@@ -3523,11 +3533,11 @@ const StatsTracker = (() => {
         const headline = mk('span', 'rt-cb-detail-headline', null, {
             children: [
                 mk('strong', null, `${stats.sharePct}%`),
-                document.createTextNode(' of your watch time'),
+                            document.createTextNode(' of your watch time'),
             ],
         });
         const compare = mk('span', 'rt-cb-detail-compare',
-            stats.isLeader ? 'Your most-watched channel' : `${stats.vsLeaderPct}% of your #1`);
+                           stats.isLeader ? 'Your most-watched channel' : `${stats.vsLeaderPct}% of your #1`);
 
         const text = mk('div', 'rt-cb-detail-text', null, { children: [headline, compare] });
 
@@ -3598,14 +3608,14 @@ const StatsTracker = (() => {
             const days = Math.max(0, channel.days || 0);
             return {
                 pct: Math.max(6, Math.round((sec / shownSec) * 100)),
-                stats: {
-                    sharePct: Math.round((sec / totalSec) * 100),
-                    vsLeaderPct: leaderSec ? Math.round((sec / leaderSec) * 100) : 100,
-                    isLeader: channel.rank === 1,
-                    days,
-                    avgPerDaySec: days ? Math.round(sec / days) : sec,
-                    peakSec: channel.peakSec || 0,
-                },
+                      stats: {
+                          sharePct: Math.round((sec / totalSec) * 100),
+                      vsLeaderPct: leaderSec ? Math.round((sec / leaderSec) * 100) : 100,
+                      isLeader: channel.rank === 1,
+                      days,
+                      avgPerDaySec: days ? Math.round(sec / days) : sec,
+                      peakSec: channel.peakSec || 0,
+                      },
             };
         };
 
@@ -3732,7 +3742,7 @@ const StatsTracker = (() => {
                 mk('div', 'rt-stats-card-heading', null, {
                     children: [
                         mk('span', 'rt-stats-card-title', STATS_TITLE),
-                        buildStatsRangePicker(range),
+                   buildStatsRangePicker(range),
                     ],
                 }),
             ],
@@ -4016,9 +4026,9 @@ const StatsTracker = (() => {
     async function load() {
         const [enabled, display, metrics, buckets] = await Promise.all([
             StatsStore.getValue(CFG.storage.statsEnabled, true),
-            StatsStore.getValue(CFG.storage.statsDisplay, 'panel'),
-            StatsStore.getJson(CFG.storage.statsMetrics, null),
-            StatsStore.getJson(CFG.storage.statsBuckets, null),
+                                                                       StatsStore.getValue(CFG.storage.statsDisplay, 'panel'),
+                                                                       StatsStore.getJson(CFG.storage.statsMetrics, null),
+                                                                       StatsStore.getJson(CFG.storage.statsBuckets, null),
         ]);
         state.enabled = typeof enabled === 'boolean' ? enabled : true;
         state.range = STATS_SESSION_DEFAULT_RANGE;
@@ -4217,7 +4227,7 @@ function buildFieldLabel(text, helpText, labelClass = 'rt-field-label') {
     help.addEventListener('keydown', event => {
         if (event.key === ' ' || event.key === 'Enter') stopLabelActivation(event);
     });
-    return mk('span', 'rt-field-label-wrap', null, { children: [label, help] });
+        return mk('span', 'rt-field-label-wrap', null, { children: [label, help] });
 }
 
 function buildCheckboxField({ inputId, text, checked, wide = false, helpText, onChange }) {
@@ -4308,7 +4318,7 @@ function buildWarningCheckboxField({ noteText, noteIcon = '⚠', ...checkbox }) 
         box.appendChild(mk('div', 'rt-setting-warning-note', null, {
             children: [
                 mk('span', 'rt-setting-warning-ico', noteIcon),
-                mk('span', 'rt-setting-warning-text', noteText),
+                           mk('span', 'rt-setting-warning-text', noteText),
             ],
         }));
     }
@@ -4330,7 +4340,7 @@ function buildWarningCheckboxPair({ items = [], noteText, noteIcon = '⚠' }) {
         box.appendChild(mk('div', 'rt-setting-warning-note', null, {
             children: [
                 mk('span', 'rt-setting-warning-ico', noteIcon),
-                mk('span', 'rt-setting-warning-text', noteText),
+                           mk('span', 'rt-setting-warning-text', noteText),
             ],
         }));
     }
@@ -4410,27 +4420,27 @@ function SETTINGS_SECTIONS() {
                     step: 0.5,
                     value: S.toastDurationMs / 1000,
                     valueRender: secs => `${secs.toFixed(1)}s`,
-                    stateKey: 'toastDurationMs',
-                    storageKey: CFG.storage.toastDurationMs,
-                    read: secs => Math.max(TOAST_DURATION_MIN_MS, Math.min(TOAST_DURATION_MAX_MS, Math.round(secs * 1000))),
+                              stateKey: 'toastDurationMs',
+                              storageKey: CFG.storage.toastDurationMs,
+                              read: secs => Math.max(TOAST_DURATION_MIN_MS, Math.min(TOAST_DURATION_MAX_MS, Math.round(secs * 1000))),
                 }),
                 selectSetting({
                     labelText: 'Toast position',
                     selectId: 'rt_toast_position_select',
                     options: labelOptions(TOAST_PLACEMENT_ORDER, TOAST_PLACEMENT_LABEL),
-                    stateKey: 'toastPlacement',
-                    storageKey: CFG.storage.toastPlacement,
-                    read: readToastPlacementSetting,
-                    afterChange: scheduleToastPositionSync,
+                              stateKey: 'toastPlacement',
+                              storageKey: CFG.storage.toastPlacement,
+                              read: readToastPlacementSetting,
+                              afterChange: scheduleToastPositionSync,
                 }),
                 selectSetting({
                     labelText: 'Rain quantity',
                     selectId: 'rt_rain_quantity_select',
                     options: labelOptions(RAIN_QUANTITY_ORDER, RAIN_QUANTITY_LABEL),
-                    stateKey: 'rainQuantity',
-                    storageKey: CFG.storage.rainQuantity,
-                    read: readRainQuantitySetting,
-                    afterChange: syncRainQuantity,
+                              stateKey: 'rainQuantity',
+                              storageKey: CFG.storage.rainQuantity,
+                              read: readRainQuantitySetting,
+                              afterChange: syncRainQuantity,
                 }),
                 sliderSetting({
                     labelText: 'Rain FPS cap',
@@ -4440,10 +4450,10 @@ function SETTINGS_SECTIONS() {
                     max: RAIN_FPS_MAX,
                     step: 5,
                     valueRender: fps => `${Math.round(fps)} fps`,
-                    stateKey: 'rainFpsCap',
-                    storageKey: CFG.storage.rainFpsCap,
-                    read: readRainFpsCap,
-                    afterChange: syncRainFps,
+                              stateKey: 'rainFpsCap',
+                              storageKey: CFG.storage.rainFpsCap,
+                              read: readRainFpsCap,
+                              afterChange: syncRainFps,
                 }),
                 checkboxSetting({
                     inputId: 'rt_lightning_enabled',
@@ -4459,10 +4469,10 @@ function SETTINGS_SECTIONS() {
                     helpText: 'Choose where RainTube buttons appear on YouTube.',
                     selectId: 'rt_button_placement_select',
                     options: labelOptions(BUTTON_PLACEMENT_ORDER, BUTTON_PLACEMENT_LABEL),
-                    stateKey: 'buttonPlacement',
-                    storageKey: CFG.storage.buttonPlacement,
-                    read: readButtonPlacement,
-                    afterChange: syncButtonPlacement,
+                              stateKey: 'buttonPlacement',
+                              storageKey: CFG.storage.buttonPlacement,
+                              read: readButtonPlacement,
+                              afterChange: syncButtonPlacement,
                 }),
                 {
                     type: 'warningCheckboxPair',
@@ -4543,9 +4553,9 @@ function SETTINGS_SECTIONS() {
                     labelText: 'Direct /shorts/ links',
                     selectId: 'rt_shorts_on_visit_select',
                     options: labelOptions(SHORTS_ON_VISIT_ORDER, SHORTS_ON_VISIT_LABEL),
-                    stateKey: 'shortsOnVisit',
-                    storageKey: CFG.storage.shortsOnVisit,
-                    read: readShortsOnVisit,
+                              stateKey: 'shortsOnVisit',
+                              storageKey: CFG.storage.shortsOnVisit,
+                              read: readShortsOnVisit,
                 }),
             ],
         },
@@ -4571,7 +4581,7 @@ function SETTINGS_SECTIONS() {
                         inputId: `rt_stats_metric_${key}`,
                         text: STATS_METRIC_INFO[key].label,
                         checked: StatsTracker.getMetrics()[key] !== false,
-                        onChange: checked => StatsTracker.setMetric(key, checked),
+                                                           onChange: checked => StatsTracker.setMetric(key, checked),
                     })),
                 },
             ],
@@ -4588,10 +4598,10 @@ function SETTINGS_SECTIONS() {
                     helpText: 'Uses this quality when available, otherwise chooses the closest lower eligible option.',
                     selectId: 'rt_quality_max',
                     options: labelOptions(QUALITY_ORDER, QUALITY_LABEL),
-                    stateKey: 'qualityMax',
-                    storageKey: CFG.storage.qualityMax,
-                    read: value => readEnumSetting(value, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax),
-                    afterChange: restartQualityTargeting,
+                              stateKey: 'qualityMax',
+                              storageKey: CFG.storage.qualityMax,
+                              read: value => readEnumSetting(value, QUALITY_ORDER, DEFAULT_SETTINGS.qualityMax),
+                              afterChange: restartQualityTargeting,
                 }),
                 checkboxSetting({
                     inputId: 'rt_quality_super_resolution',
@@ -4617,9 +4627,9 @@ function SETTINGS_SECTIONS() {
                     helpText: 'Choose which private mirrors RainTube tries. “Both” uses Piped and Invidious.',
                     selectId: 'rt_private_provider_select',
                     options: labelOptions(PRIVATE_PROVIDER_ORDER, PRIVATE_PROVIDER_LABEL),
-                    stateKey: 'privateProvider',
-                    storageKey: CFG.storage.privateProvider,
-                    read: readPrivateProvider,
+                              stateKey: 'privateProvider',
+                              storageKey: CFG.storage.privateProvider,
+                              read: readPrivateProvider,
                 }),
                 sliderSetting({
                     labelText: 'Request timeout',
@@ -4765,17 +4775,23 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
 
     appendChildren(sliderWrap, [
         mk('div', 'rt-slider-track'),
-        mk('div', 'rt-slider-fill'),
-        mk('div', 'rt-slider-thumb-custom'),
+                   mk('div', 'rt-slider-fill'),
+                   mk('div', 'rt-slider-thumb-custom', null, {
+                       children: [
+                           mk('span', 'rt-slider-knurl', null, { 'aria-hidden': 'true' }),
+                      mk('span', 'rt-slider-knurl', null, { 'aria-hidden': 'true' }),
+                      mk('span', 'rt-slider-knurl', null, { 'aria-hidden': 'true' }),
+                       ],
+                   }),
     ]);
 
     const slider = mk('input', 'rt-slider-input', null, {
         id: sliderId,
         type: 'range',
         min: String(min),
-        max: String(max),
-        step: String(step),
-        value: String(value),
+                      max: String(max),
+                      step: String(step),
+                      value: String(value),
     });
     sliderWrap.appendChild(slider);
     row.appendChild(sliderWrap);
@@ -4810,35 +4826,35 @@ function buildSlider({ labelText, helpText, sliderId, min, max, step, value, val
         if (!rafHandle) rafHandle = requestAnimationFrame(tick);
     };
 
-    let lastChipText = chip.textContent;
-    const pulseChip = () => {
-        chip.classList.remove('rt-chip-pulse');
-        void chip.offsetWidth;
-        chip.classList.add('rt-chip-pulse');
-    };
+        let lastChipText = chip.textContent;
+        const pulseChip = () => {
+            chip.classList.remove('rt-chip-pulse');
+            void chip.offsetWidth;
+            chip.classList.add('rt-chip-pulse');
+        };
 
-    slider.addEventListener('input', e => {
-        const v = parseFloat(e.currentTarget.value);
-        const next = valueRender(v);
-        if (next !== lastChipText) {
-            chip.textContent = next;
-            lastChipText = next;
-            pulseChip();
-        }
-        setTarget(toPct(v));
-    });
-    slider.addEventListener('change', e => {
-        onChange?.(parseFloat(e.currentTarget.value), chip);
-    });
+        slider.addEventListener('input', e => {
+            const v = parseFloat(e.currentTarget.value);
+            const next = valueRender(v);
+            if (next !== lastChipText) {
+                chip.textContent = next;
+                lastChipText = next;
+                pulseChip();
+            }
+            setTarget(toPct(v));
+        });
+        slider.addEventListener('change', e => {
+            onChange?.(parseFloat(e.currentTarget.value), chip);
+        });
 
-    const onDown = () => row.classList.add('rt-slider-grabbing');
-    const onUp = () => row.classList.remove('rt-slider-grabbing');
-    slider.addEventListener('pointerdown', onDown, { passive: true });
-    slider.addEventListener('pointerup', onUp, { passive: true });
-    slider.addEventListener('pointercancel', onUp, { passive: true });
-    slider.addEventListener('blur', onUp);
+        const onDown = () => row.classList.add('rt-slider-grabbing');
+        const onUp = () => row.classList.remove('rt-slider-grabbing');
+        slider.addEventListener('pointerdown', onDown, { passive: true });
+        slider.addEventListener('pointerup', onUp, { passive: true });
+        slider.addEventListener('pointercancel', onUp, { passive: true });
+        slider.addEventListener('blur', onUp);
 
-    return row;
+        return row;
 }
 
 function buildSelectField({ labelText, helpText, selectId, options, value, onChange }) {
@@ -4858,7 +4874,7 @@ function buildSelectField({ labelText, helpText, selectId, options, value, onCha
     return row;
 }
 
-function buildDownloadBtn(variant, iconKey, primaryLabel, id) {
+function buildDownloadBtn(variant, iconKey, primaryLabel, id, formatLabel) {
     const iconWrap = mk('span', 'rt-dl-ico');
     appendChildren(iconWrap, iconFor(iconKey, iconKey || '◦'));
     return mk('button', `rt-dl rt-dl-${variant}`, null, {
@@ -4867,8 +4883,12 @@ function buildDownloadBtn(variant, iconKey, primaryLabel, id) {
         children: [
             iconWrap,
             mk('span', 'rt-dl-txt', null, {
-                children: mk('span', 'rt-dl-p', primaryLabel),
+                children: [
+                    mk('span', 'rt-dl-p', primaryLabel),
+               mk('span', 'rt-dl-fmt', formatLabel),
+                ],
             }),
+            mk('span', 'rt-dl-go', null, { 'aria-hidden': 'true', children: RT_ICONS.download() }),
         ],
     });
 }
@@ -4886,8 +4906,10 @@ function buildProgress() {
     appendChildren(wrap, [
         mk('div', 'rt-progress-top', null, {
             children: [
-                mk('span', 'rt-progress-label', 'Ready', { id: 'rt_progress_label' }),
-                mk('span', 'rt-progress-pct', '0%', { id: 'rt_progress_pct' }),
+                mk('span', 'rt-progress-dot', null, { 'aria-hidden': 'true' }),
+           mk('span', 'rt-progress-label', 'Ready — choose a format to begin', { id: 'rt_progress_label' }),
+           mk('span', 'rt-progress-pct', '0%', { id: 'rt_progress_pct' }),
+           buildControlButton('rt_dl_stop', '✕', 'rt-ctrl-cancel', 'Stop after current request'),
             ],
         }),
         mk('div', 'rt-progress-track', null, {
@@ -5069,14 +5091,14 @@ function createRainCanvas({ canvas, host: panel, ...opts }) {
             for (let i = 0; i < count; i++) {
                 state.splashes.push({
                     x: x + random(-1.2, 1.2),
-                    y: y + random(-0.6, 0.6),
-                    vx: random(-18, 18) * power,
-                    vy: random(-28, -7) * power,
-                    g: random(64, 110),
-                    r: random(0.35, 0.9) * power * RAIN_SIZE_SCALE,
-                    life: 0,
-                    ttl: random(0.18, 0.38),
-                    alpha: random(0.10, 0.24),
+                                    y: y + random(-0.6, 0.6),
+                                    vx: random(-18, 18) * power,
+                                    vy: random(-28, -7) * power,
+                                    g: random(64, 110),
+                                    r: random(0.35, 0.9) * power * RAIN_SIZE_SCALE,
+                                    life: 0,
+                                    ttl: random(0.18, 0.38),
+                                    alpha: random(0.10, 0.24),
                 });
             }
         },
@@ -5171,7 +5193,7 @@ function createRainCanvas({ canvas, host: panel, ...opts }) {
                 if (state.targetHits.get(target.el) === ts) target.el.classList.remove('rt-rain-hit');
             }, 380);
 
-            return true;
+                return true;
         },
 
         maybeHit(drop, prevX, prevY, ts, targets) {
@@ -5238,7 +5260,7 @@ function createRainCanvas({ canvas, host: panel, ...opts }) {
                 x += random(-18, 18) + drift * 0.18;
                 points.push({
                     x: clamp(x, state.width * 0.08, state.width * 0.92),
-                    y: topY + (bottomY - topY) * pct + yJitter,
+                            y: topY + (bottomY - topY) * pct + yJitter,
                 });
             }
 
@@ -5251,7 +5273,7 @@ function createRainCanvas({ canvas, host: panel, ...opts }) {
                     point,
                     {
                         x: clamp(point.x + side * len, 4, state.width - 4),
-                        y: clamp(point.y + random(6, 22), 2, state.height - 2),
+                 y: clamp(point.y + random(6, 22), 2, state.height - 2),
                     },
                 ];
             });
@@ -5527,8 +5549,8 @@ function createRainCanvas({ canvas, host: panel, ...opts }) {
 
 function rainHosts() {
     return ['rt_panel', 'rt_stats_panel', 'rt_settings_root']
-        .map(id => document.getElementById(id))
-        .filter(Boolean);
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
 }
 
 function syncRainQuantity() {
@@ -5672,29 +5694,49 @@ function buildPanel() {
 
     body.appendChild(mk('h2', 'rt-section', 'Download'));
 
-    const downloadArea = mk('div', 'rt-download-area');
-    const downloadLine = mk('div', 'rt-download-line');
+    const dlConsole = mk('div', 'rt-dl-console');
+
+    // Action buttons.
     const dlRow = mk('div', 'rt-dl-row');
-    dlRow.appendChild(buildDownloadBtn('video', 'video', 'Video', 'rt_dl_v'));
-    dlRow.appendChild(buildDownloadBtn('audio', 'audio', 'Audio', 'rt_dl_a'));
+    dlRow.appendChild(buildDownloadBtn('video', 'video', 'Video', 'rt_dl_v', 'mp4'));
+    dlRow.appendChild(buildDownloadBtn('audio', 'audio', 'Audio', 'rt_dl_a', 'm4a'));
+    dlConsole.appendChild(dlRow);
 
-    const controls = mk('div', 'rt-controls');
-    controls.appendChild(buildControlButton('rt_dl_stop', '✕', 'rt-ctrl-cancel', 'Stop after current request'));
+    // Progress: hidden at idle, becomes the live readout (track, %, cancel)
+    // during a download.
+    dlConsole.appendChild(buildProgress());
 
-    downloadLine.appendChild(dlRow);
-    downloadLine.appendChild(controls);
-    downloadArea.appendChild(downloadLine);
-    downloadArea.appendChild(buildProgress());
-    body.appendChild(downloadArea);
+    // Private-download footer row: the shield + label + description show the
+    // proxied state, and the toggle controls it. Reuses the rt_sw_private id so
+    // all existing toggle wiring (click handler, syncToggle) applies unchanged.
+    const privSw = mk('button', 'rt-sw', null, {
+        id: 'rt_sw_private', type: 'button', role: 'switch', 'aria-checked': 'false',
+        children: mk('span', 'rt-thumb'),
+    });
+    const privRow = mk('div', 'rt-dl-priv', null, {
+        id: 'rt_dl_priv',
+        children: [
+            mk('span', 'rt-dl-priv-ico', null, { id: 'rt_dl_priv_ico', 'aria-hidden': 'true', children: RT_ICONS.shield() }),
+                       mk('span', 'rt-dl-priv-text', null, {
+                           children: [
+                               mk('span', 'rt-dl-priv-name', 'Private download'),
+                          mk('span', 'rt-dl-priv-desc', 'Routed through privacy proxies', { id: 'rt_dl_priv_desc' }),
+                           ],
+                       }),
+                       privSw,
+        ],
+    });
+    dlConsole.appendChild(privRow);
+
+    body.appendChild(dlConsole);
 
     body.appendChild(mk('h2', 'rt-section', 'Features'));
 
     const toggles = mk('div', 'rt-toggles');
     [
-        ['shorts', 'rt_sw_shorts', 'Shorts', 'rt_sw_shorts_st', 'Hides Shorts across YouTube.'],
-        ['quality', 'rt_sw_q', 'Quality', 'rt_sw_q_st', 'Sets playback to your target quality (or closest available).'],
-        ['private', 'rt_sw_private', 'Private', 'rt_sw_private_st', 'Downloads through privacy-friendly mirrors.'],
-        ['chart', 'rt_sw_stats', STATS_TITLE, 'rt_sw_stats_st', 'Tracks local watch summaries.'],
+        ['shorts', 'rt_sw_shorts', 'Hide Shorts', 'rt_sw_shorts_st', 'Hides Shorts across YouTube.'],
+        ['quality', 'rt_sw_q', 'Auto Quality', 'rt_sw_q_st', 'Sets playback to your target quality (or closest available).'],
+        ['chart', 'rt_sw_stats', 'Usage Stats', 'rt_sw_stats_st', 'Tracks local watch summaries.'],
     ].forEach(args => toggles.appendChild(buildToggleCard(...args)));
     body.appendChild(toggles);
 
@@ -5889,6 +5931,28 @@ function uiSync() {
         syncToggle('rt_sw_q', S.qualityEnabled);
         syncToggle('rt_sw_private', S.privateDownloadsEnabled);
         syncToggle('rt_sw_stats', StatsTracker.getEnabled());
+
+        // Private-download footer row reflects whether downloads are actually
+        // proxied. With private downloads off, they go through the external
+        // converter — not proxied — so flag it red (icon, text, console glow).
+        const privRow = document.getElementById('rt_dl_priv');
+        const privDesc = document.getElementById('rt_dl_priv_desc');
+        if (privRow && privDesc) {
+            const proxied = !!S.privateDownloadsEnabled;
+            privRow.classList.toggle('rt-dl-priv-unproxied', !proxied);
+            privRow.closest('.rt-dl-console')?.classList.toggle('rt-dl-console-unproxied', !proxied);
+
+            const desc = proxied ? 'Routed through privacy proxies' : 'Direct from external converter';
+            if (privDesc.textContent !== desc) privDesc.textContent = desc;
+
+            // Swap the shield shape (check ↔ X), tracking the rendered state so
+            // we only rebuild the SVG when it actually changes.
+            const ico = document.getElementById('rt_dl_priv_ico');
+            if (ico && ico.dataset.state !== String(proxied)) {
+                replaceChildrenSafe(ico, proxied ? RT_ICONS.shield() : RT_ICONS.shieldOff());
+                ico.dataset.state = String(proxied);
+            }
+        }
 
         const vid = getVideoId();
         const title = document.getElementById('rt_title');
@@ -6110,8 +6174,8 @@ function buildSettingsModal() {
         host: root,
         targetSelector: '.rt-settings-icon, .rt-settings-close',
         targetKind: el => (el.classList.contains('rt-settings-icon') ? 'logo' : 'button'),
-        maxDrops: 92,
-        surfaceBeadCount: 7,
+                     maxDrops: 92,
+                     surfaceBeadCount: 7,
     });
     syncRainQuantity();
 
@@ -6206,107 +6270,107 @@ function bindEvents(panel, fab, statsFab, statsPanel) {
         if (statsOpen) requestAnimationFrame(() => statsPanel?.__rtPositionNearButton?.(false));
     };
 
-    const setOpen = value => {
-        open = !!value;
-        if (open) panel.__rtPositionNearButton?.(false);
-        else hideTooltip();
-        panel.classList.toggle('show', open);
-        fab.classList.toggle('active', open);
-        fab.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (open) uiSync();
-    };
+        const setOpen = value => {
+            open = !!value;
+            if (open) panel.__rtPositionNearButton?.(false);
+            else hideTooltip();
+            panel.classList.toggle('show', open);
+            fab.classList.toggle('active', open);
+            fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) uiSync();
+        };
 
-    registerMenuCommands({
-        openPanel: () => setOpen(true),
-        openSettings: () => setSettingsOpen(true),
-    });
+            registerMenuCommands({
+                openPanel: () => setOpen(true),
+                                 openSettings: () => setSettingsOpen(true),
+            });
 
-    const clickStatsFab = () => {
-        if (!StatsTracker.isPanelEnabled() && !statsOpen) return;
-        hideTooltip();
-        setStatsOpen(!statsPanel?.classList.contains('show'));
-    };
-    const clickFab = () => {
-        hideTooltip();
-        setOpen(!open);
-    };
-    const clickSettingsFab = () => {
-        hideTooltip();
-        setSettingsOpen(!isSettingsOpen());
-    };
-    statsFab?.addEventListener('click', clickStatsFab);
-    fab.addEventListener('click', clickFab);
-    S._settingsFab?.addEventListener('click', clickSettingsFab);
+            const clickStatsFab = () => {
+                if (!StatsTracker.isPanelEnabled() && !statsOpen) return;
+                hideTooltip();
+                setStatsOpen(!statsPanel?.classList.contains('show'));
+            };
+            const clickFab = () => {
+                hideTooltip();
+                setOpen(!open);
+            };
+            const clickSettingsFab = () => {
+                hideTooltip();
+                setSettingsOpen(!isSettingsOpen());
+            };
+            statsFab?.addEventListener('click', clickStatsFab);
+            fab.addEventListener('click', clickFab);
+            S._settingsFab?.addEventListener('click', clickSettingsFab);
 
-    const closeSettings = () => setSettingsOpen(false);
-    const downloads = {
-        rt_dl_v: ['video', 'Video download failed'],
-        rt_dl_a: ['audio', 'Audio download failed'],
-    };
-    for (const [id, [mode, message]] of Object.entries(downloads)) {
-        on(id, 'click', safeAction(`${mode} download handler`, e =>
-            downloadViaPublicApisOrFallback(getVideoId(), mode, e.currentTarget), message));
-    }
+            const closeSettings = () => setSettingsOpen(false);
+            const downloads = {
+                rt_dl_v: ['video', 'Video download failed'],
+                rt_dl_a: ['audio', 'Audio download failed'],
+            };
+            for (const [id, [mode, message]] of Object.entries(downloads)) {
+                on(id, 'click', safeAction(`${mode} download handler`, e =>
+                downloadViaPublicApisOrFallback(getVideoId(), mode, e.currentTarget), message));
+            }
 
-    [
-        ['rt_close', () => setOpen(false)],
-        ['rt_stats_close', () => setStatsOpen(false)],
-        ['rt_dl_stop', requestStopAfterCurrentRequest],
-        ['rt_settings_close', closeSettings],
-        ['rt_settings_done', closeSettings],
-        ['rt_settings_backdrop', closeSettings],
-    ].forEach(([id, handler]) => on(id, 'click', handler));
+            [
+                ['rt_close', () => setOpen(false)],
+                ['rt_stats_close', () => setStatsOpen(false)],
+                ['rt_dl_stop', requestStopAfterCurrentRequest],
+                ['rt_settings_close', closeSettings],
+                ['rt_settings_done', closeSettings],
+                ['rt_settings_backdrop', closeSettings],
+            ].forEach(([id, handler]) => on(id, 'click', handler));
 
-    document.addEventListener('keydown', e => {
-        if (e.key !== 'Escape') return;
-        if (isSettingsOpen()) {
-            e.stopPropagation();
-            setSettingsOpen(false);
-        } else if (statsPanel?.classList.contains('show')) {
-            e.stopPropagation();
-            setStatsOpen(false);
-        } else if (open) {
-            e.stopPropagation();
-            setOpen(false);
-        }
-    });
+            document.addEventListener('keydown', e => {
+                if (e.key !== 'Escape') return;
+                if (isSettingsOpen()) {
+                    e.stopPropagation();
+                    setSettingsOpen(false);
+                } else if (statsPanel?.classList.contains('show')) {
+                    e.stopPropagation();
+                    setStatsOpen(false);
+                } else if (open) {
+                    e.stopPropagation();
+                    setOpen(false);
+                }
+            });
 
-    [
-        ['rt_sw_shorts', {
-            stateKey: 'shortsBlockerEnabled',
-            storageKey: CFG.storage.shortsBlocker,
-            onLabel: 'Shorts hidden',
-            offLabel: 'Shorts shown',
-            onVariant: 'shorts',
-            toastMeta: { icon: 'shorts', label: 'Shorts' },
-            afterChange: () => ShortsBlocker.apply(),
-        }],
-        ['rt_sw_q', {
-            stateKey: 'qualityEnabled',
-            storageKey: CFG.storage.quality,
-            onLabel: 'Quality targeting on',
-            offLabel: 'Quality targeting off',
-            onVariant: 'quality',
-            toastMeta: { icon: 'quality', label: 'Quality' },
-            afterChange: enabled => restartQualityTargeting({ enabled }),
-        }],
-        ['rt_sw_private', {
-            stateKey: 'privateDownloadsEnabled',
-            storageKey: CFG.storage.privateDownloads,
-            onLabel: 'Private downloads on',
-            offLabel: 'Private downloads off',
-            onVariant: 'dl',
-            toastMeta: { icon: 'private', label: 'Download' },
-        }],
-    ].forEach(([id, config]) => on(id, 'click', toggleStoredSetting(config)));
+            [
+                ['rt_sw_shorts', {
+                    stateKey: 'shortsBlockerEnabled',
+                    storageKey: CFG.storage.shortsBlocker,
+                    onLabel: 'Shorts hidden',
+                    offLabel: 'Shorts shown',
+                    onVariant: 'shorts',
+                    toastMeta: { icon: 'shorts', label: 'Shorts' },
+                    afterChange: () => ShortsBlocker.apply(),
+                }],
+                ['rt_sw_q', {
+                    stateKey: 'qualityEnabled',
+                    storageKey: CFG.storage.quality,
+                    onLabel: 'Quality targeting on',
+                    offLabel: 'Quality targeting off',
+                    onVariant: 'quality',
+                    toastMeta: { icon: 'quality', label: 'Quality' },
+                    afterChange: enabled => restartQualityTargeting({ enabled }),
+                }],
+                ['rt_sw_private', {
+                    stateKey: 'privateDownloadsEnabled',
+                    storageKey: CFG.storage.privateDownloads,
+                    onLabel: 'Private downloads on',
+                    offLabel: 'Private downloads off',
+                    onVariant: 'dl',
+                    toastMeta: { icon: 'private', label: 'Download' },
+                }],
+            ].forEach(([id, config]) => on(id, 'click', toggleStoredSetting(config)));
 
-    on('rt_sw_stats', 'click', safeAction('Statistics toggle', async () => {
-        const enabled = StatsTracker.getEnabled();
-        await StatsTracker.setEnabled(!enabled);
-        uiSync();
-        toast(enabled ? 'Statistics tracking paused' : 'Statistics tracking on',
-            enabled ? 'off' : 'stats', { icon: 'chart', label: STATS_TITLE });
-    }, 'Statistics toggle failed'));
+            on('rt_sw_stats', 'click', safeAction('Statistics toggle', async () => {
+                const enabled = StatsTracker.getEnabled();
+                await StatsTracker.setEnabled(!enabled);
+                uiSync();
+                toast(enabled ? 'Statistics tracking paused' : 'Statistics tracking on',
+                      enabled ? 'off' : 'stats', { icon: 'chart', label: STATS_TITLE });
+            }, 'Statistics toggle failed'));
 }
 
 /* ── Runtime controllers ────────────────────────────────────────────────── */
@@ -6322,7 +6386,7 @@ const ShortsBlocker = (() => {
             bodyClass: 'rt-shorts-hide-sidebar',
             selectors: [
                 'ytd-guide-entry-renderer:has(a[title="Shorts"])',
-                'ytd-mini-guide-entry-renderer:has(a[title="Shorts"])',
+                       'ytd-mini-guide-entry-renderer:has(a[title="Shorts"])',
             ],
         },
         {
@@ -6332,10 +6396,10 @@ const ShortsBlocker = (() => {
             selectors: [
                 'ytd-rich-shelf-renderer[is-shorts]',
                 'ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is-shorts])',
-                'ytd-browse ytd-reel-shelf-renderer',
-                'ytd-rich-item-renderer:has(a[href^="/shorts/"])',
-                'ytd-grid-video-renderer:has(a[href^="/shorts/"])',
-                'ytd-reel-item-renderer',
+                       'ytd-browse ytd-reel-shelf-renderer',
+                       'ytd-rich-item-renderer:has(a[href^="/shorts/"])',
+                       'ytd-grid-video-renderer:has(a[href^="/shorts/"])',
+                       'ytd-reel-item-renderer',
             ],
         },
         {
@@ -6347,11 +6411,11 @@ const ShortsBlocker = (() => {
                 'ytd-search ytd-shorts-lockup-view-model',
                 'ytd-search ytd-shorts-shelf-renderer',
                 'ytd-search ytd-shelf-renderer:has(ytd-shorts-lockup-view-model)',
-                'ytd-search ytd-shelf-renderer:has(ytd-reel-item-renderer)',
-                'ytd-search grid-shelf-view-model:has(a[href*="/shorts/"])',
-                'ytd-search ytd-video-renderer:has(a[href*="/shorts/"])',
-                'ytd-search ytd-video-renderer:has(ytd-thumbnail-overlay-time-status-renderer[overlay-style="SHORTS"])',
-                'ytd-search ytd-reel-video-renderer',
+                       'ytd-search ytd-shelf-renderer:has(ytd-reel-item-renderer)',
+                       'ytd-search grid-shelf-view-model:has(a[href*="/shorts/"])',
+                       'ytd-search ytd-video-renderer:has(a[href*="/shorts/"])',
+                       'ytd-search ytd-video-renderer:has(ytd-thumbnail-overlay-time-status-renderer[overlay-style="SHORTS"])',
+                       'ytd-search ytd-reel-video-renderer',
             ],
         },
         {
@@ -6532,8 +6596,8 @@ const TopbarTheme = (() => {
                 maxDrops: 280,
                 surfaceBeadCount: 16,
                 shouldRun: () => !!S?.topbarThemeEnabled
-                    && nextHost.isConnected
-                    && readRainQuantitySetting(S.rainQuantity) !== 'off',
+                && nextHost.isConnected
+                && readRainQuantitySetting(S.rainQuantity) !== 'off',
             });
             el.dataset.rtRainBound = 'true';
         }
@@ -6549,7 +6613,7 @@ const TopbarTheme = (() => {
             S?.topbarThemeEnabled ? '1' : '0',
             rainQuantity,
             readRainFpsCap(S.rainFpsCap),
-            S?.lightningEnabled ? '1' : '0',
+                     S?.lightningEnabled ? '1' : '0',
         ].join('|');
 
         activeHost.classList.toggle('rt-rain-off', rainOff);
@@ -6736,7 +6800,7 @@ function boot() {
     S._statsFab = statsFab;
     S._settingsFab = settingsFab;
     mountRainTubeButtons(statsFab, fab, settingsFab);
-    initDrag(panel, fab);
+    initDrag(panel, fab, { snapToDevicePixels: true });
     initDrag(statsPanel, statsFab, { handleSelector: '#rt_stats_drag', fallbackW: 454, fallbackH: 380, snapToDevicePixels: true });
     bindEvents(panel, fab, statsFab, statsPanel);
 
@@ -6766,9 +6830,9 @@ async function shortcutShortsVisit() {
     try {
         const [enabled, rawOnVisit, statsEnabled, rawBuckets] = await Promise.all([
             readStoredValue(CFG.storage.shortsBlocker, DEFAULT_SETTINGS.shortsBlockerEnabled),
-            readStoredValue(CFG.storage.shortsOnVisit, DEFAULT_SETTINGS.shortsOnVisit),
-            readStoredValue(CFG.storage.statsEnabled, true),
-            readStoredValue(CFG.storage.statsBuckets, null),
+                                                                                  readStoredValue(CFG.storage.shortsOnVisit, DEFAULT_SETTINGS.shortsOnVisit),
+                                                                                  readStoredValue(CFG.storage.statsEnabled, true),
+                                                                                  readStoredValue(CFG.storage.statsBuckets, null),
         ]);
         if (!enabled) return false;
 
@@ -6789,8 +6853,8 @@ async function shortcutShortsVisit() {
 
         const onVisit = readShortsOnVisit(rawOnVisit);
         const target = onVisit === 'redirect'
-            ? `${location.origin}/watch?v=${encodeURIComponent(shortsId)}`
-            : `${location.origin}/`;
+        ? `${location.origin}/watch?v=${encodeURIComponent(shortsId)}`
+        : `${location.origin}/`;
         location.replace(target);
         return true;
     } catch (err) {
@@ -6821,8 +6885,8 @@ async function reportFatalStartupFailure(err) {
     });
 
     const text = resource
-        ? `Couldn't load "${resource}" (${reason}). Click to reload; reinstall if it persists.`
-        : `Couldn't load a required asset (${reason}). Click to reload; reinstall if it persists.`;
+    ? `Couldn't load "${resource}" (${reason}). Click to reload; reinstall if it persists.`
+    : `Couldn't load a required asset (${reason}). Click to reload; reinstall if it persists.`;
 
     try {
         await GM.notification({
@@ -6851,9 +6915,9 @@ async function startRainTube() {
     // unhandled rejections) before we decide to abort with a visible notice.
     const [styleError, state] = await Promise.all([
         injectRainTubeStyles().then(() => null, err => err || new Error('style injection failed')),
-        loadRuntimeState(),
-        cleanupDeprecatedStorageKeys(),
-        waitForDocumentBody(),
+                                                  loadRuntimeState(),
+                                                  cleanupDeprecatedStorageKeys(),
+                                                  waitForDocumentBody(),
     ]);
 
     if (styleError) {
