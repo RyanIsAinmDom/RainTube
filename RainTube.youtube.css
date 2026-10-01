@@ -230,7 +230,13 @@ ytd-masthead.rt-topbar-theme-host.rt-rain-calm #rt_topbar_mist::before {
     #rt_topbar_mist::before { animation: none; }
 }
 body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host {
-    & :is(a, button, yt-icon, yt-icon-shape, #logo-icon, #country-code) {
+    /* Filled buttons (the "Search" button in YouTube's newer search panel)
+       are light pills with their own dark label. :where() keeps the
+       exclusion from adding specificity. */
+    & :is(a, button, yt-icon, yt-icon-shape, #logo-icon, #country-code):not(:where(
+        .ytSpecButtonShapeNextFilled, .yt-spec-button-shape-next--filled,
+        .ytSpecButtonShapeNextFilled *, .yt-spec-button-shape-next--filled *
+    )) {
         color: rgba(244, 248, 251, 0.92) !important;
         fill: currentColor !important;
     }
@@ -300,11 +306,12 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host {
         --ytd-searchbox-legacy-button-color: rgba(0, 0, 0, 0.18) !important;
         --ytd-searchbox-text-color: #f4f8fb !important;
     }
+    /* The legacy ytd-searchbox IDs sit in :where() so this rule stays at class
+       weight and the newer search box's overrides below can win. */
     & :is(
-        #container.ytd-searchbox,
         .ytSearchboxComponentInputBox,
         .ytSearchboxComponentInputBoxDark,
-        ytd-searchbox #container
+        :where(#container.ytd-searchbox, ytd-searchbox #container)
     ) {
         background:
             radial-gradient(95% 150% at 10% 0%, rgba(255,255,255,.135), transparent 64%),
@@ -334,6 +341,24 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host {
                 inset 0 1px 0 rgba(255, 255, 255, 0.17),
                 inset 0 -1px 0 rgba(0, 0, 0, 0.30) !important;
         }
+    }
+    /* YouTube's newer search box ("Search or ask a question") has no separate
+       search button: the input box is the whole pill. Focused, it becomes the
+       top row of a panel YouTube draws itself (dark, from the masthead's
+       [dark] palette), so the box goes clear inside it. */
+    & .ytSearchboxComponentInputBoxUnified {
+        border-radius: 999px !important;
+        &.ytSearchboxComponentInputBoxHasFocus {
+            background: transparent !important;
+            border-radius: 24px !important;
+            box-shadow: none !important;
+        }
+    }
+    /* The focused search icon and the clear button take YouTube's text colour,
+       which is near-black on a light page. */
+    & :is(.ytSearchboxComponentInnerSearchIcon, .ytSearchboxComponentClearButtonIcon) {
+        color: rgba(244, 248, 251, 0.92) !important;
+        fill: currentColor !important;
     }
     & :is(
         #search-form.ytd-searchbox,
@@ -2989,10 +3014,39 @@ html[dark] body.rt-oled {
        producing a coloured haze that fundamentally conflicts with what
        OLED wants (uniform pure black). The video player is a sibling of
        the cinematics container, not a child, so hiding it doesn't touch
-       playback. */
-    & #cinematics-container.ytd-watch-flexy, & #cinematics.ytd-watch-flexy {
+       playback. Matched by id alone: YouTube is dropping the Polymer scope
+       classes, and the grid watch layout uses the same ids. */
+    & :is(#cinematics-container, #cinematics) {
         display: none !important;
     }
+}
+
+/* Player glow (YouTube's ambient mode)
+   YouTube paints the glow into two small canvases in #cinematics, scaled up
+   behind the player. Each is filled with the page colour (the floor: #0f0f0f
+   in dark mode, black in theater and fullscreen, white in the light
+   "elevated" layout), then the video's storyboard is painted over it at 40%.
+   The slider (--rt-glow, 1 = YouTube's own) scales each colour's distance
+   from that floor, so the fill never changes and the canvas edge never shows
+   as a box. Colour-matrix filters on the small canvases are cheap.
+     dark floors   brightness(k / c) contrast(c), c = 1 + 2·floor·(k − 1)
+     white floor   invert(1) brightness(k) invert(1)
+   0% hides the glow the way the OLED theme does. */
+body.rt-glow-custom {
+    & :is(ytd-watch-flexy, ytd-watch-grid) {
+        --rt-glow-floor: 0.0588;
+        &:is([theater], [fullscreen]) { --rt-glow-floor: 0; }
+    }
+    & #cinematics canvas {
+        --rt-glow-c: calc(1 + 2 * var(--rt-glow-floor, 0.0588) * (var(--rt-glow) - 1));
+        filter: brightness(calc(var(--rt-glow) / var(--rt-glow-c))) contrast(var(--rt-glow-c));
+    }
+    & :is(ytd-watch-flexy, ytd-watch-grid)[elevated-watch-ambient]:not([is-dark-theme], [theater], [fullscreen]) #cinematics canvas {
+        filter: invert(1) brightness(var(--rt-glow)) invert(1);
+    }
+}
+body.rt-glow-off #cinematics {
+    display: none !important;
 }
 
 /* Quality-automation flicker guard. To pick a quality the userscript
