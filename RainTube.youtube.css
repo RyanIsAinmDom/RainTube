@@ -626,42 +626,63 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(#rt_fab, #rt_stats_fa
 .rt-hdr-r { display: flex; align-items: center; gap: 6px; }
 .rt-hdr-btn {
     position: relative;
-    width: 28px; height: 28px; border-radius: 10px;
+    width: 30px; height: 30px; border-radius: 11px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--rt-text-mute);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    /* A small glass key: lit from above (bright top edge, soft sheen), shaded
+       below, and lifted off the header by a shadow. */
+    background:
+        radial-gradient(90% 70% at 30% 0%, rgba(255, 255, 255, 0.20), transparent 62%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02) 55%, rgba(0, 0, 0, 0.16));
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+        0 -1px 0 rgba(0, 0, 0, 0.30) inset,
+        0 5px 12px rgba(0, 0, 0, 0.38),
+        0 1px 2px rgba(0, 0, 0, 0.45);
+    color: rgba(243, 240, 235, 0.80);
     line-height: 1;
     cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
     overflow: hidden;
     isolation: isolate;
-    transition: transform .14s ease, color .18s, background .18s, border-color .18s;
+    transition: transform .14s ease, color .18s, background .18s, border-color .18s, box-shadow .18s;
 }
 .rt-hdr-btn:hover {
-    color: var(--rt-text);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.08) inset,
+        0 -1px 0 rgba(0, 0, 0, 0.30) inset,
+        0 8px 16px rgba(0, 0, 0, 0.42),
+        0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.rt-hdr-btn:active {
+    transform: translateY(0.5px) scale(0.97);
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.5) inset,
+        0 0 0 1px rgba(0, 0, 0, 0.2),
+        0 2px 4px rgba(0, 0, 0, 0.3);
 }
 /* Main panel close: same visual language as the settings gear (tinted
    border/background on hover, inner-glyph animation), but red. */
 .rt-close {
-    font-size: 14px; font-weight: 800;
-    color: var(--rt-text-mute);
+    font-size: 15px; font-weight: 800;
 }
 .rt-close:hover {
-    color: #fff;
-    border-color: rgba(255, 84, 84, 0.42);
-    background: rgba(255, 84, 84, 0.10);
+    border-color: rgba(255, 96, 96, 0.55);
+    background:
+        radial-gradient(90% 70% at 30% 0%, rgba(255, 150, 150, 0.32), transparent 62%),
+        linear-gradient(180deg, rgba(255, 84, 84, 0.22), rgba(255, 84, 84, 0.05) 60%, rgba(60, 0, 0, 0.2));
 }
 .rt-hdr-settings {
-    font-size: 14px; font-weight: 800;
-    color: var(--rt-text-mute);
+    font-size: 15px; font-weight: 800;
 }
 .rt-hdr-settings:hover {
-    color: #fff;
-    border-color: rgba(var(--rt-control-blue-rgb), 0.42);
-    background: rgba(var(--rt-control-blue-rgb), 0.08);
+    border-color: rgba(var(--rt-control-blue-rgb), 0.55);
+    background:
+        radial-gradient(90% 70% at 30% 0%, rgba(150, 215, 255, 0.30), transparent 62%),
+        linear-gradient(180deg, rgba(var(--rt-control-blue-rgb), 0.22), rgba(var(--rt-control-blue-rgb), 0.05) 60%, rgba(0, 20, 40, 0.2));
 }
 /* Animate only the inner glyph, not the whole button. */
 .rt-hdr-gear-icon,
