@@ -873,6 +873,8 @@ body.rt-topbar-theme ytd-masthead.rt-topbar-theme-host :is(#rt_fab, #rt_stats_fa
 #rt_stats_panel :is(button, a, [role="button"]) { cursor: pointer; }
 
 .rt-inline-stats {
+    /* A fullscreen / ultrawide sidebar can be far wider than the card was drawn for. */
+    max-width: 440px;
     margin: 0 0 12px 0;
     font-family: var(--rt-font-ui);
     color: var(--rt-text);
